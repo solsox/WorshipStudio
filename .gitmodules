@@ -1,0 +1,9 @@
+[submodule "app/plugins/obs-browser"]
+	path = app/plugins/obs-browser
+	url = https://github.com/obsproject/obs-browser.git
+[submodule "app/plugins/obs-websocket"]
+	path = app/plugins/obs-websocket
+	url = https://github.com/obsproject/obs-websocket.git
+[submodule "app/deps/libdshowcapture/src"]
+	path = app/deps/libdshowcapture/src
+	url = https://github.com/obsproject/libdshowcapture.git

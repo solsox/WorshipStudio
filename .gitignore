@@ -1,0 +1,25 @@
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Contenido con derechos de autor o pesado: NUNCA al repositorio.
+# Himnarios, Biblias con derechos, programas de terceros y archivos de prueba.
+/contenido-local/
+
+# Compilaciones y paquetes
+/dist/
+build/
+build_*/
+/app/.deps/
+/app/CMakeCache.txt
+/app/CMakeFiles/
+DerivedData/
+*.dSYM
+*.app
+
+# Editores
+.vscode/
+.idea/
+*.xcuserstate
+xcuserdata/
