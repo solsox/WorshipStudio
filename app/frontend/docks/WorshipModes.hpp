@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QPointer>
 
+#include <obs-frontend-api.h>
+
 #include <functional>
 
 class QAction;
@@ -25,6 +27,7 @@ public:
 
 	WorshipModes(QMainWindow *window, QMenu *viewMenu, QStatusBar *statusBar, QDockWidget *liveTools,
 		     const QList<QDockWidget *> &content, std::function<void()> resetObsDocks);
+	~WorshipModes() override;
 
 	Mode mode() const { return current; }
 	void setMode(Mode mode);
@@ -46,5 +49,7 @@ private:
 	QPushButton *tecnicoButton = nullptr;
 
 	void applyVisibility();
+	void filterSceneList();
+	static void onFrontendEvent(enum obs_frontend_event event, void *data);
 	void syncControls();
 };

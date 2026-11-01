@@ -1,11 +1,13 @@
 #include "WorshipModes.hpp"
 #include "WorshipOutput.hpp"
 
+#include <obs-frontend-api.h>
 #include <Idian/Utils.hpp>
 
 #include <QAction>
 #include <QActionGroup>
 #include <QDockWidget>
+#include <QListWidget>
 #include <QHBoxLayout>
 #include <QMainWindow>
 #include <QMenu>
@@ -75,6 +77,36 @@ WorshipModes::WorshipModes(QMainWindow *window_, QMenu *viewMenu, QStatusBar *st
 	connect(cultoAction, &QAction::triggered, this, [this]() { setMode(Mode::Culto); });
 	connect(tecnicoAction, &QAction::triggered, this, [this]() { setMode(Mode::Tecnico); });
 	connect(resetAction, &QAction::triggered, this, &WorshipModes::applyLayout);
+
+	obs_frontend_add_event_callback(&WorshipModes::onFrontendEvent, this);
+}
+
+WorshipModes::~WorshipModes()
+{
+	obs_frontend_remove_event_callback(&WorshipModes::onFrontendEvent, this);
+}
+
+void WorshipModes::onFrontendEvent(enum obs_frontend_event event, void *data)
+{
+	if (event != OBS_FRONTEND_EVENT_SCENE_LIST_CHANGED && event != OBS_FRONTEND_EVENT_FINISHED_LOADING)
+		return;
+	auto *modes = static_cast<WorshipModes *>(data);
+	QMetaObject::invokeMethod(modes, [modes]() { modes->filterSceneList(); }, Qt::QueuedConnection);
+}
+
+/* WorshipStudio's own scenes ("WS Cantos", "WS Cantos B"...) are driven by
+ * the docks; in Modo culto the scene list only shows the user's scenes
+ * (cameras, videos...). Modo tecnico shows everything. */
+void WorshipModes::filterSceneList()
+{
+	auto *list = window->findChild<QListWidget *>(QStringLiteral("scenes"));
+	if (!list)
+		return;
+	const bool culto = current == Mode::Culto;
+	for (int row = 0; row < list->count(); ++row) {
+		QListWidgetItem *item = list->item(row);
+		item->setHidden(culto && item->text().startsWith(QStringLiteral("WS ")));
+	}
 }
 
 void WorshipModes::restore()
@@ -140,6 +172,7 @@ void WorshipModes::applyLayout()
 
 void WorshipModes::applyVisibility()
 {
+	filterSceneList();
 	const bool culto = current == Mode::Culto;
 	for (const char *name : TechnicalDocks) {
 		if (QDockWidget *dock = window->findChild<QDockWidget *>(QString::fromLatin1(name))) {
