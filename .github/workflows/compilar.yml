@@ -83,7 +83,8 @@ jobs:
             libxinerama-dev libxcb1-dev libxcb-xfixes0-dev libxss-dev libglvnd-dev libxkbcommon-dev libasound2-dev \
             libfdk-aac-dev libfontconfig-dev libfreetype6-dev libjack-jackd2-dev libsndio-dev libspeexdsp-dev \
             libudev-dev libv4l-dev libva-dev libvlc-dev libpci-dev libdrm-dev nlohmann-json3-dev libwebsocketpp-dev \
-            libasio-dev libqrcodegencpp-dev libxcb-xinput-dev librist-dev libsrt-openssl-dev libglib2.0-dev poppler-utils
+            libasio-dev libqrcodegencpp-dev libxcb-xinput-dev \
+            libffmpeg-nvenc-dev libvpl-dev libvpl2 libcmocka-dev lsb-release dh-cmake librist-dev libsrt-openssl-dev libglib2.0-dev poppler-utils
       - name: Configurar
         run: cmake --preset ubuntu -DENABLE_BROWSER=OFF -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF -DCMAKE_BUILD_TYPE=RelWithDebInfo
       - name: Compilar

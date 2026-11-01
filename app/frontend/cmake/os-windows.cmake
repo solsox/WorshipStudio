@@ -62,6 +62,13 @@ target_link_libraries(
 
 target_compile_definitions(obs-studio PRIVATE PSAPI_VERSION=2)
 
+# C++/WinRT (PDF rendering) uses coroutine headers that newer MSVC flags as
+# deprecated in C++17; libobs-winrt silences them the same way.
+set_source_files_properties(
+  docks/WorshipDocument_Windows.cpp
+  PROPERTIES COMPILE_DEFINITIONS _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
+)
+
 target_link_options(obs-studio PRIVATE /IGNORE:4099 $<$<CONFIG:DEBUG>:/NODEFAULTLIB:MSVCRT>)
 
 # Set commit for untagged version comparisons in the Windows updater
