@@ -8,17 +8,17 @@
 
 /* Light theme for rehearsals and preparing services in bright rooms. */
 @OBSThemeVars {
-    --ws_indigo1: #8189F5;
-    --ws_indigo2: #636BE6;
-    --ws_indigo3: #4E55C7;
-    --ws_indigo4: #3C42A0;
-    --ws_indigo5: #2E3380;
+    --ws_ember1: #F57A4A;
+    --ws_ember2: #E2582B;
+    --ws_ember3: #C2441C;
+    --ws_ember4: #943314;
+    --ws_ember5: #6E250F;
 
-    --primary: var(--ws_indigo3);
-    --primary_light: var(--ws_indigo2);
-    --primary_lighter: var(--ws_indigo1);
-    --primary_dark: var(--ws_indigo4);
-    --primary_darker: var(--ws_indigo5);
+    --primary: var(--ws_ember3);
+    --primary_light: var(--ws_ember2);
+    --primary_lighter: var(--ws_ember1);
+    --primary_dark: var(--ws_ember4);
+    --primary_darker: var(--ws_ember5);
 
     --border_radius: 8px;
     --border_radius_small: 6px;

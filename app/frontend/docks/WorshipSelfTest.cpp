@@ -18,6 +18,7 @@
 #include <qt-wrappers.hpp>
 
 #include <QDir>
+#include <QPainter>
 #include <QDockWidget>
 #include <QMainWindow>
 #include <QFile>
@@ -505,6 +506,96 @@ struct SelfTest {
 		});
 	}
 
+	/* Showcase images for the website, drawn by the real renderer. */
+	void addGallerySteps()
+	{
+		struct Shot {
+			const char *query;
+			int preset;
+			const char *font;
+			const char *name;
+		};
+		const Shot shots[] = {
+			{"Salmos 23:1", 12, "Playfair Display", "galeria-salmo23"},
+			{"Salmos 121:1-2", 8, "Montserrat", "galeria-salmo121"},
+			{"Salmos 150:6", 10, "DM Serif Display", "galeria-salmo150"},
+			{"Isaias 40:31", 7, "Lora", "galeria-isaias40"},
+			{"Salmos 46:10", 9, "Raleway", "galeria-salmo46"},
+		};
+		for (const Shot &shot : shots) {
+			const QString query = QString::fromLatin1(shot.query);
+			const QString font = QString::fromLatin1(shot.font);
+			const QString name = QString::fromLatin1(shot.name);
+			const int preset = shot.preset;
+			add(200, [=]() {
+				bible->setStyle(font, preset);
+				check(bible->projectQuery(query, 0), QStringLiteral("galeria %1").arg(query));
+			});
+			add(500, [=]() {
+				const QString copy = outDir.absoluteFilePath(name + QStringLiteral(".png"));
+				QFile::remove(copy);
+				check(QFile::copy(bible->lastRenderedImage(), copy), QStringLiteral("galeria guardada %1").arg(name));
+			});
+		}
+		add(200, [=]() {
+			const QSize canvas(1920, 1080);
+			struct Lyric {
+				const char *text;
+				int preset;
+				const char *font;
+				const char *name;
+			};
+			const Lyric lyrics[] = {
+				{"Cantad al Senor un cantico nuevo\ncantad al Senor toda la tierra", 11, "Montserrat", "galeria-canto1"},
+				{"Alabad su nombre\nanunciad de dia en dia su salvacion", 13, "Poppins", "galeria-canto2"},
+				{"Dad gloria y poder\ntributad la honra debida a su nombre", 15, "Josefin Sans", "galeria-canto3"},
+			};
+			for (const Lyric &lyric : lyrics) {
+				WorshipRender::LyricsSlide slide;
+				slide.text = QString::fromUtf8(lyric.text)
+						     .replace(QStringLiteral("Senor"), QString::fromUtf8("Señor"))
+						     .replace(QStringLiteral("cantico"), QString::fromUtf8("cántico"))
+						     .replace(QStringLiteral("dia en dia"), QString::fromUtf8("día en día"))
+						     .replace(QStringLiteral("salvacion"), QString::fromUtf8("salvación"));
+				slide.background.preset = lyric.preset;
+				slide.fontFamily = QString::fromLatin1(lyric.font);
+				slide.maxFontSize = 96;
+				WorshipRender::Lyrics(slide, canvas).save(outDir.absoluteFilePath(QString::fromLatin1(lyric.name) + QStringLiteral(".png")));
+			}
+
+			/* Lower third and urgent message over a clean background. */
+			WorshipRender::LyricsSlide base;
+			base.background.preset = 6;
+			QImage composite = WorshipRender::Lyrics(base, canvas).convertToFormat(QImage::Format_ARGB32_Premultiplied);
+			QPainter painter(&composite);
+			painter.drawImage(0, 0, WorshipRender::NameLowerThird(QString::fromUtf8("Ana Martínez"),
+									      QString::fromUtf8("Conferencia: Liderazgo con propósito"),
+									      QStringLiteral("Montserrat"), canvas));
+			painter.drawImage(0, 0, WorshipRender::UrgentMessage(QString::fromUtf8("Los padres de Sofía, por favor acercarse a la recepción"),
+									     QStringLiteral("Montserrat"), canvas));
+			painter.end();
+			check(composite.save(outDir.absoluteFilePath(QStringLiteral("galeria-rotulo.png"))),
+			      QStringLiteral("galeria rotulo"));
+
+			WorshipRender::StageInfo stage;
+			stage.clock = QStringLiteral("10:42");
+			stage.title = QStringLiteral("Cantad al Señor");
+			stage.section = QStringLiteral("Coro");
+			stage.current = QString::fromUtf8("Cantad al Señor un cántico nuevo\ncantad al Señor toda la tierra");
+			stage.next = QString::fromUtf8("Alabad su nombre\nanunciad de día en día su salvación");
+			stage.timer = QStringLiteral("Cronometro 12:05");
+			stage.message = QStringLiteral("5 minutos");
+			WorshipRender::StageDisplay(stage, canvas).save(outDir.absoluteFilePath(QStringLiteral("galeria-escenario.png")));
+
+			WorshipRender::Background night;
+			night.preset = 9;
+			WorshipRender::Countdown(QStringLiteral("Comenzamos en"), QStringLiteral("04:59"), QString(), night,
+						 QStringLiteral("Montserrat"), canvas)
+				.save(outDir.absoluteFilePath(QStringLiteral("galeria-cuenta.png")));
+		});
+		add(200, [=]() { bible->setStyle(WorshipRender::RecommendedFonts().value(0), 0); });
+	}
+
 	/* Screenshots of the main window with each WorshipStudio dock in front. */
 	void addInterfaceSteps()
 	{
@@ -618,6 +709,8 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Songs
 		for (int i = 0; i < presentationFiles.size(); ++i)
 			test->addPresentationSteps(presentationFiles.at(i), i + 1);
 	}
+	if (wanted("galeria"))
+		test->addGallerySteps();
 	if (wanted("envivo"))
 		test->addLiveSteps();
 	if (wanted("importar"))

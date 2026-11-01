@@ -631,6 +631,23 @@ QImage Lyrics(const LyricsSlide &slide, const QSize &canvas)
 			}
 		}
 
+		/* Lines are written on purpose: if a slightly smaller size keeps
+		 * every line whole, prefer it over breaking a line in two. */
+		QFont probeFont(family);
+		probeFont.setWeight(QFont::DemiBold);
+		const QStringList rawLines = text.split(QLatin1Char('\n'));
+		for (int size = best; size >= qRound(best * 0.72); --size) {
+			probeFont.setPixelSize(size);
+			const QFontMetricsF metrics(probeFont);
+			qreal widest = 0;
+			for (const QString &line : rawLines)
+				widest = qMax(widest, metrics.horizontalAdvance(line.trimmed()));
+			if (widest <= box.width() * 0.98) {
+				best = size;
+				break;
+			}
+		}
+
 		QTextDocument doc, shadow;
 		setup(doc, html(slide.textColor.isEmpty() ? QStringLiteral("#FFFFFF") : slide.textColor), best);
 		setup(shadow, html(QStringLiteral("#000000")), best);
@@ -858,7 +875,7 @@ QImage StageDisplay(const StageInfo &info, const QSize &canvas)
 	/* Next slide. */
 	painter.fillRect(QRectF(W * 0.03, H * 0.69, W * 0.94, qMax(1.0, 2 * scale)), QColor(0x26, 0x29, 0x35));
 	painter.setFont(small);
-	painter.setPen(QColor(0x63, 0x6B, 0xE6));
+	painter.setPen(QColor(0xE2, 0x58, 0x2B));
 	painter.drawText(QRectF(W * 0.04, H * 0.70, W * 0.3, H * 0.05), Qt::AlignLeft | Qt::AlignVCenter,
 			 QStringLiteral("SIGUIENTE"));
 	const QRectF nextBox(W * 0.04, H * 0.75, W * 0.92, info.message.isEmpty() ? H * 0.22 : H * 0.12);

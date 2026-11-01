@@ -1,7 +1,7 @@
 [Desktop Entry]
 Version=1.0
-Name=OBS Studio
-GenericName=Streaming/Recording Software
+Name=WorshipStudio
+GenericName=Proyección y transmisión para reuniones
 Comment=Free and Open Source Streaming/Recording Software
 Exec=obs
 Icon=com.obsproject.Studio

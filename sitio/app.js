@@ -11,7 +11,6 @@
   var cta = document.getElementById("cta-principal");
   if (cta) {
     if (os === "mac") cta.textContent = "Descargar para Mac";
-    else if (os === "win") cta.textContent = "Descargar para Windows";
   }
 
   var nav = document.querySelector(".nav");
@@ -20,7 +19,7 @@
   onScroll();
 
   if ("IntersectionObserver" in window) {
-    var items = document.querySelectorAll(".feature, .card, .tile, .gallery img, .split, .platform, .section__title");
+    var items = document.querySelectorAll(".row, .lesson, .trio figure, .two, .dl, .title, .live");
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
         if (entry.isIntersecting) { entry.target.classList.add("is-visible"); io.unobserve(entry.target); }

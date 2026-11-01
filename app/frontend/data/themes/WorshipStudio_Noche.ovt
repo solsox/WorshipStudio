@@ -7,7 +7,7 @@
 }
 
 /* Calm, low-glare dark theme for the booth during a service: ink-blue
- * neutrals, one indigo accent, rounded shapes and quiet borders. */
+ * neutrals, one ember accent (same as the logo), rounded shapes and quiet borders. */
 @OBSThemeVars {
     --grey1: #5C6178;
     --grey2: #4A4F63;
@@ -18,17 +18,17 @@
     --grey7: #16181F;
     --grey8: #0E0F14;
 
-    --ws_indigo1: #A5ACFF;
-    --ws_indigo2: #8189F5;
-    --ws_indigo3: #636BE6;
-    --ws_indigo4: #4E55C7;
-    --ws_indigo5: #3C42A0;
+    --ws_ember1: #FFB394;
+    --ws_ember2: #F57A4A;
+    --ws_ember3: #E2582B;
+    --ws_ember4: #C2441C;
+    --ws_ember5: #943314;
 
-    --primary: var(--ws_indigo3);
-    --primary_light: var(--ws_indigo2);
-    --primary_lighter: var(--ws_indigo1);
-    --primary_dark: var(--ws_indigo4);
-    --primary_darker: var(--ws_indigo5);
+    --primary: var(--ws_ember3);
+    --primary_light: var(--ws_ember2);
+    --primary_lighter: var(--ws_ember1);
+    --primary_dark: var(--ws_ember4);
+    --primary_darker: var(--ws_ember5);
 
     --text_muted: #9AA0B4;
 
