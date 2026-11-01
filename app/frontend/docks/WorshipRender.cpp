@@ -730,7 +730,9 @@ QImage Countdown(const QString &title, const QString &time, const QString &foote
 	QFont timeFont(family);
 	timeFont.setPixelSize(qRound(300 * scale));
 	timeFont.setWeight(QFont::Bold);
-	timeFont.setFeature("tnum", 1);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+	timeFont.setFeature("tnum", 1); /* digits of equal width */
+#endif
 	painter.setFont(timeFont);
 	shadowedText(painter, QRectF(0, H * 0.30, W, H * 0.40), Qt::AlignCenter, time, Qt::white, 6 * scale);
 
@@ -847,7 +849,9 @@ QImage StageDisplay(const StageInfo &info, const QSize &canvas)
 	QFont clock(family);
 	clock.setPixelSize(qRound(64 * scale));
 	clock.setWeight(QFont::Bold);
-	clock.setFeature("tnum", 1);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+	clock.setFeature("tnum", 1); /* digits of equal width */
+#endif
 	painter.setFont(clock);
 	painter.setPen(Qt::white);
 	painter.drawText(QRectF(W * 0.60, H * 0.01, W * 0.37, H * 0.09), Qt::AlignRight | Qt::AlignVCenter, info.clock);

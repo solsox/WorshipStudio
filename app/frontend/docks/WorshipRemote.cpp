@@ -151,7 +151,11 @@ QString localAddress()
 			const QHostAddress ip = entry.ip();
 			if (ip.protocol() != QAbstractSocket::IPv4Protocol)
 				continue;
-			if (ip.isPrivateUse())
+			/* 10.x, 172.16-31.x and 192.168.x (Qt 6.4 has no isPrivateUse). */
+			const bool privateLan = ip.isInSubnet(QHostAddress(QStringLiteral("10.0.0.0")), 8) ||
+						ip.isInSubnet(QHostAddress(QStringLiteral("172.16.0.0")), 12) ||
+						ip.isInSubnet(QHostAddress(QStringLiteral("192.168.0.0")), 16);
+			if (privateLan)
 				return ip.toString();
 			if (fallback.isEmpty())
 				fallback = ip.toString();
