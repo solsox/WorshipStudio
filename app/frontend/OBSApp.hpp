@@ -30,6 +30,7 @@
 #include <QAbstractNativeEventFilter>
 #include <QApplication>
 #include <QHash>
+#include <QColor>
 #include <QPalette>
 #include <QPointer>
 #include <QUuid>
@@ -174,6 +175,9 @@ public:
 	QList<OBSTheme> GetThemes() const { return themes.values(); }
 	OBSTheme *GetTheme(const QString &name);
 	bool SetTheme(const QString &name);
+	/* WorshipStudio appearance: a theme on top of WorshipStudio Noche (dark)
+	 * or Dia (light) with the chosen accent color. */
+	bool SetWorshipAppearance(const QColor &accent, bool light);
 	bool IsThemeDark() const { return currentTheme ? currentTheme->isDark : false; }
 	QStyle *GetInvisibleCursorStyle();
 

@@ -1,6 +1,28 @@
 #include "WorshipLive.hpp"
 
+#include <obs-frontend-api.h>
+#include <obs.hpp>
+
 #include "moc_WorshipLive.cpp"
+
+namespace {
+/* "WS Presentacion B" -> "Presentaciones": which dock owns a scene. */
+QString ownerOfScene(obs_source_t *scene)
+{
+	if (!scene)
+		return {};
+	const QString name = QString::fromUtf8(obs_source_get_name(scene));
+	if (name.startsWith(QStringLiteral("WS Cantos")))
+		return QStringLiteral("Cantos");
+	if (name.startsWith(QStringLiteral("WS Biblia")))
+		return QStringLiteral("Biblia");
+	if (name.startsWith(QStringLiteral("WS Himnario")))
+		return QStringLiteral("Himnario");
+	if (name.startsWith(QStringLiteral("WS Presentacion")))
+		return QStringLiteral("Presentaciones");
+	return {};
+}
+} // namespace
 
 WorshipLive &WorshipLive::instance()
 {
@@ -44,7 +66,21 @@ void WorshipLive::setService(const QStringList &items, int currentItem)
 
 void WorshipLive::invoke(const char *method)
 {
-	QObject *target = targets.value(current.source);
+	/* Next/previous drive what the congregation sees. In Studio Mode, content
+	 * that was just chosen and is still waiting in the preview is prepared
+	 * first; otherwise the dock that owns the scene on screen is used. */
+	OBSSourceAutoRelease program = obs_frontend_get_current_scene();
+	QString source = ownerOfScene(program);
+	if (obs_frontend_preview_program_mode_active()) {
+		OBSSourceAutoRelease preview = obs_frontend_get_current_preview_scene();
+		const QString waiting = ownerOfScene(preview);
+		if (!waiting.isEmpty() && waiting == current.source && preview != program)
+			source = waiting;
+	}
+	if (source.isEmpty())
+		source = current.source;
+
+	QObject *target = targets.value(source);
 	if (target)
 		QMetaObject::invokeMethod(target, method, Qt::QueuedConnection);
 }

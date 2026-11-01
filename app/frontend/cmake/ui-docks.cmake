@@ -3,6 +3,8 @@ target_sources(
   PRIVATE
     docks/OBSDock.cpp
     docks/OBSDock.hpp
+    docks/AppearanceDialog.cpp
+    docks/AppearanceDialog.hpp
     docks/BibleDock.cpp
     docks/BibleDock.hpp
     docks/LiveToolsDock.cpp

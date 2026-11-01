@@ -44,6 +44,7 @@
 #include <docks/LiveToolsDock.hpp>
 #include <docks/ServiceDock.hpp>
 #include <docks/SongsDock.hpp>
+#include <docks/AppearanceDialog.hpp>
 #include <docks/WelcomeGuide.hpp>
 #include <docks/WorshipLive.hpp>
 #include <docks/WorshipModes.hpp>
@@ -1345,6 +1346,14 @@ void OBSBasic::OBSInit()
 				       {serviceDock, songsDock, hymnalDock, bibleDock, presentationDock},
 				       [this]() { on_resetDocks_triggered(true); });
 	QTimer::singleShot(0, modes, &WorshipModes::restore);
+
+	auto *appearanceAction = new QAction(QStringLiteral("Personalizar apariencia..."), this);
+	ui->viewMenu->insertAction(ui->viewMenu->actions().value(0), appearanceAction);
+	connect(appearanceAction, &QAction::triggered, this, [this]() {
+		auto *dialog = new AppearanceDialog(this);
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		dialog->open();
+	});
 
 	auto *guideAction = new QAction(QStringLiteral("Guía de inicio de WorshipStudio"), this);
 	ui->menuBasic_MainMenu_Help->insertAction(ui->menuBasic_MainMenu_Help->actions().value(0), guideAction);

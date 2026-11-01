@@ -356,7 +356,14 @@ void OBSApp::InitUserConfigDefaults()
 	config_set_default_bool(userConfig, "BasicWindow", "PreviewEnabled", true);
 	config_set_default_bool(userConfig, "BasicWindow", "PreviewProgramMode", false);
 	config_set_default_bool(userConfig, "BasicWindow", "SceneDuplicationMode", true);
-	config_set_default_bool(userConfig, "BasicWindow", "SwapScenesMode", true);
+	/* WorshipStudio: after "Pasar a pantalla" the content stays on screen;
+	 * swapping would put the previous scene back in the preview and the
+	 * next click would return to it. Existing installs are moved once. */
+	config_set_default_bool(userConfig, "BasicWindow", "SwapScenesMode", false);
+	if (!config_get_bool(userConfig, "WorshipStudio", "SwapScenesDisabled")) {
+		config_set_bool(userConfig, "BasicWindow", "SwapScenesMode", false);
+		config_set_bool(userConfig, "WorshipStudio", "SwapScenesDisabled", true);
+	}
 	config_set_default_bool(userConfig, "BasicWindow", "SnappingEnabled", true);
 	config_set_default_bool(userConfig, "BasicWindow", "ScreenSnapping", true);
 	config_set_default_bool(userConfig, "BasicWindow", "SourceSnapping", true);

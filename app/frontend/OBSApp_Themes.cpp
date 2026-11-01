@@ -1124,3 +1124,44 @@ bool OBSApp::InitTheme()
 
 	return true;
 }
+
+bool OBSApp::SetWorshipAppearance(const QColor &accent, bool light)
+{
+	char userDir[512];
+	if (!accent.isValid() || !GetAppConfigPath(userDir, sizeof(userDir), OBS_APP_CONFIG_DIR "/themes"))
+		return false;
+	QDir().mkpath(QString::fromUtf8(userDir));
+
+	/* Five shades of the accent, from light to dark, like the built-in ones. */
+	const QColor shades[] = {accent.lighter(150), accent.lighter(120), accent, accent.darker(125),
+				 accent.darker(160)};
+	QString vars;
+	for (int i = 0; i < 5; ++i)
+		vars += QStringLiteral("    --ws_ember%1: %2;\n").arg(i + 1).arg(shades[i].name());
+
+	const QString theme =
+		QStringLiteral("@OBSThemeMeta {\n"
+			       "    name: 'WorshipStudio Personalizado';\n"
+			       "    id: 'com.worshipstudio.Personal';\n"
+			       "    extends: '%1';\n"
+			       "    author: 'WorshipStudio';\n"
+			       "    dark: '%2';\n"
+			       "}\n\n"
+			       "@OBSThemeVars {\n%3}\n")
+			.arg(light ? QStringLiteral("com.worshipstudio.Dia") : QStringLiteral("com.worshipstudio.Noche"),
+			     light ? QStringLiteral("false") : QStringLiteral("true"), vars);
+
+	QFile file(QDir(QString::fromUtf8(userDir)).absoluteFilePath(QStringLiteral("WorshipStudio_Personal.ovt")));
+	if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+		return false;
+	file.write(theme.toUtf8());
+	file.close();
+
+	/* The theme list is read at startup; read it again to pick this up. */
+	FindThemes();
+	if (!SetTheme(QStringLiteral("com.worshipstudio.Personal")))
+		return false;
+	config_set_string(userConfig, "Appearance", "Theme", "com.worshipstudio.Personal");
+	config_save_safe(userConfig, "tmp", nullptr);
+	return true;
+}
