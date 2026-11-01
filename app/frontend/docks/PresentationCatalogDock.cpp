@@ -20,6 +20,7 @@
 #include "WorshipOutput.hpp"
 #include "WorshipRender.hpp"
 
+#include <obs-frontend-api.h>
 #include <qt-wrappers.hpp>
 #include <Idian/Utils.hpp>
 
@@ -90,9 +91,6 @@ PresentationCatalogDock::PresentationCatalogDock(const QString &objectName, cons
 	audioModeCombo->addItem(tr("Solo letra"));
 	audioModeCombo->setCurrentIndex(qBound(0, WorshipOutput::ConfigString(ConfigAudioMode).toInt(), 2));
 
-	projectButton = new QPushButton(tr("Proyectar"), root);
-	idian::Utils::addClass(projectButton, "button-primary");
-	projectButton->setDefault(true);
 
 	auto *folderButton = new QPushButton(tr("Carpeta..."), root);
 	folderButton->setToolTip(tr("Elegir la carpeta del himnario seleccionado"));
@@ -112,7 +110,6 @@ PresentationCatalogDock::PresentationCatalogDock(const QString &objectName, cons
 	auto *projectRow = new QHBoxLayout();
 	projectRow->addWidget(audioModeCombo, 1);
 	projectRow->addWidget(fitCombo, 1);
-	projectRow->addWidget(projectButton);
 
 	slidesList = new QListWidget(root);
 	slidesList->setViewMode(QListView::IconMode);
@@ -129,14 +126,11 @@ PresentationCatalogDock::PresentationCatalogDock(const QString &objectName, cons
 	splitter->setStretchFactor(0, 2);
 	splitter->setStretchFactor(1, 3);
 
-	previousButton = new QPushButton(tr("< Anterior"), root);
-	nextButton = new QPushButton(tr("Siguiente >"), root);
-	stopButton = new QPushButton(tr("Detener"), root);
+	stopButton = new QPushButton(tr("Detener audio"), root);
 
-	auto *liveRow = new QHBoxLayout();
-	liveRow->addWidget(previousButton);
-	liveRow->addWidget(nextButton);
-	liveRow->addWidget(stopButton);
+	auto *hint = new QLabel(tr("Doble clic en un himno para mostrarlo. Con audio, la letra avanza sola."), root);
+	hint->setWordWrap(true);
+	idian::Utils::addClass(hint, "text-muted");
 
 	liveLabel = new QLabel(root);
 	idian::Utils::addClass(liveLabel, "text-bold");
@@ -153,7 +147,8 @@ PresentationCatalogDock::PresentationCatalogDock(const QString &objectName, cons
 	layout->addWidget(searchEdit);
 	layout->addWidget(splitter, 1);
 	layout->addLayout(projectRow);
-	layout->addLayout(liveRow);
+	layout->addWidget(hint);
+	layout->addWidget(stopButton);
 	layout->addWidget(liveLabel);
 	layout->addWidget(statusLabel);
 
@@ -163,16 +158,14 @@ PresentationCatalogDock::PresentationCatalogDock(const QString &objectName, cons
 	syncTimer->setInterval(100);
 
 	WorshipLive::instance().registerTarget(QStringLiteral("Himnario"), this);
+	obs_frontend_add_event_callback(&PresentationCatalogDock::onFrontendEvent, this);
 	connect(searchEdit, &QLineEdit::textChanged, this, &PresentationCatalogDock::onSearchChanged);
 	connect(searchEdit, &QLineEdit::returnPressed, this, &PresentationCatalogDock::onProjectClicked);
 	connect(resultsList, &QListWidget::currentItemChanged, this, &PresentationCatalogDock::onCurrentHymnChanged);
 	connect(resultsList, &QListWidget::itemActivated, this, &PresentationCatalogDock::onProjectClicked);
 	connect(slidesList, &QListWidget::itemClicked, this, &PresentationCatalogDock::onSlideClicked);
 	connect(slidesList, &QListWidget::currentRowChanged, this, &PresentationCatalogDock::onSlideRowChanged);
-	connect(projectButton, &QPushButton::clicked, this, &PresentationCatalogDock::onProjectClicked);
 	connect(folderButton, &QPushButton::clicked, this, &PresentationCatalogDock::onChooseFolderClicked);
-	connect(previousButton, &QPushButton::clicked, this, &PresentationCatalogDock::onPreviousClicked);
-	connect(nextButton, &QPushButton::clicked, this, &PresentationCatalogDock::onNextClicked);
 	connect(stopButton, &QPushButton::clicked, this, &PresentationCatalogDock::onStopClicked);
 	connect(audioModeCombo, &QComboBox::currentIndexChanged, this,
 		[](int index) { WorshipOutput::SetConfigString(ConfigAudioMode, QString::number(index)); });
@@ -194,8 +187,27 @@ PresentationCatalogDock::PresentationCatalogDock(const QString &objectName, cons
 	loadCatalog();
 }
 
+void PresentationCatalogDock::onFrontendEvent(enum obs_frontend_event event, void *data)
+{
+	if (event != OBS_FRONTEND_EVENT_SCENE_CHANGED)
+		return;
+	auto *dock = static_cast<PresentationCatalogDock *>(data);
+	QMetaObject::invokeMethod(dock, [dock]() { dock->stopAudioOffAir(); }, Qt::QueuedConnection);
+}
+
+/* A hymn that left the screen must not keep playing in the room. */
+void PresentationCatalogDock::stopAudioOffAir()
+{
+	for (const QString &slot : {QString(), QStringLiteral(" B")}) {
+		OBSSourceAutoRelease audio = obs_get_source_by_name(WorshipOutput::Named(AudioSourceName, slot).c_str());
+		if (audio && !obs_source_active(audio) && obs_source_media_get_state(audio) == OBS_MEDIA_STATE_PLAYING)
+			obs_source_media_stop(audio);
+	}
+}
+
 PresentationCatalogDock::~PresentationCatalogDock()
 {
+	obs_frontend_remove_event_callback(&PresentationCatalogDock::onFrontendEvent, this);
 	syncTimer->stop();
 }
 
@@ -324,24 +336,41 @@ QString PresentationCatalogDock::audioPathFor(const PresentationEntry &entry) co
 	return {};
 }
 
+std::string PresentationCatalogDock::slideItemName() const
+{
+	return WorshipOutput::Named(SlideSourceName, outputSlot);
+}
+
 bool PresentationCatalogDock::prepareOutput()
 {
-	scene = WorshipOutput::EnsureScene(SceneName);
+	/* A new hymn goes to the copy of the scene that is not on air. */
+	outputSlot = WorshipOutput::OutputSlot(SceneName);
+	scene = WorshipOutput::EnsureScene(WorshipOutput::Named(SceneName, outputSlot).c_str());
 	if (!scene)
 		return false;
 
 	bool created = false;
 	OBSDataAutoRelease slideSettings = obs_data_create();
-	slideSource = WorshipOutput::EnsureSource(scene, SlideSourceName, "image_source", slideSettings, &created);
+	slideSource = WorshipOutput::EnsureSource(scene, slideItemName().c_str(), "image_source", slideSettings,
+						  &created);
 	if (created && slideSource)
 		WorshipOutput::FitItem(scene, slideSource, 0.0f, 0.0f, 1.0f, 1.0f);
 
 	OBSDataAutoRelease audioSettings = obs_data_create();
 	obs_data_set_bool(audioSettings, "is_local_file", true);
 	obs_data_set_bool(audioSettings, "looping", false);
-	obs_data_set_bool(audioSettings, "restart_on_activate", false);
+	/* A hymn waiting in the preview stays silent: it starts when it goes on
+	 * air (restart_on_activate) and stops when it leaves (onSceneChanged). */
+	obs_data_set_bool(audioSettings, "restart_on_activate", true);
 	obs_data_set_bool(audioSettings, "close_when_inactive", false);
-	audioSource = WorshipOutput::EnsureSource(scene, AudioSourceName, "ffmpeg_source", audioSettings, &created);
+	audioSource = WorshipOutput::EnsureSource(scene, WorshipOutput::Named(AudioSourceName, outputSlot).c_str(),
+						  "ffmpeg_source", audioSettings, &created);
+	if (!created && audioSource) {
+		/* Sources made by older builds still play while waiting in the preview. */
+		OBSDataAutoRelease current = obs_source_get_settings(audioSource);
+		if (!obs_data_get_bool(current, "restart_on_activate") || obs_data_get_bool(current, "close_when_inactive"))
+			obs_source_update(audioSource, audioSettings);
+	}
 	if (created && audioSource) {
 		/* Hymns are played to the room, not only to the stream. */
 		obs_source_set_monitoring_type(audioSource, OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT);
@@ -380,7 +409,11 @@ void PresentationCatalogDock::onProjectClicked()
 	WorshipOutput::ShowScene(scene);
 
 	if (liveWithAudio) {
-		obs_source_media_restart(audioSource);
+		/* In Studio Mode it plays once the transition puts it on air. */
+		if (obs_source_active(audioSource))
+			obs_source_media_restart(audioSource);
+		else
+			obs_source_media_stop(audioSource);
 		syncTimer->start();
 	} else {
 		obs_source_media_stop(audioSource);
@@ -439,7 +472,7 @@ void PresentationCatalogDock::showSlide(int slide, bool seekAudio)
 	state.section = tr("Diapositiva %1 de %2").arg(slide + 1).arg(entry.slidePaths.size());
 	state.index = slide;
 	state.count = (int)entry.slidePaths.size();
-	if (obs_sceneitem_t *item = scene ? obs_scene_find_source(scene, SlideSourceName) : nullptr)
+	if (obs_sceneitem_t *item = scene ? obs_scene_find_source(scene, slideItemName().c_str()) : nullptr)
 		state.hidden = !obs_sceneitem_visible(item);
 	WorshipLive::instance().publish(state);
 }
@@ -448,7 +481,7 @@ void PresentationCatalogDock::toggleHidden()
 {
 	if (liveEntry < 0 || !scene)
 		return;
-	if (obs_sceneitem_t *item = obs_scene_find_source(scene, SlideSourceName)) {
+	if (obs_sceneitem_t *item = obs_scene_find_source(scene, slideItemName().c_str())) {
 		obs_sceneitem_set_visible(item, !obs_sceneitem_visible(item));
 		LiveState state = WorshipLive::instance().state();
 		state.hidden = !obs_sceneitem_visible(item);
@@ -583,9 +616,6 @@ void PresentationCatalogDock::onChooseFolderClicked()
 void PresentationCatalogDock::updateControls()
 {
 	const bool live = liveEntry >= 0;
-	projectButton->setEnabled(selectedEntry >= 0);
-	previousButton->setEnabled(live && liveSlide > 0);
-	nextButton->setEnabled(live && liveSlide < allEntries.at(liveEntry).slidePaths.size() - 1);
 	stopButton->setEnabled(live);
 }
 

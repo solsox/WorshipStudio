@@ -61,7 +61,6 @@ constexpr const char *SlideSourceName = "WS Presentacion - Diapositiva";
 constexpr const char *ConfigRecent = "PresentationRecent";
 constexpr const char *ConfigFit = "PresentationFit";
 constexpr const char *ConfigBook = "PresentationBookMode";
-constexpr const char *ConfigHotkeys = "PresentationHotkeys";
 constexpr int MaxRecent = 15;
 constexpr int ThumbnailsPerTick = 3;
 const QSize ThumbnailSize(160, 90);
@@ -120,23 +119,6 @@ QRect contentRect(const QImage &page)
 	return QRect(QPoint(left, top), QPoint(right, bottom)).adjusted(-pad, -pad, pad, pad).intersected(image.rect());
 }
 
-void hotkeyNext(void *data, obs_hotkey_id, obs_hotkey_t *, bool pressed)
-{
-	if (pressed)
-		QMetaObject::invokeMethod(static_cast<PresentationDock *>(data), "nextSlide", Qt::QueuedConnection);
-}
-
-void hotkeyPrevious(void *data, obs_hotkey_id, obs_hotkey_t *, bool pressed)
-{
-	if (pressed)
-		QMetaObject::invokeMethod(static_cast<PresentationDock *>(data), "previousSlide", Qt::QueuedConnection);
-}
-
-void hotkeyHide(void *data, obs_hotkey_id, obs_hotkey_t *, bool pressed)
-{
-	if (pressed)
-		QMetaObject::invokeMethod(static_cast<PresentationDock *>(data), "toggleHidden", Qt::QueuedConnection);
-}
 } // namespace
 
 PresentationDock::PresentationDock(const QString &objectName, const QString &title, QWidget *parent)
@@ -191,25 +173,15 @@ PresentationDock::PresentationDock(const QString &objectName, const QString &tit
 				 "que el texto se lea grande"));
 	bookCheck->setChecked(WorshipOutput::ConfigString(ConfigBook) == QStringLiteral("1"));
 
-	projectButton = new QPushButton(tr("Proyectar"), root);
-	idian::Utils::addClass(projectButton, "button-primary");
-	projectButton->setDefault(true);
-
 	auto *projectRow = new QHBoxLayout();
 	projectRow->addWidget(fitCombo, 1);
 	projectRow->addWidget(bookCheck);
-	projectRow->addWidget(projectButton);
 
-	previousButton = new QPushButton(tr("< Anterior"), root);
-	nextButton = new QPushButton(tr("Siguiente >"), root);
-	hideButton = new QPushButton(tr("Ocultar"), root);
-	hideButton->setCheckable(true);
-	hideButton->setToolTip(tr("Quita la diapositiva de la pantalla sin perder el lugar (tecla B)"));
-
-	auto *liveRow = new QHBoxLayout();
-	liveRow->addWidget(previousButton);
-	liveRow->addWidget(nextButton);
-	liveRow->addWidget(hideButton);
+	auto *hint = new QLabel(tr("Doble clic en una diapositiva para mostrarla. El presentador inalambrico y "
+				   "las flechas avanzan."),
+				root);
+	hint->setWordWrap(true);
+	idian::Utils::addClass(hint, "text-muted");
 
 	liveLabel = new QLabel(root);
 	idian::Utils::addClass(liveLabel, "text-bold");
@@ -221,7 +193,7 @@ PresentationDock::PresentationDock(const QString &objectName, const QString &tit
 	layout->addLayout(openRow);
 	layout->addWidget(splitter, 1);
 	layout->addLayout(projectRow);
-	layout->addLayout(liveRow);
+	layout->addWidget(hint);
 	layout->addWidget(liveLabel);
 	layout->addWidget(statusLabel);
 	setWidget(root);
@@ -237,10 +209,6 @@ PresentationDock::PresentationDock(const QString &objectName, const QString &tit
 	connect(decksList, &QListWidget::itemActivated, this, &PresentationDock::onDeckActivated);
 	connect(slidesList, &QListWidget::itemClicked, this, &PresentationDock::onSlideClicked);
 	connect(slidesList, &QListWidget::itemActivated, this, &PresentationDock::onSlideClicked);
-	connect(projectButton, &QPushButton::clicked, this, &PresentationDock::project);
-	connect(previousButton, &QPushButton::clicked, this, &PresentationDock::previousSlide);
-	connect(nextButton, &QPushButton::clicked, this, &PresentationDock::nextSlide);
-	connect(hideButton, &QPushButton::clicked, this, &PresentationDock::toggleHidden);
 	connect(thumbnailTimer, &QTimer::timeout, this, &PresentationDock::onThumbnailTick);
 	connect(converter, &WorshipDocument::Converter::progress, this, [this](const QString &text) { setStatus(text); });
 	connect(fitCombo, &QComboBox::currentIndexChanged, this, [this](int index) {
@@ -266,7 +234,6 @@ PresentationDock::PresentationDock(const QString &objectName, const QString &tit
 	});
 
 	WorshipLive::instance().registerTarget(QStringLiteral("Presentaciones"), this);
-	registerHotkeys();
 	rebuildDecksList();
 	updateControls();
 	updateLiveLabel();
@@ -278,52 +245,6 @@ PresentationDock::PresentationDock(const QString &objectName, const QString &tit
 		setStatus(tr("Elegi una presentacion de la lista."));
 }
 
-PresentationDock::~PresentationDock()
-{
-	saveHotkeys();
-	for (obs_hotkey_id id : {nextHotkey, previousHotkey, hideHotkey}) {
-		if (id != OBS_INVALID_HOTKEY_ID)
-			obs_hotkey_unregister(id);
-	}
-}
-
-/* ------------------------------------------------------------------------ */
-/* Hotkeys: work with presentation clickers and while OBS is not focused.   */
-
-void PresentationDock::registerHotkeys()
-{
-	nextHotkey = obs_hotkey_register_frontend("WorshipStudio.Presentation.Next",
-						  "Presentacion: diapositiva siguiente", hotkeyNext, this);
-	previousHotkey = obs_hotkey_register_frontend("WorshipStudio.Presentation.Previous",
-						      "Presentacion: diapositiva anterior", hotkeyPrevious, this);
-	hideHotkey = obs_hotkey_register_frontend("WorshipStudio.Presentation.Hide",
-						  "Presentacion: ocultar / mostrar", hotkeyHide, this);
-
-	const QString json = WorshipOutput::ConfigString(ConfigHotkeys);
-	if (json.isEmpty())
-		return;
-	OBSDataAutoRelease data = obs_data_create_from_json(QT_TO_UTF8(json));
-	if (!data)
-		return;
-	const std::pair<const char *, obs_hotkey_id> entries[] = {
-		{"next", nextHotkey}, {"previous", previousHotkey}, {"hide", hideHotkey}};
-	for (const auto &[name, id] : entries) {
-		OBSDataArrayAutoRelease array = obs_data_get_array(data, name);
-		obs_hotkey_load(id, array);
-	}
-}
-
-void PresentationDock::saveHotkeys()
-{
-	OBSDataAutoRelease data = obs_data_create();
-	const std::pair<const char *, obs_hotkey_id> entries[] = {
-		{"next", nextHotkey}, {"previous", previousHotkey}, {"hide", hideHotkey}};
-	for (const auto &[name, id] : entries) {
-		OBSDataArrayAutoRelease array = obs_hotkey_save(id);
-		obs_data_set_array(data, name, array);
-	}
-	WorshipOutput::SetConfigString(ConfigHotkeys, QT_UTF8(obs_data_get_json(data)));
-}
 
 /* ------------------------------------------------------------------------ */
 /* Opening files                                                             */
@@ -612,15 +533,22 @@ QString PresentationDock::renderedSlide(int index) const
 /* ------------------------------------------------------------------------ */
 /* Live output                                                               */
 
+std::string PresentationDock::slideItemName() const
+{
+	return WorshipOutput::Named(SlideSourceName, outputSlot);
+}
+
 bool PresentationDock::prepareOutput()
 {
-	scene = WorshipOutput::EnsureScene(SceneName);
+	/* A new presentation goes to the copy of the scene that is not on air. */
+	outputSlot = WorshipOutput::OutputSlot(SceneName);
+	scene = WorshipOutput::EnsureScene(WorshipOutput::Named(SceneName, outputSlot).c_str());
 	if (!scene)
 		return false;
 
 	bool created = false;
 	OBSDataAutoRelease settings = obs_data_create();
-	slideSource = WorshipOutput::EnsureSource(scene, SlideSourceName, "image_source", settings, &created);
+	slideSource = WorshipOutput::EnsureSource(scene, slideItemName().c_str(), "image_source", settings, &created);
 	if (created && slideSource)
 		WorshipOutput::FitItem(scene, slideSource, 0.0f, 0.0f, 1.0f, 1.0f);
 	return slideSource;
@@ -639,7 +567,7 @@ bool PresentationDock::project()
 	live = true;
 	liveSlide = -1;
 	hidden = false;
-	if (obs_sceneitem_t *item = obs_scene_find_source(scene, SlideSourceName))
+	if (obs_sceneitem_t *item = obs_scene_find_source(scene, slideItemName().c_str()))
 		obs_sceneitem_set_visible(item, true);
 
 	showSlide(start);
@@ -713,14 +641,11 @@ void PresentationDock::previousSlide()
 
 void PresentationDock::toggleHidden()
 {
-	if (!live || !scene) {
-		hideButton->setChecked(false);
+	if (!live || !scene)
 		return;
-	}
 	hidden = !hidden;
-	if (obs_sceneitem_t *item = obs_scene_find_source(scene, SlideSourceName))
+	if (obs_sceneitem_t *item = obs_scene_find_source(scene, slideItemName().c_str()))
 		obs_sceneitem_set_visible(item, !hidden);
-	hideButton->setChecked(hidden);
 	updateLiveLabel();
 	publishLive();
 }
@@ -730,11 +655,10 @@ void PresentationDock::stopLive()
 	live = false;
 	liveSlide = -1;
 	if (hidden && scene) {
-		if (obs_sceneitem_t *item = obs_scene_find_source(scene, SlideSourceName))
+		if (obs_sceneitem_t *item = obs_scene_find_source(scene, slideItemName().c_str()))
 			obs_sceneitem_set_visible(item, true);
 	}
 	hidden = false;
-	hideButton->setChecked(false);
 	updateControls();
 	updateLiveLabel();
 	WorshipLive::instance().clear(QStringLiteral("Presentaciones"));
@@ -816,10 +740,6 @@ void PresentationDock::dropEvent(QDropEvent *event)
 
 void PresentationDock::updateControls()
 {
-	projectButton->setEnabled(!slides.isEmpty());
-	previousButton->setEnabled(live && liveSlide > 0);
-	nextButton->setEnabled(live && liveSlide < slides.size() - 1);
-	hideButton->setEnabled(live);
 }
 
 void PresentationDock::updateLiveLabel()

@@ -44,12 +44,24 @@ public:
 	/* Creates the WS Escenario scene (done when opening the projector). */
 	void ensureStage();
 
+public slots:
+	/* Studio Mode: sends what is waiting in the preview to the screen. */
+	void goLive();
+	/* Full screen projector of what the congregation sees. */
+	void openProgramProjector();
+
+public:
+	void runHotkey(obs_hotkey_id id);
+
 private:
 	/* On air */
-	QLabel *nowTitle = nullptr;
+	QLabel *programLabel = nullptr;
+	QLabel *previewLabel = nullptr;
 	QLabel *nowText = nullptr;
 	QLabel *nextText = nullptr;
 	QPushButton *hideButton = nullptr;
+	QPushButton *goLiveButton = nullptr;
+	QPushButton *projectorButton = nullptr;
 
 	/* Countdown */
 	QComboBox *countdownMode = nullptr;
@@ -86,6 +98,13 @@ private:
 
 	QTimer *clockTimer = nullptr;
 
+	obs_hotkey_id nextHotkey = OBS_INVALID_HOTKEY_ID;
+	obs_hotkey_id previousHotkey = OBS_INVALID_HOTKEY_ID;
+	obs_hotkey_id hideHotkey = OBS_INVALID_HOTKEY_ID;
+	obs_hotkey_id goLiveHotkey = OBS_INVALID_HOTKEY_ID;
+	void registerHotkeys();
+	void saveHotkeys();
+
 	OBSScene countdownSceneRef;
 	OBSSource countdownSource;
 	OBSScene stageSceneRef;
@@ -95,6 +114,8 @@ private:
 	OBSSource messageSource;
 
 	void onLiveChanged();
+	void refreshOnAir();
+	QString describeScene(obs_source_t *sceneSource) const;
 	void onTick();
 	void renderCountdown();
 	void ensureOverlays();

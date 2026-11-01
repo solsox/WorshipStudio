@@ -44,6 +44,7 @@
 #include <docks/LiveToolsDock.hpp>
 #include <docks/ServiceDock.hpp>
 #include <docks/SongsDock.hpp>
+#include <docks/WelcomeGuide.hpp>
 #include <docks/WorshipModes.hpp>
 #include <docks/WorshipRender.hpp>
 #include <docks/WorshipSelfTest.hpp>
@@ -1331,9 +1332,20 @@ void OBSBasic::OBSInit()
 	config_set_bool(App()->GetUserConfig(), "WorshipStudio", "SongsDockPlaced", true);
 
 	/* Modo culto (simple) / Modo tecnico (all of OBS). */
-	auto *modes = new WorshipModes(this, ui->viewMenu, ui->statusbar, serviceDock, liveToolsDock,
-				       {songsDock, hymnalDock, bibleDock, presentationDock}, controlsDock);
+	auto *modes = new WorshipModes(this, ui->viewMenu, ui->statusbar, liveToolsDock,
+				       {serviceDock, songsDock, hymnalDock, bibleDock, presentationDock},
+				       [this]() { on_resetDocks_triggered(true); });
 	QTimer::singleShot(0, modes, &WorshipModes::restore);
+
+	auto *guideAction = new QAction(QStringLiteral("Guía de inicio de WorshipStudio"), this);
+	ui->menuBasic_MainMenu_Help->insertAction(ui->menuBasic_MainMenu_Help->actions().value(0), guideAction);
+	connect(guideAction, &QAction::triggered, this, [this, liveToolsDock]() {
+		auto *guide = new WelcomeGuide(liveToolsDock, this);
+		guide->setAttribute(Qt::WA_DeleteOnClose);
+		guide->open();
+	});
+	if (qEnvironmentVariableIsEmpty("WORSHIPSTUDIO_SELFTEST"))
+		QTimer::singleShot(1500, this, [this, liveToolsDock]() { WelcomeGuide::showOnFirstRun(liveToolsDock, this); });
 
 	bool pre23Defaults = config_get_bool(App()->GetUserConfig(), "General", "Pre23Defaults");
 	if (pre23Defaults) {

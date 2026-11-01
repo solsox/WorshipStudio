@@ -4,6 +4,8 @@
 
 #include <QString>
 
+#include <string>
+
 /* Helpers shared by the WorshipStudio docks to project content through
  * regular OBS scenes and sources, so everything stays editable by the user
  * (filters, transforms, transitions, multiview, streaming, recording). */
@@ -21,6 +23,15 @@ OBSSource EnsureSource(obs_scene_t *scene, const char *sourceName, const char *s
 /* Fits the scene item into a box (relative to the canvas) using bounds. */
 void FitItem(obs_scene_t *scene, obs_source_t *source, float x, float y, float width, float height,
 	     uint32_t alignment = OBS_ALIGN_CENTER, obs_bounds_type boundsType = OBS_BOUNDS_SCALE_INNER);
+
+/* Every WorshipStudio scene has two copies ("WS Cantos" and "WS Cantos B").
+ * New content goes to the copy that is not on air, so in Studio Mode it
+ * waits in the preview until the transition instead of jumping to the
+ * screen. Returns the suffix to use: "" or " B". */
+QString OutputSlot(const char *baseSceneName);
+
+/* Name of a scene or source for a slot: Named("WS Cantos", " B"). */
+std::string Named(const char *baseName, const QString &slot);
 
 /* Shows the scene: in Studio Mode it goes to preview, otherwise to program. */
 void ShowScene(obs_scene_t *scene);

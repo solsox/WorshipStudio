@@ -71,10 +71,46 @@ void FitItem(obs_scene_t *scene, obs_source_t *source, float x, float y, float w
 	obs_sceneitem_defer_update_end(item);
 }
 
+QString OutputSlot(const char *baseSceneName)
+{
+	const QString base = QString::fromUtf8(baseSceneName);
+	const QString second = base + QStringLiteral(" B");
+
+	OBSSourceAutoRelease program = obs_frontend_get_current_scene();
+	const QString onAir = program ? QT_UTF8(obs_source_get_name(program)) : QString();
+
+	if (!obs_frontend_preview_program_mode_active())
+		return onAir == second ? QStringLiteral(" B") : QString();
+
+	if (onAir == base)
+		return QStringLiteral(" B");
+	if (onAir == second)
+		return QString();
+
+	/* Neither copy is on air: keep using the one already in the preview. */
+	OBSSourceAutoRelease preview = obs_frontend_get_current_preview_scene();
+	const QString waiting = preview ? QT_UTF8(obs_source_get_name(preview)) : QString();
+	return waiting == second ? QStringLiteral(" B") : QString();
+}
+
+std::string Named(const char *baseName, const QString &slot)
+{
+	return std::string(baseName) + slot.toStdString();
+}
+
 void ShowScene(obs_scene_t *scene)
 {
 	obs_source_t *source = obs_scene_get_source(scene);
-	if (obs_frontend_preview_program_mode_active())
+	const bool studio = obs_frontend_preview_program_mode_active();
+
+	/* Already there: a transition to the same scene would restart its
+	 * media sources (hymn audio) for nothing. */
+	OBSSourceAutoRelease current = studio ? obs_frontend_get_current_preview_scene()
+					      : obs_frontend_get_current_scene();
+	if (current == source)
+		return;
+
+	if (studio)
 		obs_frontend_set_current_preview_scene(source);
 	else
 		obs_frontend_set_current_scene(source);

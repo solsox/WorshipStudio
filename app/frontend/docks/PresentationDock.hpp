@@ -9,6 +9,8 @@
 #include <QStringList>
 #include <QVector>
 
+#include <string>
+
 class QCheckBox;
 class QComboBox;
 class QLabel;
@@ -28,7 +30,6 @@ class PresentationDock : public OBSDock {
 
 public:
 	PresentationDock(const QString &objectName, const QString &title, QWidget *parent = nullptr);
-	~PresentationDock() override;
 
 	/* Used by the self test. */
 	void openFiles(const QStringList &paths);
@@ -80,10 +81,6 @@ private:
 	QListWidget *slidesList = nullptr;
 	QComboBox *fitCombo = nullptr;
 	QCheckBox *bookCheck = nullptr;
-	QPushButton *projectButton = nullptr;
-	QPushButton *previousButton = nullptr;
-	QPushButton *nextButton = nullptr;
-	QPushButton *hideButton = nullptr;
 	QLabel *liveLabel = nullptr;
 	QLabel *statusLabel = nullptr;
 	QTimer *thumbnailTimer = nullptr;
@@ -98,14 +95,8 @@ private:
 	QString lastError;
 
 	OBSScene scene;
+	QString outputSlot;
 	OBSSource slideSource;
-
-	obs_hotkey_id nextHotkey = OBS_INVALID_HOTKEY_ID;
-	obs_hotkey_id previousHotkey = OBS_INVALID_HOTKEY_ID;
-	obs_hotkey_id hideHotkey = OBS_INVALID_HOTKEY_ID;
-
-	void registerHotkeys();
-	void saveHotkeys();
 
 	void loadDeck(const QString &key);
 	void setDeck(const Deck &newDeck);
@@ -114,6 +105,7 @@ private:
 	QImage renderSlide(int index, const QSize &canvas) const;
 	QString renderedSlide(int index) const;
 	bool prepareOutput();
+	std::string slideItemName() const;
 	void showSlide(int slide);
 	void stopLive();
 	void selectSlideRow(int slide);

@@ -130,9 +130,6 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 	previewLabel->setAlignment(Qt::AlignCenter);
 	previewLabel->setToolTip(tr("Vista previa de como se vera en pantalla"));
 
-	projectButton = new QPushButton(tr("Proyectar"), root);
-	idian::Utils::addClass(projectButton, "button-primary");
-	projectButton->setDefault(true);
 
 	fontSizeSpin = new QSpinBox(root);
 	fontSizeSpin->setRange(24, 200);
@@ -170,17 +167,11 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 	styleRow->addWidget(backgroundCombo, 1);
 	styleRow->addWidget(layoutCombo);
 
-	auto *projectRow = new QHBoxLayout();
-	projectRow->addWidget(projectButton, 1);
-
-	previousButton = new QPushButton(tr("< Anterior"), root);
-	nextButton = new QPushButton(tr("Siguiente >"), root);
-	clearButton = new QPushButton(tr("Limpiar"), root);
-
-	auto *liveRow = new QHBoxLayout();
-	liveRow->addWidget(previousButton);
-	liveRow->addWidget(nextButton);
-	liveRow->addWidget(clearButton);
+	auto *hint = new QLabel(tr("Doble clic o Enter en un versiculo para mostrarlo. Selecciona varios con "
+				   "Mayus para mostrarlos juntos."),
+				root);
+	hint->setWordWrap(true);
+	idian::Utils::addClass(hint, "text-muted");
 
 	statusLabel = new QLabel(root);
 	idian::Utils::addClass(statusLabel, "text-muted");
@@ -192,8 +183,7 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 	layout->addWidget(previewLabel, 2);
 	layout->addLayout(fontRow);
 	layout->addLayout(styleRow);
-	layout->addLayout(projectRow);
-	layout->addLayout(liveRow);
+	layout->addWidget(hint);
 	layout->addWidget(statusLabel);
 
 	setWidget(root);
@@ -203,10 +193,6 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 	connect(resultsList, &QListWidget::itemSelectionChanged, this, &BibleDock::onSelectionChanged);
 	connect(resultsList, &QListWidget::itemActivated, this, &BibleDock::onProjectClicked);
 	WorshipLive::instance().registerTarget(QStringLiteral("Biblia"), this);
-	connect(projectButton, &QPushButton::clicked, this, &BibleDock::onProjectClicked);
-	connect(previousButton, &QPushButton::clicked, this, &BibleDock::onPreviousClicked);
-	connect(nextButton, &QPushButton::clicked, this, &BibleDock::onNextClicked);
-	connect(clearButton, &QPushButton::clicked, this, &BibleDock::onClearClicked);
 	connect(importButton, &QPushButton::clicked, this, &BibleDock::onImportVersionClicked);
 	connect(versionCombo, &QComboBox::currentIndexChanged, this, &BibleDock::onVersionChanged);
 	connect(backgroundCombo, &QComboBox::activated, this, &BibleDock::onBackgroundActivated);
@@ -689,10 +675,6 @@ QString BibleDock::referenceLabel(const QVector<BibleVerseRef> &verses) const
 void BibleDock::onSelectionChanged()
 {
 	const QVector<BibleVerseRef> verses = selectedVerses();
-	projectButton->setEnabled(!verses.isEmpty());
-	previousButton->setEnabled(resultsList->count() > 0);
-	nextButton->setEnabled(resultsList->count() > 0);
-	clearButton->setEnabled(live);
 
 	updatePreview(verses);
 	if (verses.isEmpty())
@@ -703,9 +685,14 @@ void BibleDock::onSelectionChanged()
 		project(verses);
 }
 
-bool BibleDock::prepareOutput()
+bool BibleDock::prepareOutput(bool fresh)
 {
-	scene = WorshipOutput::EnsureScene(SceneName);
+	/* A new passage goes to the copy of the scene that is not on air;
+	 * moving through the verses keeps updating the same copy. */
+	if (fresh || !scene) {
+		outputSlot = WorshipOutput::OutputSlot(SceneName);
+		scene = WorshipOutput::EnsureScene(WorshipOutput::Named(SceneName, outputSlot).c_str());
+	}
 	if (!scene)
 		return false;
 
@@ -717,21 +704,22 @@ bool BibleDock::prepareOutput()
 
 	bool created = false;
 	OBSDataAutoRelease settings = obs_data_create();
-	screenSource = WorshipOutput::EnsureSource(scene, ScreenSourceName, "image_source", settings, &created);
+	screenSource = WorshipOutput::EnsureSource(scene, WorshipOutput::Named(ScreenSourceName, outputSlot).c_str(), "image_source", settings, &created);
 	if (created && screenSource)
 		WorshipOutput::FitItem(scene, screenSource, 0.0f, 0.0f, 1.0f, 1.0f);
 
 	/* Optional looping video under the verse (full screen layout only). */
 	const WorshipRender::Background bg = currentBackground();
 	const bool useVideo = bg.kind == WorshipRender::BackgroundKind::Video && layoutCombo->currentIndex() == 0;
-	obs_sceneitem_t *videoItem = obs_scene_find_source(scene, VideoSourceName);
+	const std::string videoName = WorshipOutput::Named(VideoSourceName, outputSlot);
+	obs_sceneitem_t *videoItem = obs_scene_find_source(scene, videoName.c_str());
 	if (useVideo) {
 		OBSDataAutoRelease videoSettings = obs_data_create();
 		obs_data_set_bool(videoSettings, "is_local_file", true);
 		obs_data_set_bool(videoSettings, "looping", true);
 		obs_data_set_bool(videoSettings, "restart_on_activate", false);
 		obs_data_set_string(videoSettings, "local_file", QT_TO_UTF8(bg.path));
-		OBSSource video = WorshipOutput::EnsureSource(scene, VideoSourceName, "ffmpeg_source", videoSettings, &created);
+		OBSSource video = WorshipOutput::EnsureSource(scene, videoName.c_str(), "ffmpeg_source", videoSettings, &created);
 		if (video) {
 			if (created) {
 				obs_source_set_muted(video, true);
@@ -740,7 +728,7 @@ bool BibleDock::prepareOutput()
 			} else {
 				obs_source_update(video, videoSettings);
 			}
-			videoItem = obs_scene_find_source(scene, VideoSourceName);
+			videoItem = obs_scene_find_source(scene, videoName.c_str());
 			obs_sceneitem_set_order(videoItem, OBS_ORDER_MOVE_BOTTOM);
 		}
 	}
@@ -750,13 +738,13 @@ bool BibleDock::prepareOutput()
 	return screenSource;
 }
 
-bool BibleDock::project(const QVector<BibleVerseRef> &verses)
+bool BibleDock::project(const QVector<BibleVerseRef> &verses, bool fresh)
 {
 	if (verses.isEmpty())
 		return false;
 
-	const bool wasLive = live;
-	if (!prepareOutput()) {
+	const bool newOutput = fresh || !live;
+	if (!prepareOutput(newOutput)) {
 		statusLabel->setText(tr("No se pudieron crear las fuentes de proyeccion."));
 		return false;
 	}
@@ -786,8 +774,7 @@ bool BibleDock::project(const QVector<BibleVerseRef> &verses)
 					    .arg(slide.reference));
 
 	live = true;
-	clearButton->setEnabled(true);
-	if (!wasLive)
+	if (newOutput)
 		WorshipOutput::ShowScene(scene);
 
 	LiveState state;
@@ -818,12 +805,12 @@ void BibleDock::toggleHidden()
 	if (live)
 		onClearClicked();
 	else
-		project(selectedVerses());
+		project(selectedVerses(), true);
 }
 
 void BibleDock::onProjectClicked()
 {
-	project(selectedVerses());
+	project(selectedVerses(), true);
 }
 
 void BibleDock::moveSelection(int delta)
@@ -852,22 +839,11 @@ void BibleDock::moveSelection(int delta)
 	onSelectionChanged();
 }
 
-void BibleDock::onPreviousClicked()
-{
-	moveSelection(-1);
-}
-
-void BibleDock::onNextClicked()
-{
-	moveSelection(1);
-}
-
 void BibleDock::onClearClicked()
 {
 	live = false;
 	if (screenSource)
 		obs_source_set_enabled(screenSource, false);
-	clearButton->setEnabled(false);
 	statusLabel->setText(tr("Pantalla limpia"));
 	LiveState state = WorshipLive::instance().state();
 	if (state.source == QStringLiteral("Biblia")) {
@@ -911,5 +887,5 @@ bool BibleDock::projectQuery(const QString &query, int layout)
 {
 	layoutCombo->setCurrentIndex(layout);
 	searchEdit->setText(query);
-	return project(selectedVerses());
+	return project(selectedVerses(), true);
 }

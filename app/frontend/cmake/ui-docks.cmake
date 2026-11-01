@@ -21,6 +21,8 @@ target_sources(
     docks/ServiceDock.cpp
     docks/ServiceDock.hpp
     docks/SongsDock.hpp
+    docks/WelcomeGuide.cpp
+    docks/WelcomeGuide.hpp
     docks/WorshipOutput.cpp
     docks/WorshipDocument.cpp
     docks/WorshipDocument.hpp

@@ -20,7 +20,6 @@ class SongsDock : public OBSDock {
 
 public:
 	SongsDock(const QString &objectName, const QString &title, QWidget *parent = nullptr);
-	~SongsDock() override;
 
 	/* Used by the self test: saves a song, selects and projects it. */
 	bool projectNewSong(const QString &title, const QString &text, int preset);
@@ -58,11 +57,7 @@ private:
 	QLineEdit *searchEdit = nullptr;
 	QListWidget *songsList = nullptr;
 	QListWidget *slidesList = nullptr;
-	QPushButton *projectButton = nullptr;
-	QPushButton *previousButton = nullptr;
-	QPushButton *nextButton = nullptr;
 	QPushButton *clearButton = nullptr;
-	QPushButton *hideButton = nullptr;
 	QLabel *liveLabel = nullptr;
 	QLabel *statusLabel = nullptr;
 
@@ -74,11 +69,9 @@ private:
 	bool textCleared = false;
 
 	OBSScene scene;
+	QString outputSlot;
+	bool freshOutput = false;
 	OBSSource screenSource;
-
-	obs_hotkey_id nextHotkey = OBS_INVALID_HOTKEY_ID;
-	obs_hotkey_id previousHotkey = OBS_INVALID_HOTKEY_ID;
-	obs_hotkey_id hideHotkey = OBS_INVALID_HOTKEY_ID;
 
 	void reload(const QString &selectId = QString());
 	void rebuildList();
@@ -92,7 +85,5 @@ private:
 	void updateControls();
 	void updateLiveLabel();
 	void publishLive();
-	void registerHotkeys();
-	void saveHotkeys();
 	void createExampleSong();
 };

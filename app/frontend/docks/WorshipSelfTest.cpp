@@ -9,6 +9,8 @@
 #include "SongLibrary.hpp"
 #include "WorshipLive.hpp"
 #include "WorshipRemote.hpp"
+#include "WelcomeGuide.hpp"
+#include <QStackedWidget>
 #include <obs-frontend-api.h>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -507,6 +509,91 @@ struct SelfTest {
 	}
 
 	/* Showcase images for the website, drawn by the real renderer. */
+	/* Studio Mode: new content waits in the preview; the screen only
+	 * changes with the transition. */
+	void addStudioSteps()
+	{
+		auto sceneName = [](bool preview) {
+			OBSSourceAutoRelease source = preview ? obs_frontend_get_current_preview_scene()
+							      : obs_frontend_get_current_scene();
+			return source ? QT_UTF8(obs_source_get_name(source)) : QString();
+		};
+		add(300, [=]() {
+			log(QStringLiteral("--- Modo estudio ---"));
+			obs_frontend_set_preview_program_mode(true);
+		});
+		add(800, [=]() {
+			songs->projectNewSong(QStringLiteral("Prueba estudio A"), QStringLiteral("Canto A\nprimera"), 11);
+		});
+		add(800, [=]() {
+			check(sceneName(true).startsWith(QStringLiteral("WS Cantos")),
+			      QStringLiteral("canto A en espera (%1)").arg(sceneName(true)));
+			liveTools->goLive();
+		});
+		add(1500, [=]() {
+			const QString onAir = sceneName(false);
+			check(onAir.startsWith(QStringLiteral("WS Cantos")), QStringLiteral("canto A en pantalla (%1)").arg(onAir));
+			songs->projectNewSong(QStringLiteral("Prueba estudio B"), QStringLiteral("Canto B\nsegunda"), 13);
+		});
+		add(800, [=]() {
+			const QString onAir = sceneName(false), waiting = sceneName(true);
+			check(onAir != waiting && waiting.startsWith(QStringLiteral("WS Cantos")),
+			      QStringLiteral("canto B en espera sin tocar la pantalla (pantalla %1, espera %2)").arg(onAir, waiting));
+			OBSSourceAutoRelease program = obs_frontend_get_current_scene();
+			capture(obs_scene_from_source(program), QStringLiteral("estudio-pantalla-sigue-A"));
+			OBSSourceAutoRelease preview = obs_frontend_get_current_preview_scene();
+			capture(obs_scene_from_source(preview), QStringLiteral("estudio-espera-B"));
+			liveTools->goLive();
+		});
+		add(1500, [=]() {
+			check(sceneName(false).startsWith(QStringLiteral("WS Cantos")), QStringLiteral("canto B paso a pantalla"));
+			songs->deleteSong(QStringLiteral("Prueba estudio A"));
+			songs->deleteSong(QStringLiteral("Prueba estudio B"));
+			hymnal->useEdition(0, QString());
+			check(hymnal->projectHymn(1, 0), QStringLiteral("himno 1 en espera"));
+		});
+		add(2000, [=]() {
+			check(mediaState() != QStringLiteral("reproduciendo"),
+			      QStringLiteral("himno en espera no suena (%1)").arg(mediaState()));
+			liveTools->goLive();
+		});
+		add(2500, [=]() {
+			check(mediaState() == QStringLiteral("reproduciendo"),
+			      QStringLiteral("al pasar a pantalla el himno suena (%1)").arg(mediaState()));
+			hymnal->stop();
+			obs_frontend_set_preview_program_mode(false);
+		});
+	}
+
+	void addGuideSteps()
+	{
+		auto guide = std::make_shared<QPointer<WelcomeGuide>>();
+		add(300, [=]() {
+			*guide = new WelcomeGuide(liveTools, hymnal->window());
+			(*guide)->resize(760, 660);
+			(*guide)->show();
+		});
+		for (int page = 0; page < 5; ++page) {
+			add(500, [=]() {
+				if (!*guide)
+					return;
+				auto *pages = (*guide)->findChild<QStackedWidget *>();
+				if (pages)
+					pages->setCurrentIndex(page);
+			});
+			add(400, [=]() {
+				if (!*guide)
+					return;
+				const QString path = outDir.absoluteFilePath(QStringLiteral("guia-paso%1.png").arg(page + 1));
+				check((*guide)->grab().save(path), QStringLiteral("guia paso %1").arg(page + 1));
+			});
+		}
+		add(200, [=]() {
+			if (*guide)
+				(*guide)->reject();
+		});
+	}
+
 	void addGallerySteps()
 	{
 		struct Shot {
@@ -603,23 +690,18 @@ struct SelfTest {
 							     presentations.data()};
 		const QStringList names = {QStringLiteral("himnario"), QStringLiteral("cantos"), QStringLiteral("biblia"),
 					   QStringLiteral("presentaciones")};
-		/* A wide single preview reads better in screenshots; restored after. */
 		auto studioWas = std::make_shared<bool>(false);
+		/* Show the real flow: a passage on screen, a song waiting. */
 		add(300, [=]() {
 			*studioWas = obs_frontend_preview_program_mode_active();
-			obs_frontend_set_preview_program_mode(false);
-			if (auto *window = qobject_cast<QMainWindow *>(hymnal->window())) {
-				QList<QDockWidget *> docksToSize;
-				QList<int> widths;
-				for (QDockWidget *dock : window->findChildren<QDockWidget *>()) {
-					if (dock->isVisible() && !dock->isFloating() &&
-					    window->dockWidgetArea(dock) != Qt::NoDockWidgetArea) {
-						docksToSize << dock;
-						widths << window->width() * 19 / 100;
-					}
-				}
-				window->resizeDocks(docksToSize, widths, Qt::Horizontal);
-			}
+			obs_frontend_set_preview_program_mode(true);
+		});
+		add(800, [=]() { bible->projectQuery(QStringLiteral("Salmos 46:10"), 0); });
+		add(800, [=]() { liveTools->goLive(); });
+		add(1500, [=]() {
+			songs->projectNewSong(QStringLiteral("Cantad al Señor"),
+					      QString::fromUtf8("Cantad al Señor un cántico nuevo\ncantad al Señor toda la tierra"),
+					      11);
 		});
 		for (int i = 0; i < docks.size(); ++i) {
 			add(400, [=]() {
@@ -634,7 +716,10 @@ struct SelfTest {
 				check(window && window->grab().save(path), QStringLiteral("captura de la interfaz %1").arg(path));
 			});
 		}
-		add(200, [=]() { obs_frontend_set_preview_program_mode(*studioWas); });
+		add(200, [=]() {
+			songs->deleteSong(QStringLiteral("Cantad al Señor"));
+			obs_frontend_set_preview_program_mode(*studioWas);
+		});
 	}
 
 	void runNext(int index)
@@ -687,11 +772,6 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Songs
 	test->presentations = presentations;
 	QDir().mkpath(outputDir);
 	test->outDir = QDir(outputDir);
-	test->finished = [test, finished]() {
-		if (finished)
-			finished();
-		delete test;
-	};
 
 	test->log(QStringLiteral("=== WorshipStudio autoprueba, lienzo %1x%2 ===")
 			  .arg(WorshipOutput::CanvasWidth())
@@ -709,8 +789,22 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Songs
 		for (int i = 0; i < presentationFiles.size(); ++i)
 			test->addPresentationSteps(presentationFiles.at(i), i + 1);
 	}
+	/* The checks expect content to go straight to the screen. */
+	const bool studioWas = obs_frontend_preview_program_mode_active();
+	obs_frontend_set_preview_program_mode(false);
+	test->finished = [test, finished, studioWas]() {
+		obs_frontend_set_preview_program_mode(studioWas);
+		if (finished)
+			finished();
+		delete test;
+	};
+
 	if (wanted("galeria"))
 		test->addGallerySteps();
+	if (wanted("estudio"))
+		test->addStudioSteps();
+	if (wanted("guia"))
+		test->addGuideSteps();
 	if (wanted("envivo"))
 		test->addLiveSteps();
 	if (wanted("importar"))
@@ -726,6 +820,8 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Songs
 		return;
 	}
 
+	/* Hymn checks use the new hymnal (2009). */
+	test->add(100, [test]() { test->hymnal->useEdition(0, QString()); });
 	test->addHymnSteps(1, 0);
 	test->addHymnSteps(1, 1);
 	test->addHymnSteps(1, 2);

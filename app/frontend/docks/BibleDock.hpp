@@ -9,6 +9,8 @@
 #include <QStringList>
 #include <QVector>
 
+#include <string>
+
 class QComboBox;
 class QLabel;
 class QLineEdit;
@@ -58,8 +60,6 @@ private slots:
 	void onSearchChanged(const QString &text);
 	void onSelectionChanged();
 	void onProjectClicked();
-	void onPreviousClicked();
-	void onNextClicked();
 	void onClearClicked();
 	void onVersionChanged(int index);
 	void onImportVersionClicked();
@@ -76,10 +76,6 @@ private:
 	QListWidget *resultsList = nullptr;
 	QLabel *previewLabel = nullptr;
 	QLabel *statusLabel = nullptr;
-	QPushButton *projectButton = nullptr;
-	QPushButton *previousButton = nullptr;
-	QPushButton *nextButton = nullptr;
-	QPushButton *clearButton = nullptr;
 	QSpinBox *fontSizeSpin = nullptr;
 	QComboBox *layoutCombo = nullptr;
 	QComboBox *versionCombo = nullptr;
@@ -87,6 +83,7 @@ private:
 	QComboBox *backgroundCombo = nullptr;
 
 	OBSScene scene;
+	QString outputSlot;
 	OBSSource screenSource;
 	int renderCounter = 0;
 	QString lastRenderPath;
@@ -107,7 +104,8 @@ private:
 	QVector<BibleVerseRef> selectedVerses() const;
 	QString verseText(const BibleVerseRef &ref) const;
 	QString referenceLabel(const QVector<BibleVerseRef> &verses) const;
-	bool prepareOutput();
-	bool project(const QVector<BibleVerseRef> &verses);
+	bool prepareOutput(bool fresh);
+	/* `fresh`: a new passage (goes to the preview in Studio Mode). */
+	bool project(const QVector<BibleVerseRef> &verses, bool fresh = false);
 	void moveSelection(int delta);
 };

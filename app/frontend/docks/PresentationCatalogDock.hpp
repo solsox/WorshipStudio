@@ -4,8 +4,11 @@
 #include "PresentationCatalogData.hpp"
 
 #include <obs.hpp>
+#include <obs-frontend-api.h>
 
 #include <QVector>
+
+#include <string>
 
 class QComboBox;
 class QLabel;
@@ -63,10 +66,7 @@ private:
 	QComboBox *audioModeCombo = nullptr;
 	QComboBox *fitCombo = nullptr;
 	QComboBox *editionCombo = nullptr;
-	QPushButton *projectButton = nullptr;
 	QListWidget *slidesList = nullptr;
-	QPushButton *previousButton = nullptr;
-	QPushButton *nextButton = nullptr;
 	QPushButton *stopButton = nullptr;
 	QLabel *statusLabel = nullptr;
 	QLabel *liveLabel = nullptr;
@@ -78,6 +78,7 @@ private:
 	bool liveWithAudio = false;
 
 	OBSScene scene;
+	QString outputSlot;
 	OBSSource slideSource;
 	OBSSource audioSource;
 
@@ -86,6 +87,9 @@ private:
 	void rebuildResults(const QString &filter);
 	void loadSlideThumbnails(int entryIndex);
 	bool prepareOutput();
+	void stopAudioOffAir();
+	static void onFrontendEvent(enum obs_frontend_event event, void *data);
+	std::string slideItemName() const;
 	void showSlide(int slide, bool seekAudio);
 	void selectSlideRow(int slide);
 	QString renderedSlide(int entryIndex, int slide) const;

@@ -53,6 +53,16 @@ constexpr const char *OverlaySceneName = "WS Superposiciones";
 constexpr const char *NameSourceName = "WS Rotulo de nombre";
 constexpr const char *MessageSourceName = "WS Mensaje urgente";
 constexpr const char *ConfigRemote = "RemoteEnabled";
+constexpr const char *ConfigHotkeys = "LiveHotkeys";
+
+/* Hotkeys run on another thread; the work is queued to the UI thread. */
+void hotkeyCall(void *data, obs_hotkey_id id, obs_hotkey_t *, bool pressed)
+{
+	if (!pressed)
+		return;
+	auto *dock = static_cast<LiveToolsDock *>(data);
+	QMetaObject::invokeMethod(dock, [dock, id]() { dock->runHotkey(id); }, Qt::QueuedConnection);
+}
 
 QLabel *heading(const QString &text, QWidget *parent)
 {
@@ -107,26 +117,42 @@ LiveToolsDock::LiveToolsDock(const QString &objectName, const QString &title, QW
 	layout->setSpacing(6);
 
 	/* --- On air ------------------------------------------------------- */
-	layout->addWidget(heading(tr("En pantalla"), root));
-	nowTitle = new QLabel(tr("Nada en pantalla"), root);
-	nowTitle->setWordWrap(true);
+	/* --- The one place to drive what the congregation sees ------------ */
+	layout->addWidget(heading(tr("Control en vivo"), root));
+	programLabel = new QLabel(root);
+	programLabel->setWordWrap(true);
+	programLabel->setTextFormat(Qt::RichText);
+	previewLabel = new QLabel(root);
+	previewLabel->setWordWrap(true);
+	previewLabel->setTextFormat(Qt::RichText);
 	nowText = new QLabel(root);
 	nowText->setWordWrap(true);
 	nextText = new QLabel(root);
 	nextText->setWordWrap(true);
 	idian::Utils::addClass(nextText, "text-muted");
-	auto *previousButton = new QPushButton(tr("< Anterior"), root);
-	auto *nextButton = new QPushButton(tr("Siguiente >"), root);
-	idian::Utils::addClass(nextButton, "button-primary");
+
+	goLiveButton = new QPushButton(tr("Pasar a pantalla  ➜"), root);
+	idian::Utils::addClass(goLiveButton, "button-primary");
+	goLiveButton->setMinimumHeight(44);
+	goLiveButton->setToolTip(tr("Lo que esta EN ESPERA pasa a la pantalla de la congregacion"));
+	auto *previousButton = new QPushButton(tr("◀  Anterior"), root);
+	auto *nextButton = new QPushButton(tr("Siguiente  ▶"), root);
 	hideButton = new QPushButton(tr("Ocultar"), root);
+	hideButton->setToolTip(tr("Deja la pantalla sin contenido sin perder el lugar"));
 	auto *nowRow = new QHBoxLayout();
 	nowRow->addWidget(previousButton);
 	nowRow->addWidget(nextButton, 1);
 	nowRow->addWidget(hideButton);
-	layout->addWidget(nowTitle);
+	projectorButton = new QPushButton(tr("Pantalla del proyector..."), root);
+	projectorButton->setToolTip(tr("Muestra la salida a pantalla completa en el proyector o TV"));
+
+	layout->addWidget(programLabel);
+	layout->addWidget(previewLabel);
 	layout->addWidget(nowText);
 	layout->addWidget(nextText);
+	layout->addWidget(goLiveButton);
 	layout->addLayout(nowRow);
+	layout->addWidget(projectorButton);
 
 	/* --- Countdown ---------------------------------------------------- */
 	layout->addWidget(heading(tr("Cuenta regresiva"), root));
@@ -237,6 +263,8 @@ LiveToolsDock::LiveToolsDock(const QString &objectName, const QString &title, QW
 	connect(previousButton, &QPushButton::clicked, &live, &WorshipLive::previous);
 	connect(nextButton, &QPushButton::clicked, &live, &WorshipLive::next);
 	connect(hideButton, &QPushButton::clicked, &live, &WorshipLive::toggleHidden);
+	connect(goLiveButton, &QPushButton::clicked, this, &LiveToolsDock::goLive);
+	connect(projectorButton, &QPushButton::clicked, this, &LiveToolsDock::openProgramProjector);
 	connect(clockTimer, &QTimer::timeout, this, &LiveToolsDock::onTick);
 
 	connect(countdownMode, &QComboBox::currentIndexChanged, this, [this](int index) {
@@ -298,6 +326,7 @@ LiveToolsDock::LiveToolsDock(const QString &objectName, const QString &title, QW
 	});
 
 	obs_frontend_add_event_callback(&LiveToolsDock::onFrontendEvent, this);
+	registerHotkeys();
 
 	updateRemoteInfo();
 	if (WorshipOutput::ConfigString(ConfigRemote) == QStringLiteral("1"))
@@ -307,6 +336,11 @@ LiveToolsDock::LiveToolsDock(const QString &objectName, const QString &title, QW
 LiveToolsDock::~LiveToolsDock()
 {
 	obs_frontend_remove_event_callback(&LiveToolsDock::onFrontendEvent, this);
+	saveHotkeys();
+	for (obs_hotkey_id id : {nextHotkey, previousHotkey, hideHotkey, goLiveHotkey}) {
+		if (id != OBS_INVALID_HOTKEY_ID)
+			obs_hotkey_unregister(id);
+	}
 }
 
 /* ------------------------------------------------------------------------ */
@@ -314,22 +348,117 @@ LiveToolsDock::~LiveToolsDock()
 void LiveToolsDock::onLiveChanged()
 {
 	const LiveState state = WorshipLive::instance().state();
-	if (state.source.isEmpty()) {
-		nowTitle->setText(tr("Nada en pantalla"));
-		nowText->clear();
-		nextText->clear();
-	} else {
-		QString heading = QStringLiteral("<b>%1</b> · %2").arg(state.source.toHtmlEscaped(), state.title.toHtmlEscaped());
-		if (!state.section.isEmpty())
-			heading += QStringLiteral(" · ") + state.section.toHtmlEscaped();
-		if (state.hidden)
-			heading += tr(" · <i>oculto</i>");
-		nowTitle->setText(heading);
-		nowText->setText(state.current);
-		nextText->setText(state.next.isEmpty() ? QString() : tr("Siguiente: %1").arg(QString(state.next).replace(QLatin1Char('\n'), QStringLiteral(" / "))));
-	}
+	nowText->setText(state.current);
+	nextText->setText(state.next.isEmpty()
+				  ? QString()
+				  : tr("Sigue: %1").arg(QString(state.next).replace(QLatin1Char('\n'), QStringLiteral(" / "))));
 	hideButton->setText(state.hidden ? tr("Mostrar") : tr("Ocultar"));
+	refreshOnAir();
 	refreshStage();
+}
+
+/* "WS Cantos B" -> "Cantos", plus the title of what the dock is showing. */
+QString LiveToolsDock::describeScene(obs_source_t *sceneSource) const
+{
+	if (!sceneSource)
+		return tr("nada");
+	QString name = QT_UTF8(obs_source_get_name(sceneSource));
+	if (!name.startsWith(QStringLiteral("WS ")))
+		return tr("escena \"%1\"").arg(name);
+	name = name.mid(3);
+	if (name.endsWith(QStringLiteral(" B")))
+		name.chop(2);
+	const LiveState state = WorshipLive::instance().state();
+	if (!state.title.isEmpty() && state.source.startsWith(name.left(4)))
+		name += QStringLiteral(" · ") + state.title;
+	return name;
+}
+
+void LiveToolsDock::refreshOnAir()
+{
+	const bool studio = obs_frontend_preview_program_mode_active();
+	OBSSourceAutoRelease program = obs_frontend_get_current_scene();
+	programLabel->setText(QStringLiteral("<span style=\"color:#E5484D\">●</span> <b>%1</b> %2")
+				      .arg(tr("EN PANTALLA:"), describeScene(program).toHtmlEscaped()));
+	previewLabel->setVisible(studio);
+	goLiveButton->setVisible(studio);
+	if (studio) {
+		OBSSourceAutoRelease preview = obs_frontend_get_current_preview_scene();
+		previewLabel->setText(QStringLiteral("<span style=\"color:#30A46C\">●</span> <b>%1</b> %2")
+					      .arg(tr("EN ESPERA:"), describeScene(preview).toHtmlEscaped()));
+	}
+}
+
+void LiveToolsDock::registerHotkeys()
+{
+	/* One set for everything on screen: songs, Bible, hymns, presentations.
+	 * They also work with presentation clickers and while OBS is in the
+	 * background (Settings > Hotkeys). */
+	nextHotkey = obs_hotkey_register_frontend("WorshipStudio.Next", "WorshipStudio: siguiente", hotkeyCall, this);
+	previousHotkey =
+		obs_hotkey_register_frontend("WorshipStudio.Previous", "WorshipStudio: anterior", hotkeyCall, this);
+	hideHotkey =
+		obs_hotkey_register_frontend("WorshipStudio.Hide", "WorshipStudio: ocultar / mostrar", hotkeyCall, this);
+	goLiveHotkey = obs_hotkey_register_frontend("WorshipStudio.GoLive", "WorshipStudio: pasar a pantalla",
+						    hotkeyCall, this);
+
+	const QString json = WorshipOutput::ConfigString(ConfigHotkeys);
+	OBSDataAutoRelease data = json.isEmpty() ? nullptr : obs_data_create_from_json(QT_TO_UTF8(json));
+	if (!data)
+		return;
+	const std::pair<const char *, obs_hotkey_id> entries[] = {
+		{"next", nextHotkey}, {"previous", previousHotkey}, {"hide", hideHotkey}, {"golive", goLiveHotkey}};
+	for (const auto &[name, id] : entries) {
+		OBSDataArrayAutoRelease array = obs_data_get_array(data, name);
+		obs_hotkey_load(id, array);
+	}
+}
+
+void LiveToolsDock::saveHotkeys()
+{
+	OBSDataAutoRelease data = obs_data_create();
+	const std::pair<const char *, obs_hotkey_id> entries[] = {
+		{"next", nextHotkey}, {"previous", previousHotkey}, {"hide", hideHotkey}, {"golive", goLiveHotkey}};
+	for (const auto &[name, id] : entries) {
+		OBSDataArrayAutoRelease array = obs_hotkey_save(id);
+		obs_data_set_array(data, name, array);
+	}
+	WorshipOutput::SetConfigString(ConfigHotkeys, QT_UTF8(obs_data_get_json(data)));
+}
+
+void LiveToolsDock::runHotkey(obs_hotkey_id id)
+{
+	WorshipLive &live = WorshipLive::instance();
+	if (id == nextHotkey)
+		live.next();
+	else if (id == previousHotkey)
+		live.previous();
+	else if (id == hideHotkey)
+		live.toggleHidden();
+	else if (id == goLiveHotkey)
+		goLive();
+}
+
+void LiveToolsDock::goLive()
+{
+	if (obs_frontend_preview_program_mode_active())
+		obs_frontend_preview_program_trigger_transition();
+}
+
+void LiveToolsDock::openProgramProjector()
+{
+	/* The congregation sees the program: full screen on the chosen display. */
+	const char *type = obs_frontend_preview_program_mode_active() ? "StudioProgram" : "Preview";
+	QMenu menu(this);
+	const QList<QScreen *> screens = QGuiApplication::screens();
+	for (int i = 0; i < screens.size(); ++i) {
+		const QSize size = screens.at(i)->geometry().size();
+		menu.addAction(tr("Pantalla %1: %2 (%3x%4)").arg(i + 1).arg(screens.at(i)->name()).arg(size.width()).arg(size.height()),
+			       this, [i, type]() { obs_frontend_open_projector(type, i, "", nullptr); });
+	}
+	menu.addSeparator();
+	menu.addAction(tr("En una ventana"), this, [type]() { obs_frontend_open_projector(type, -1, "", nullptr); });
+	menu.exec(QCursor::pos());
 }
 
 void LiveToolsDock::onTick()
@@ -501,6 +630,9 @@ void LiveToolsDock::onFrontendEvent(enum obs_frontend_event event, void *data)
 	/* Overlays follow the operator to whatever scene goes on air. */
 	if (event == OBS_FRONTEND_EVENT_SCENE_CHANGED || event == OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED)
 		QMetaObject::invokeMethod(dock, [dock]() { dock->attachOverlays(); }, Qt::QueuedConnection);
+	if (event == OBS_FRONTEND_EVENT_SCENE_CHANGED || event == OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED ||
+	    event == OBS_FRONTEND_EVENT_STUDIO_MODE_ENABLED || event == OBS_FRONTEND_EVENT_STUDIO_MODE_DISABLED)
+		QMetaObject::invokeMethod(dock, [dock]() { dock->refreshOnAir(); }, Qt::QueuedConnection);
 }
 
 /* ------------------------------------------------------------------------ */

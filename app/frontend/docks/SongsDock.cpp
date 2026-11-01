@@ -51,27 +51,8 @@ namespace {
 constexpr const char *SceneName = "WS Cantos";
 constexpr const char *ScreenSourceName = "WS Cantos - Pantalla";
 constexpr const char *VideoSourceName = "WS Cantos - Video de fondo";
-constexpr const char *ConfigHotkeys = "SongsHotkeys";
 constexpr const char *ConfigExample = "SongsExampleCreated";
 const QSize ThumbnailSize(160, 90);
-
-void hotkeyNext(void *data, obs_hotkey_id, obs_hotkey_t *, bool pressed)
-{
-	if (pressed)
-		QMetaObject::invokeMethod(static_cast<SongsDock *>(data), "nextSlide", Qt::QueuedConnection);
-}
-
-void hotkeyPrevious(void *data, obs_hotkey_id, obs_hotkey_t *, bool pressed)
-{
-	if (pressed)
-		QMetaObject::invokeMethod(static_cast<SongsDock *>(data), "previousSlide", Qt::QueuedConnection);
-}
-
-void hotkeyHide(void *data, obs_hotkey_id, obs_hotkey_t *, bool pressed)
-{
-	if (pressed)
-		QMetaObject::invokeMethod(static_cast<SongsDock *>(data), "toggleHidden", Qt::QueuedConnection);
-}
 
 /* Section names start with these words; the key jumps to the next one. */
 QString sectionPrefix(QChar key)
@@ -138,23 +119,15 @@ SongsDock::SongsDock(const QString &objectName, const QString &title, QWidget *p
 	splitter->setStretchFactor(0, 2);
 	splitter->setStretchFactor(1, 3);
 
-	projectButton = new QPushButton(tr("Proyectar"), root);
-	idian::Utils::addClass(projectButton, "button-primary");
-	projectButton->setDefault(true);
-	previousButton = new QPushButton(tr("< Anterior"), root);
-	nextButton = new QPushButton(tr("Siguiente >"), root);
-	clearButton = new QPushButton(tr("Sin texto"), root);
+	clearButton = new QPushButton(tr("Solo fondo"), root);
 	clearButton->setCheckable(true);
-	clearButton->setToolTip(tr("Deja solo el fondo en pantalla (tecla L)"));
-	hideButton = new QPushButton(tr("Ocultar"), root);
-	hideButton->setCheckable(true);
-	hideButton->setToolTip(tr("Quita el canto de la pantalla sin perder el lugar (tecla B)"));
+	clearButton->setToolTip(tr("Deja solo el fondo en pantalla, sin la letra (tecla L)"));
 
-	auto *liveRow = new QHBoxLayout();
-	liveRow->addWidget(previousButton);
-	liveRow->addWidget(nextButton);
-	liveRow->addWidget(clearButton);
-	liveRow->addWidget(hideButton);
+	auto *hint = new QLabel(tr("Doble clic en un canto o en una diapositiva para mostrarlo. "
+				   "Teclas: C coro, P puente, 1-9 estrofa."),
+				root);
+	hint->setWordWrap(true);
+	idian::Utils::addClass(hint, "text-muted");
 
 	liveLabel = new QLabel(root);
 	idian::Utils::addClass(liveLabel, "text-bold");
@@ -166,8 +139,8 @@ SongsDock::SongsDock(const QString &objectName, const QString &title, QWidget *p
 	layout->addWidget(searchEdit);
 	layout->addLayout(libraryRow);
 	layout->addWidget(splitter, 1);
-	layout->addWidget(projectButton);
-	layout->addLayout(liveRow);
+	layout->addWidget(hint);
+	layout->addWidget(clearButton);
 	layout->addWidget(liveLabel);
 	layout->addWidget(statusLabel);
 	setWidget(root);
@@ -182,59 +155,13 @@ SongsDock::SongsDock(const QString &objectName, const QString &title, QWidget *p
 	connect(editButton, &QPushButton::clicked, this, &SongsDock::onEditClicked);
 	connect(deleteButton, &QPushButton::clicked, this, &SongsDock::onDeleteClicked);
 	connect(importButton, &QPushButton::clicked, this, &SongsDock::onImportClicked);
-	connect(projectButton, &QPushButton::clicked, this, &SongsDock::project);
-	connect(previousButton, &QPushButton::clicked, this, &SongsDock::previousSlide);
-	connect(nextButton, &QPushButton::clicked, this, &SongsDock::nextSlide);
 	connect(clearButton, &QPushButton::clicked, this, &SongsDock::toggleClearText);
-	connect(hideButton, &QPushButton::clicked, this, &SongsDock::toggleHidden);
 
 	WorshipLive::instance().registerTarget(QStringLiteral("Cantos"), this);
-	registerHotkeys();
 	createExampleSong();
 	reload();
 }
 
-SongsDock::~SongsDock()
-{
-	saveHotkeys();
-	for (obs_hotkey_id id : {nextHotkey, previousHotkey, hideHotkey}) {
-		if (id != OBS_INVALID_HOTKEY_ID)
-			obs_hotkey_unregister(id);
-	}
-}
-
-void SongsDock::registerHotkeys()
-{
-	nextHotkey = obs_hotkey_register_frontend("WorshipStudio.Songs.Next", "Cantos: diapositiva siguiente",
-						  hotkeyNext, this);
-	previousHotkey = obs_hotkey_register_frontend("WorshipStudio.Songs.Previous", "Cantos: diapositiva anterior",
-						      hotkeyPrevious, this);
-	hideHotkey = obs_hotkey_register_frontend("WorshipStudio.Songs.Hide", "Cantos: ocultar / mostrar", hotkeyHide,
-						  this);
-
-	const QString json = WorshipOutput::ConfigString(ConfigHotkeys);
-	OBSDataAutoRelease data = json.isEmpty() ? nullptr : obs_data_create_from_json(QT_TO_UTF8(json));
-	if (!data)
-		return;
-	const std::pair<const char *, obs_hotkey_id> entries[] = {
-		{"next", nextHotkey}, {"previous", previousHotkey}, {"hide", hideHotkey}};
-	for (const auto &[name, id] : entries) {
-		OBSDataArrayAutoRelease array = obs_data_get_array(data, name);
-		obs_hotkey_load(id, array);
-	}
-}
-
-void SongsDock::saveHotkeys()
-{
-	OBSDataAutoRelease data = obs_data_create();
-	const std::pair<const char *, obs_hotkey_id> entries[] = {
-		{"next", nextHotkey}, {"previous", previousHotkey}, {"hide", hideHotkey}};
-	for (const auto &[name, id] : entries) {
-		OBSDataArrayAutoRelease array = obs_hotkey_save(id);
-		obs_data_set_array(data, name, array);
-	}
-	WorshipOutput::SetConfigString(ConfigHotkeys, QT_UTF8(obs_data_get_json(data)));
-}
 
 void SongsDock::createExampleSong()
 {
@@ -445,8 +372,8 @@ bool SongsDock::projectTransient(const Song &song)
 	live = true;
 	hidden = false;
 	textCleared = false;
-	hideButton->setChecked(false);
 	clearButton->setChecked(false);
+	freshOutput = true;
 	showSlide(0, true);
 	setItemVisible(true);
 	WorshipOutput::ShowScene(scene);
@@ -458,13 +385,20 @@ bool SongsDock::projectTransient(const Song &song)
 
 bool SongsDock::prepareOutput(const WorshipRender::Background &background)
 {
-	scene = WorshipOutput::EnsureScene(SceneName);
+	/* New songs go to the copy of the scene that is not on air. */
+	if (freshOutput || !scene) {
+		outputSlot = WorshipOutput::OutputSlot(SceneName);
+		scene = WorshipOutput::EnsureScene(WorshipOutput::Named(SceneName, outputSlot).c_str());
+		freshOutput = false;
+	}
 	if (!scene)
 		return false;
+	const std::string videoName = WorshipOutput::Named(VideoSourceName, outputSlot);
+	const std::string screenName = WorshipOutput::Named(ScreenSourceName, outputSlot);
 
 	const bool useVideo = background.kind == WorshipRender::BackgroundKind::Video &&
 			      liveSong.layout == WorshipRender::LyricsLayout::FullScreen;
-	obs_sceneitem_t *videoItem = obs_scene_find_source(scene, VideoSourceName);
+	obs_sceneitem_t *videoItem = obs_scene_find_source(scene, videoName.c_str());
 	if (useVideo) {
 		OBSDataAutoRelease settings = obs_data_create();
 		obs_data_set_bool(settings, "is_local_file", true);
@@ -472,13 +406,13 @@ bool SongsDock::prepareOutput(const WorshipRender::Background &background)
 		obs_data_set_bool(settings, "looping", true);
 		obs_data_set_bool(settings, "restart_on_activate", false);
 		bool created = false;
-		OBSSource video = WorshipOutput::EnsureSource(scene, VideoSourceName, "ffmpeg_source", settings, &created);
+		OBSSource video = WorshipOutput::EnsureSource(scene, videoName.c_str(), "ffmpeg_source", settings, &created);
 		if (video) {
 			if (!created)
 				obs_source_update(video, settings);
 			WorshipOutput::FitItem(scene, video, 0.0f, 0.0f, 1.0f, 1.0f, OBS_ALIGN_CENTER,
 					       OBS_BOUNDS_SCALE_OUTER);
-			videoItem = obs_scene_find_source(scene, VideoSourceName);
+			videoItem = obs_scene_find_source(scene, videoName.c_str());
 			/* The video always stays under the lyrics. */
 			obs_sceneitem_set_order(videoItem, OBS_ORDER_MOVE_BOTTOM);
 		}
@@ -488,7 +422,7 @@ bool SongsDock::prepareOutput(const WorshipRender::Background &background)
 
 	bool created = false;
 	OBSDataAutoRelease settings = obs_data_create();
-	screenSource = WorshipOutput::EnsureSource(scene, ScreenSourceName, "image_source", settings, &created);
+	screenSource = WorshipOutput::EnsureSource(scene, screenName.c_str(), "image_source", settings, &created);
 	if (created && screenSource)
 		WorshipOutput::FitItem(scene, screenSource, 0.0f, 0.0f, 1.0f, 1.0f);
 	return screenSource;
@@ -503,10 +437,10 @@ bool SongsDock::project()
 	live = true;
 	hidden = false;
 	textCleared = false;
-	hideButton->setChecked(false);
 	clearButton->setChecked(false);
 
 	const int start = qMax(0, slidesList->currentRow());
+	freshOutput = true;
 	showSlide(start, true);
 	setItemVisible(true);
 	WorshipOutput::ShowScene(scene);
@@ -670,9 +604,10 @@ void SongsDock::setItemVisible(bool visible)
 {
 	if (!scene)
 		return;
-	for (const char *name : {ScreenSourceName, VideoSourceName}) {
-		if (obs_sceneitem_t *item = obs_scene_find_source(scene, name)) {
-			const bool isVideo = name == VideoSourceName;
+	for (const char *base : {ScreenSourceName, VideoSourceName}) {
+		const std::string name = WorshipOutput::Named(base, outputSlot);
+		if (obs_sceneitem_t *item = obs_scene_find_source(scene, name.c_str())) {
+			const bool isVideo = base == VideoSourceName;
 			const bool videoWanted = SongLibrary::lyricsSlide(liveSong, liveSlide).background.kind ==
 						 WorshipRender::BackgroundKind::Video;
 			obs_sceneitem_set_visible(item, visible && (!isVideo || videoWanted));
@@ -682,13 +617,10 @@ void SongsDock::setItemVisible(bool visible)
 
 void SongsDock::toggleHidden()
 {
-	if (!live) {
-		hideButton->setChecked(false);
+	if (!live)
 		return;
-	}
 	hidden = !hidden;
 	setItemVisible(!hidden);
-	hideButton->setChecked(hidden);
 	updateLiveLabel();
 	publishLive();
 }
@@ -745,11 +677,7 @@ bool SongsDock::eventFilter(QObject *watched, QEvent *event)
 
 void SongsDock::updateControls()
 {
-	projectButton->setEnabled(selectedSong >= 0 && !songs.at(selectedSong).slides.isEmpty());
-	previousButton->setEnabled(live && liveSlide > 0);
-	nextButton->setEnabled(live && liveSlide < liveSong.slides.size() - 1);
 	clearButton->setEnabled(live);
-	hideButton->setEnabled(live);
 }
 
 void SongsDock::updateLiveLabel()
