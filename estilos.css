@@ -4,13 +4,6 @@
   font-weight: 100 900;
   font-display: swap;
 }
-@font-face {
-  font-family: "Bricolage";
-  src: url("fuentes/BricolageGrotesque-Variable.ttf") format("truetype");
-  font-weight: 200 800;
-  font-stretch: 75% 100%;
-  font-display: swap;
-}
 
 /* Brand colors come from the logo: ember light inside a plum arch. */
 :root {
@@ -28,7 +21,7 @@
   --gold: #F2C26B;
   --yes: #1E9E62;
   --no: #C9BDB8;
-  --display: "Bricolage", "Inter", system-ui, sans-serif;
+  --display: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --text: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --wrap: 1180px;
   --gutter: clamp(16px, 4vw, 40px);
@@ -52,10 +45,10 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 400 17px/1.6 v
 img { max-width: 100%; height: auto; display: block; }
 a { color: inherit; }
 p { margin: 0 0 1em; }
-h1, h2, h3, h4 { margin: 0; font-family: var(--display); font-weight: 700; letter-spacing: -.025em; line-height: 1.02; font-variation-settings: "opsz" 96; }
+h1, h2, h3, h4 { margin: 0; font-family: var(--display); font-weight: 750; letter-spacing: -.03em; line-height: 1.06; font-variation-settings: "opsz" 32; }
 h2 { font-size: clamp(34px, 4.4vw, 56px); }
 h3 { font-size: clamp(24px, 2.2vw, 32px); line-height: 1.1; }
-h4 { font-size: 19px; letter-spacing: -.01em; line-height: 1.25; font-variation-settings: "opsz" 24; }
+h4 { font-size: 19px; letter-spacing: -.015em; line-height: 1.25; }
 kbd { font: 600 .82em/1 ui-monospace, Menlo, Consolas, monospace; background: var(--card); border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 6px; padding: .15em .45em; }
 :focus-visible { outline: 3px solid var(--ember); outline-offset: 3px; border-radius: 6px; }
 .wrap { width: 100%; max-width: var(--wrap); margin: 0 auto; padding: 0 var(--gutter); }
@@ -96,7 +89,7 @@ kbd { font: 600 .82em/1 ui-monospace, Menlo, Consolas, monospace; background: va
 .pill { display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-size: 14px; color: var(--ink-2); text-decoration: none; margin-bottom: 28px; }
 .pill:hover { border-color: var(--ember); }
 .pill__new { background: var(--ember); color: #fff; font-weight: 700; font-size: 12px; padding: 4px 9px; border-radius: 999px; }
-.hero h1 { font-size: clamp(42px, 6.6vw, 88px); max-width: 15ch; letter-spacing: -.035em; line-height: .98; }
+.hero h1 { font-size: clamp(44px, 7vw, 92px); max-width: 13ch; font-weight: 800; letter-spacing: -.045em; line-height: 1; }
 mark { background: none; color: var(--ember); position: relative; white-space: nowrap; }
 mark::after { content: ""; position: absolute; left: -2%; right: -2%; bottom: .04em; height: .18em; background: var(--gold); opacity: .55; border-radius: 4px; z-index: -1; transform: rotate(-1deg); }
 .hero__lead { margin: 24px auto 0; max-width: 36em; font-size: clamp(17px, 1.5vw, 20px); color: var(--ink-2); }
@@ -185,6 +178,12 @@ mark::after { content: ""; position: absolute; left: -2%; right: -2%; bottom: .0
 .steps h4 { margin-bottom: 6px; font-size: 22px; }
 .steps p { margin: 0; color: var(--muted); }
 
+/* First-run guide */
+.guide { display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(24px, 4vw, 56px); align-items: center; margin-top: 56px; }
+.guide img { border-radius: var(--r); box-shadow: var(--shadow); border: 1px solid var(--line); }
+.guide h3 { margin-bottom: 12px; }
+.guide p { color: var(--ink-2); }
+
 /* Download */
 .download { display: grid; grid-template-columns: 1fr 1.25fr; gap: clamp(28px, 5vw, 80px); align-items: start; }
 .dls { display: grid; gap: 12px; }
@@ -249,7 +248,7 @@ mark::after { content: ""; position: absolute; left: -2%; right: -2%; bottom: .0
 @media (max-width: 1000px) {
   .grid { grid-template-columns: repeat(2, 1fr); }
   .mosaic { grid-template-columns: repeat(2, 1fr); }
-  .panel, .download, .faq, .duo { grid-template-columns: 1fr; }
+  .panel, .download, .faq, .duo, .guide { grid-template-columns: 1fr; }
   .steps { grid-template-columns: 1fr; }
 }
 @media (max-width: 680px) {
