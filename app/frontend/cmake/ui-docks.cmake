@@ -1,0 +1,22 @@
+target_sources(
+  obs-studio
+  PRIVATE
+    docks/OBSDock.cpp
+    docks/OBSDock.hpp
+    docks/BibleDock.cpp
+    docks/BibleDock.hpp
+    docks/PresentationCatalogData.cpp
+    docks/PresentationCatalogData.hpp
+    docks/PresentationCatalogDock.cpp
+    docks/PresentationCatalogDock.hpp
+    docks/PresentationDock.cpp
+    docks/PresentationDock.hpp
+    docks/WorshipOutput.cpp
+    docks/WorshipDocument.cpp
+    docks/WorshipDocument.hpp
+    docks/WorshipOutput.hpp
+    docks/WorshipRender.cpp
+    docks/WorshipRender.hpp
+    docks/WorshipSelfTest.cpp
+    docks/WorshipSelfTest.hpp
+)
