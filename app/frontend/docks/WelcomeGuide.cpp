@@ -45,35 +45,35 @@ protected:
 		p.fillPath(shape, frame);
 
 		const qreal W = win.width(), H = win.height();
-		const QRectF center(win.left() + W * 0.02, win.top() + H * 0.05, W * 0.66, H * 0.56);
+		/* Same arrangement as the real window: scenes on the left, the two
+		 * screens in the middle, controls below, content column on the right. */
+		const QRectF scenes(win.left() + W * 0.02, win.top() + H * 0.05, W * 0.14, H * 0.91);
+		const QRectF center(win.left() + W * 0.18, win.top() + H * 0.05, W * 0.50, H * 0.60);
 		const QRectF left(center.left(), center.top(), center.width() * 0.49, center.height());
 		const QRectF right(center.left() + center.width() * 0.51, center.top(), center.width() * 0.49, center.height());
-		const QRectF bottom(win.left() + W * 0.02, win.top() + H * 0.65, W * 0.66, H * 0.31);
+		const QRectF bottom(win.left() + W * 0.18, win.top() + H * 0.69, W * 0.50, H * 0.27);
 		const QRectF column(win.left() + W * 0.70, win.top() + H * 0.05, W * 0.28, H * 0.53);
 		const QRectF live(win.left() + W * 0.70, win.top() + H * 0.61, W * 0.28, H * 0.35);
 
-		auto box = [&](const QRectF &r, const QColor &fill, const QString &label, const QColor &labelColor) {
+		auto box = [&](const QRectF &r, const QColor &fill, const QString &label, const QColor &labelColor,
+			       qreal scale = 1.0) {
 			QPainterPath path;
 			path.addRoundedRect(r, 6, 6);
 			p.fillPath(path, fill);
 			p.setPen(labelColor);
 			QFont font = p.font();
-			font.setPixelSize(qMax(10, int(H * 0.05)));
+			font.setPixelSize(qMax(9, int(H * 0.048 * scale)));
 			font.setBold(true);
 			p.setFont(font);
-			p.drawText(r.adjusted(6, 4, -6, -4), Qt::AlignCenter | Qt::TextWordWrap, label);
+			p.drawText(r.adjusted(4, 4, -4, -4), Qt::AlignCenter | Qt::TextWordWrap, label);
 		};
 
+		box(scenes, panel, tr("Escenas"), text, 0.85);
 		box(left, QColor(0x0E, 0x1F, 0x17), tr("EN ESPERA\nvista previa"), preview);
 		box(right, QColor(0x24, 0x10, 0x12), tr("EN PANTALLA\nlo que ve la gente"), program);
-		const qreal cell = bottom.width() / 5.0;
-		const QStringList bottomDocks = {tr("Escenas"), tr("Fuentes"), tr("Mezclador"), tr("Transiciones"),
-						 tr("Controles")};
-		for (int i = 0; i < 5; ++i)
-			box(QRectF(bottom.left() + i * cell + 2, bottom.top(), cell - 4, bottom.height()), panel,
-			    bottomDocks.at(i), text);
-		box(column, panel, tr("Orden · Cantos · Himnario\nBiblia · Presentaciones"), text);
-		box(live, panel, tr("Control en vivo\nPasar a pantalla\n◀ ▶  Ocultar"), text);
+		box(bottom, panel, tr("Controles: transmitir y grabar"), text, 0.85);
+		box(column, panel, tr("Orden · Cantos\nHimnario · Biblia\nPresentaciones"), text, 0.85);
+		box(live, panel, tr("Control en vivo\nPasar a pantalla\n◀ ▶  Ocultar"), text, 0.85);
 
 		/* Dim everything but the highlighted part. */
 		QRectF focus;
@@ -116,27 +116,27 @@ WelcomeGuide::WelcomeGuide(LiveToolsDock *liveTools_, QWidget *parent) : QDialog
 	pages = new QStackedWidget(this);
 	stepLabel = new QLabel(this);
 	idian::Utils::addClass(stepLabel, "text-muted");
-	backButton = new QPushButton(tr("Atras"), this);
+	backButton = new QPushButton(tr("Atrás"), this);
 	nextButton = new QPushButton(this);
 	idian::Utils::addClass(nextButton, "button-primary");
 	nextButton->setDefault(true);
-	auto *skipButton = new QPushButton(tr("Saltar guia"), this);
+	auto *skipButton = new QPushButton(tr("Saltar guía"), this);
 
 	addPage(Everything, tr("Todo lo que va en la pantalla, en un solo lugar"),
-		tr("WorshipStudio proyecta canciones, Biblia, himnarios y presentaciones, y si queres tambien "
-		   "transmite en vivo. Es OBS Studio por dentro: si ya lo conoces, todo sigue en su lugar."));
-	addPage(Screens, tr("Dos pantallas: lo que preparas y lo que ve la gente"),
-		tr("<b style='color:#30A46C'>EN ESPERA</b> (izquierda) es tu borrador: ahi aparece lo que elegis, "
-		   "y nadie lo ve todavia.<br><b style='color:#E5484D'>EN PANTALLA</b> (derecha) es exactamente lo "
-		   "que ve la congregacion en el proyector y en la transmision."));
-	addPage(Content, tr("Elegi que mostrar"),
-		tr("En la columna de la derecha estan el <b>Orden del culto</b>, <b>Cantos</b>, <b>Himnario</b>, "
-		   "<b>Biblia</b> y <b>Presentaciones</b>.<br>Hace <b>doble clic</b> en un canto, un himno, un "
-		   "versiculo o una diapositiva y aparece EN ESPERA."));
+		tr("WorshipStudio proyecta canciones, Biblia, himnarios y presentaciones, y si querés también "
+		   "transmite en vivo. Es OBS Studio por dentro: si ya lo conocés, todo sigue en su lugar."));
+	addPage(Screens, tr("Dos pantallas: lo que preparás y lo que ve la gente"),
+		tr("<b style='color:#30A46C'>EN ESPERA</b> (izquierda) es tu borrador: ahí aparece lo que elegís, "
+		   "y nadie lo ve todavía.<br><b style='color:#E5484D'>EN PANTALLA</b> (derecha) es exactamente lo "
+		   "que ve la congregación en el proyector y en la transmisión."));
+	addPage(Content, tr("Elegí qué mostrar"),
+		tr("En la columna de la derecha están el <b>Orden del culto</b>, <b>Cantos</b>, <b>Himnario</b>, "
+		   "<b>Biblia</b> y <b>Presentaciones</b>.<br>Hacé <b>doble clic</b> en un canto, un himno, un "
+		   "versículo o una diapositiva y aparece EN ESPERA."));
 	addPage(LiveControl, tr("Pasalo a la pantalla"),
-		tr("Abajo a la derecha esta el <b>Control en vivo</b>: <b>Pasar a pantalla</b> manda lo que esta en "
-		   "espera a la congregacion. <b>Siguiente</b>, <b>Anterior</b> y <b>Ocultar</b> sirven para "
-		   "cualquier contenido.<br>Tambien funcionan las flechas y el presentador inalambrico."));
+		tr("Abajo a la derecha está el <b>Control en vivo</b>: <b>Pasar a pantalla</b> manda lo que está en "
+		   "espera a la congregación. <b>Siguiente</b>, <b>Anterior</b> y <b>Ocultar</b> sirven para "
+		   "cualquier contenido.<br>También funcionan las flechas y el presentador inalámbrico."));
 
 	auto *projectorBox = new QWidget(this);
 	auto *projectorLayout = new QVBoxLayout(projectorBox);
@@ -146,10 +146,10 @@ WelcomeGuide::WelcomeGuide(LiveToolsDock *liveTools_, QWidget *parent) : QDialog
 	studioCheck->setChecked(true);
 	projectorLayout->addWidget(projectorButton);
 	projectorLayout->addWidget(studioCheck);
-	addPage(Projector, tr("Conecta el proyector"),
-		tr("Elegi la pantalla donde se proyecta: ahi se mostrara a pantalla completa lo que esta EN "
-		   "PANTALLA. Podes cambiarla despues con el boton <b>Pantalla del proyector</b>.<br>Abajo a la "
-		   "izquierda alternas entre <b>Modo culto</b> (sencillo) y <b>Modo tecnico</b> (todo OBS)."),
+	addPage(Projector, tr("Conectá el proyector"),
+		tr("Elegí la pantalla donde se proyecta: ahí se mostrará a pantalla completa lo que está EN "
+		   "PANTALLA. Podés cambiarla después con el botón <b>Pantalla del proyector</b>.<br>Abajo a la "
+		   "izquierda alternás entre <b>Modo culto</b> (sencillo) y <b>Modo técnico</b> (todo OBS)."),
 		projectorBox);
 
 	auto *buttons = new QHBoxLayout();
@@ -184,10 +184,8 @@ void WelcomeGuide::addPage(int region, const QString &title, const QString &text
 	layout->setSpacing(12);
 	layout->addWidget(new WindowDiagram(region, page), 1);
 	auto *heading = new QLabel(title, page);
-	QFont font = heading->font();
-	font.setPointSizeF(font.pointSizeF() * 1.6);
-	font.setBold(true);
-	heading->setFont(font);
+	idian::Utils::addClass(heading, "text-large");
+	idian::Utils::addClass(heading, "text-bold");
 	heading->setWordWrap(true);
 	auto *body = new QLabel(text, page);
 	body->setWordWrap(true);
