@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>WorshipStudio · Que toda la congregación pueda cantar</title>
-  <meta name="description" content="Programa gratis y de código abierto para proyectar letras, Escrituras, himnarios y presentaciones, y transmitir en vivo. Para iglesias, congregaciones y eventos. macOS, Windows y Linux.">
-  <meta property="og:title" content="WorshipStudio · Que toda la congregación pueda cantar">
-  <meta property="og:description" content="Letras, Escrituras, himnarios, presentaciones y transmisión en un solo programa gratuito.">
-  <meta property="og:image" content="img/salmo23.jpg">
+  <title>WorshipStudio · Proyectá y transmití tus reuniones, gratis</title>
+  <meta name="description" content="El programa gratis para proyectar canciones, Biblia, himnarios, PowerPoint y PDF, y transmitir en vivo desde el mismo lugar. Para iglesias, congregaciones y eventos. macOS, Windows y Linux.">
+  <meta property="og:title" content="WorshipStudio · Proyectá y transmití tus reuniones, gratis">
+  <meta property="og:description" content="Canciones, Biblia, himnarios y presentaciones en la pantalla y en vivo, desde un solo programa gratuito.">
+  <meta property="og:image" content="img/fotos/auditorio.jpg">
   <meta property="og:type" content="website">
-  <meta name="theme-color" content="#1A1416">
+  <meta name="theme-color" content="#16110F">
   <link rel="icon" href="logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="estilos.css">
 </head>
@@ -17,319 +17,298 @@
   <a class="skip" href="#contenido">Saltar al contenido</a>
 
   <header class="nav">
-    <div class="wrap nav__inner">
-      <a class="brand" href="#" aria-label="WorshipStudio, inicio">
-        <img src="logo.svg" alt="" width="34" height="34">
-        <span class="brand__name"><em>Worship</em>Studio</span>
-      </a>
+    <div class="wrap nav__in">
+      <a class="brand" href="#" aria-label="WorshipStudio, inicio"><img src="logo.svg" alt="" width="36" height="36"><span>WorshipStudio</span></a>
       <nav class="nav__links" aria-label="Secciones">
-        <a href="#que-hace">Qué hace</a>
-        <a href="#en-vivo">En vivo</a>
-        <a href="#aprender">Aprender</a>
-        <a href="#donar">Donar</a>
-        <a href="https://github.com/solsox/WorshipStudio" rel="noopener">Código</a>
+        <a href="#funciones">Funciones</a>
+        <a href="#para-quien">Para quién</a>
+        <a href="#comparar">Comparar</a>
+        <a href="#preguntas">Preguntas</a>
       </nav>
-      <a class="btn btn--ember btn--sm" href="#descargar">Descargar</a>
+      <a class="btn btn--primary btn--sm" href="#descargar">Descargar gratis</a>
     </div>
   </header>
 
   <main id="contenido">
-    <!-- Hero -->
+    <!-- HERO: what it is, for whom, one action -->
     <section class="hero">
-      <div class="wrap hero__grid">
-        <div class="hero__copy">
-          <p class="kicker">Gratis y libre, para siempre</p>
-          <h1>Que toda la congregación pueda <span class="ink-ember">cantar</span>.</h1>
-          <p class="hero__lead">Letras, Escrituras, himnarios y presentaciones en la pantalla y en la transmisión, desde un solo
-            programa. Para iglesias, congregaciones y eventos de cualquier tamaño.</p>
-          <div class="hero__cta">
-            <a class="btn btn--ember btn--lg" id="cta-principal" href="#descargar">Descargar gratis</a>
-            <a class="link" href="#que-hace">Mirá cómo funciona</a>
-          </div>
-          <p class="fine">Sin suscripciones. Sin cuentas. Funciona sin internet.</p>
+      <div class="wrap hero__in">
+        <a class="pill" href="https://github.com/solsox/WorshipStudio/releases/latest" rel="noopener"><span class="pill__new">Nuevo</span> Versión 0.5: orden del culto y control desde el celular <span aria-hidden="true">→</span></a>
+        <h1>El programa <mark>gratis</mark> para proyectar y transmitir tus reuniones.</h1>
+        <p class="hero__lead">Canciones, Biblia, himnarios, PowerPoint y PDF en el proyector y en YouTube al mismo tiempo, desde un solo programa. Para iglesias, congregaciones, conferencias y eventos.</p>
+        <div class="hero__cta">
+          <a class="btn btn--primary btn--lg" id="cta-principal" href="#descargar">Descargar gratis</a>
+          <a class="btn btn--ghost btn--lg" href="#funciones">Ver cómo funciona</a>
         </div>
-        <figure class="hero__art">
-          <img class="hero__slide" src="img/salmo23.jpg" alt="Salmo 23:1 proyectado con fondo azul profundo" width="1280" height="720">
-          <img class="hero__phone" src="img/celular.jpg" alt="Control desde el celular" width="390" height="844">
-        </figure>
+        <ul class="assure" aria-label="Garantías">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Gratis para siempre</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Sin cuentas ni internet</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Basado en OBS Studio</li>
+        </ul>
+      </div>
+      <div class="wrap">
+        <div class="stage">
+          <img class="stage__photo" src="img/fotos/auditorio.jpg" alt="Auditorio lleno con letras proyectadas en las pantallas laterales" width="1800" height="1200">
+          <div class="stage__app">
+            <img src="img/app.jpg" alt="WorshipStudio: orden del culto, vista previa con un salmo proyectado y panel de canciones" width="2000" height="1105">
+          </div>
+          <span class="sticker sticker--hero">Hecho en español</span>
+        </div>
       </div>
     </section>
 
-    <!-- Marquee of real slides -->
-    <section class="strip" aria-label="Diapositivas creadas con WorshipStudio">
-      <div class="strip__track">
-        <img src="img/canto1.jpg" alt="Canto con fondo rosado" width="1280" height="720">
-        <img src="img/salmo121.jpg" alt="Salmo 121 con rayos de luz" width="1280" height="720">
-        <img src="img/canto2.jpg" alt="Canto con fondo lavanda" width="1280" height="720">
-        <img src="img/salmo150.jpg" alt="Salmo 150 con fondo dorado" width="1280" height="720">
-        <img src="img/canto3.jpg" alt="Canto con fondo esmeralda" width="1280" height="720">
-        <img src="img/isaias40.jpg" alt="Isaías 40:31 con aurora boreal" width="1280" height="720">
-        <img src="img/salmo46.jpg" alt="Salmo 46:10 con noche estrellada" width="1280" height="720">
-        <img src="img/canto1.jpg" alt="" aria-hidden="true" width="1280" height="720">
-        <img src="img/salmo121.jpg" alt="" aria-hidden="true" width="1280" height="720">
-        <img src="img/canto2.jpg" alt="" aria-hidden="true" width="1280" height="720">
-        <img src="img/salmo150.jpg" alt="" aria-hidden="true" width="1280" height="720">
-        <img src="img/canto3.jpg" alt="" aria-hidden="true" width="1280" height="720">
-        <img src="img/isaias40.jpg" alt="" aria-hidden="true" width="1280" height="720">
-        <img src="img/salmo46.jpg" alt="" aria-hidden="true" width="1280" height="720">
+    <!-- Works with -->
+    <section class="works" aria-label="Funciona con">
+      <div class="wrap works__in">
+        <span>Funciona con</span>
+        <ul>
+          <li>Cualquier proyector o TV</li>
+          <li>YouTube y Facebook Live</li>
+          <li>Presentadores inalámbricos</li>
+          <li>Stream Deck</li>
+          <li>macOS · Windows · Linux</li>
+        </ul>
       </div>
-      <p class="wrap strip__note">Cada imagen de esta página salió de WorshipStudio. Nada es una maqueta.</p>
     </section>
 
-    <!-- Problem -->
+    <!-- Use cases as tabs -->
+    <section class="section" id="funciones">
+      <div class="wrap center">
+        <p class="eyebrow">Funciones</p>
+        <h2>Todo lo que pasa en la pantalla, en un lugar.</h2>
+        <p class="sub">Elegí lo que necesitás hoy.</p>
+      </div>
+      <div class="wrap">
+        <div class="tabs" role="tablist" aria-label="Casos de uso">
+          <button role="tab" aria-selected="true" aria-controls="t-canciones" id="tab-canciones">Canciones</button>
+          <button role="tab" aria-selected="false" aria-controls="t-biblia" id="tab-biblia" tabindex="-1">Biblia</button>
+          <button role="tab" aria-selected="false" aria-controls="t-presentaciones" id="tab-presentaciones" tabindex="-1">PowerPoint y PDF</button>
+          <button role="tab" aria-selected="false" aria-controls="t-vivo" id="tab-vivo" tabindex="-1">En vivo</button>
+          <button role="tab" aria-selected="false" aria-controls="t-celular" id="tab-celular" tabindex="-1">Desde el celular</button>
+        </div>
+
+        <div class="panel" role="tabpanel" id="t-canciones" aria-labelledby="tab-canciones">
+          <div class="panel__text">
+            <h3>Escribí la letra una vez. Proyectala siempre.</h3>
+            <p>Pegás la canción y cada párrafo queda como una diapositiva. En vivo saltás al coro con la tecla <kbd>C</kbd> y al puente con la <kbd>P</kbd>.</p>
+            <ul class="ticks">
+              <li>Fondos por canción o por diapositiva, incluso video</li>
+              <li>Importa desde OpenLP, OpenSong y ChordPro</li>
+              <li>Himnarios con la pista cantada o instrumental sincronizada</li>
+            </ul>
+          </div>
+          <div class="panel__media"><img src="img/canto1.jpg" alt="Diapositiva de canción: Cantad al Señor un cántico nuevo" loading="lazy" width="1280" height="720"></div>
+        </div>
+
+        <div class="panel" role="tabpanel" id="t-biblia" aria-labelledby="tab-biblia" hidden>
+          <div class="panel__text">
+            <h3>Escribí “sal 23” y listo.</h3>
+            <p>Encontrás el pasaje por cita o por frase. Se proyecta con la referencia grande y la versión discreta debajo, legible desde la última fila.</p>
+            <ul class="ticks">
+              <li>Seis versiones libres incluidas y otras para importar</li>
+              <li>17 tipografías y 18 fondos pensados para proyectar</li>
+              <li>Pantalla completa o en la parte de abajo, sobre la cámara</li>
+            </ul>
+          </div>
+          <div class="panel__media"><img src="img/salmo150.jpg" alt="Salmo 150:6 proyectado sobre un fondo dorado" loading="lazy" width="1280" height="720"></div>
+        </div>
+
+        <div class="panel" role="tabpanel" id="t-presentaciones" aria-labelledby="tab-presentaciones" hidden>
+          <div class="panel__text">
+            <h3>Arrastrá el archivo. Nada de exportar imágenes.</h3>
+            <p>PowerPoint, Keynote y PDF se proyectan diapositiva por diapositiva. El modo libro divide las páginas verticales para que el texto se lea grande.</p>
+            <ul class="ticks">
+              <li>Funciona con el presentador inalámbrico del orador</li>
+              <li>Tecla B para dejar la pantalla en negro</li>
+              <li>Carpetas de fotos como presentación</li>
+            </ul>
+          </div>
+          <div class="panel__media panel__media--dark"><img src="img/libro.jpg" alt="Página de un libro en PDF proyectada con texto grande" loading="lazy" width="868" height="787"></div>
+        </div>
+
+        <div class="panel" role="tabpanel" id="t-vivo" aria-labelledby="tab-vivo" hidden>
+          <div class="panel__text">
+            <h3>Prepará la reunión antes. En vivo, un botón.</h3>
+            <p>Armás el orden: cuenta regresiva, canciones, lecturas, presentaciones, rótulos y anuncios. Durante la reunión apretás “Siguiente elemento”.</p>
+            <ul class="ticks">
+              <li>Monitor para quien canta o predica: actual, siguiente y reloj</li>
+              <li>Rótulos de nombre y avisos urgentes encima de todo</li>
+              <li>Transmisión y grabación incluidas, sin capturar ventanas</li>
+            </ul>
+          </div>
+          <div class="panel__media"><img src="img/escenario.jpg" alt="Monitor de escenario con la diapositiva actual, la siguiente, el reloj y un aviso de 5 minutos" loading="lazy" width="1280" height="720"></div>
+        </div>
+
+        <div class="panel" role="tabpanel" id="t-celular" aria-labelledby="tab-celular" hidden>
+          <div class="panel__text">
+            <h3>Pasá diapositivas desde tu teléfono.</h3>
+            <p>Escaneás un código QR y cualquier celular de la misma red se vuelve un control remoto. Sin instalar apps y con un código de acceso.</p>
+            <ul class="ticks">
+              <li>Ves lo que está en pantalla y lo que sigue</li>
+              <li>Saltás a cualquier parte del orden de la reunión</li>
+              <li>Ideal para el orador o el líder de alabanza</li>
+            </ul>
+          </div>
+          <div class="panel__media panel__media--phone"><img src="img/celular.jpg" alt="Control desde el celular con botones Anterior y Siguiente" loading="lazy" width="390" height="844"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature grid -->
+    <section class="section section--sand">
+      <div class="wrap">
+        <div class="grid">
+          <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><h4>Canciones y coros</h4><p>Biblioteca con buscador por título o letra.</p></div>
+          <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2z"/><path d="M22 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/></svg><h4>Biblia</h4><p>Búsqueda por cita o frase, varias versiones.</p></div>
+          <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><h4>PowerPoint y PDF</h4><p>Sin exportar, con modo libro.</p></div>
+          <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49M7.76 16.24a6 6 0 0 1 0-8.49M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/></svg><h4>Transmisión</h4><p>YouTube, Facebook y grabación en el mismo programa.</p></div>
+          <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><h4>Orden de la reunión</h4><p>Todo preparado, un botón para avanzar.</p></div>
+          <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg><h4>Control desde el celular</h4><p>Con código QR, sin instalar nada.</p></div>
+          <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M5 3 2 6M22 6l-3-3"/></svg><h4>Cuenta regresiva</h4><p>Por minutos o hasta una hora exacta.</p></div>
+          <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1zM16 9a3 3 0 0 1 0 6"/></svg><h4>Avisos y rótulos</h4><p>Nombres y mensajes urgentes sobre la pantalla.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Who it's for, with real photos -->
+    <section class="section" id="para-quien">
+      <div class="wrap center">
+        <p class="eyebrow">Para quién</p>
+        <h2>Si tu comunidad se reúne, sirve.</h2>
+        <p class="sub">De una reunión de cincuenta personas a un congreso de miles.</p>
+      </div>
+      <div class="wrap mosaic">
+        <figure class="tile tile--big"><img src="img/fotos/coro.jpg" alt="Coro cantando en un templo" loading="lazy" width="1800" height="1200"><figcaption><b>Reuniones semanales</b>Alabanza, lecturas y el mensaje del día.</figcaption></figure>
+        <figure class="tile"><img src="img/fotos/conferencia.jpg" alt="Auditorio con un orador y diapositivas en pantalla" loading="lazy" width="1800" height="1200"><figcaption><b>Conferencias</b>El PDF de cada orador y la transmisión a la vez.</figcaption></figure>
+        <figure class="tile"><img src="img/fotos/banda.jpg" alt="Banda tocando con una pantalla grande detrás" loading="lazy" width="1800" height="1200"><figcaption><b>Conciertos y campamentos</b>Letras grandes con fondos en movimiento.</figcaption></figure>
+        <figure class="tile"><img src="img/fotos/orador.jpg" alt="Orador frente a una pantalla con diapositivas" loading="lazy" width="1800" height="1200"><figcaption><b>Clases y talleres</b>Material, pasajes y notas en la misma pantalla.</figcaption></figure>
+        <figure class="tile"><img src="img/fotos/alabanza.jpg" alt="Persona con la mano levantada durante un concierto" loading="lazy" width="1800" height="1200"><figcaption><b>Bodas y homenajes</b>Fotos, canciones y video en una presentación.</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- Comparison: only ticks and crosses -->
+    <section class="section section--ink" id="comparar">
+      <div class="wrap center">
+        <p class="eyebrow eyebrow--light">Comparar</p>
+        <h2>Uno hace el trabajo de dos.</h2>
+      </div>
+      <div class="wrap">
+        <div class="vs" role="table" aria-label="Comparación de WorshipStudio con otras opciones">
+          <div class="vs__row vs__head" role="row">
+            <span role="columnheader"></span>
+            <span role="columnheader" class="vs__us"><img src="logo.svg" alt="" width="40" height="40">WorshipStudio<em class="sticker">Gratis</em></span>
+            <span role="columnheader">Programa de letras pago + OBS</span>
+            <span role="columnheader">Solo OBS</span>
+          </div>
+          <div class="vs__row" role="row"><span role="rowheader">Canciones, Biblia e himnarios</span><span class="y" role="cell" aria-label="Sí"></span><span class="y" role="cell" aria-label="Sí"></span><span class="n" role="cell" aria-label="No"></span></div>
+          <div class="vs__row" role="row"><span role="rowheader">PowerPoint y PDF diapositiva por diapositiva</span><span class="y" role="cell" aria-label="Sí"></span><span class="y" role="cell" aria-label="Sí"></span><span class="n" role="cell" aria-label="No"></span></div>
+          <div class="vs__row" role="row"><span role="rowheader">Transmisión y grabación</span><span class="y" role="cell" aria-label="Sí"></span><span class="y" role="cell" aria-label="Sí"></span><span class="y" role="cell" aria-label="Sí"></span></div>
+          <div class="vs__row" role="row"><span role="rowheader">Todo en un solo programa</span><span class="y" role="cell" aria-label="Sí"></span><span class="n" role="cell" aria-label="No"></span><span class="y" role="cell" aria-label="Sí"></span></div>
+          <div class="vs__row" role="row"><span role="rowheader">Letras en la transmisión sin capturar ventanas</span><span class="y" role="cell" aria-label="Sí"></span><span class="n" role="cell" aria-label="No"></span><span class="n" role="cell" aria-label="No"></span></div>
+          <div class="vs__row" role="row"><span role="rowheader">Orden de la reunión y cuenta regresiva</span><span class="y" role="cell" aria-label="Sí"></span><span class="y" role="cell" aria-label="Sí"></span><span class="n" role="cell" aria-label="No"></span></div>
+          <div class="vs__row" role="row"><span role="rowheader">Gratis para siempre</span><span class="y" role="cell" aria-label="Sí"></span><span class="n" role="cell" aria-label="No"></span><span class="y" role="cell" aria-label="Sí"></span></div>
+          <div class="vs__row" role="row"><span role="rowheader">Código abierto</span><span class="y" role="cell" aria-label="Sí"></span><span class="n" role="cell" aria-label="No"></span><span class="y" role="cell" aria-label="Sí"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 steps -->
     <section class="section">
-      <div class="wrap two">
-        <h2>Tres programas abiertos y una persona corriendo.</h2>
-        <div class="prose">
-          <p>En muchas reuniones pasa lo mismo: un programa para las letras, otro para transmitir, la ventana del primero
-            capturada en el segundo y el PowerPoint exportado página por página. Basta que falle una pieza para que todos
-            se queden mirando una pantalla en negro.</p>
-          <p>WorshipStudio junta todo eso en un lugar. Lo que proyectás ya es una escena de transmisión: se ve nítido en
-            la sala, en YouTube y en la grabación.</p>
-        </div>
+      <div class="wrap center">
+        <p class="eyebrow">Cómo empezar</p>
+        <h2>Tu primera reunión en diez minutos.</h2>
       </div>
-    </section>
-
-    <!-- Features -->
-    <section class="section section--tight" id="que-hace">
-      <div class="wrap">
-        <h2 class="title">Qué hace</h2>
-      </div>
-
-      <article class="row wrap">
-        <div class="row__text">
-          <h3>Cantos y coros que escribís una vez</h3>
-          <p>Pegás la letra y cada párrafo se vuelve una diapositiva. Si escribís <code>[Coro]</code>, durante la reunión
-            volvés a él con la tecla <kbd>C</kbd>. El fondo puede ser uno para todo el canto o uno distinto por diapositiva,
-            incluso un video en bucle.</p>
-          <p class="aside">Importa cantos de OpenLP, OpenSong y ChordPro.</p>
-        </div>
-        <div class="row__media"><img src="img/canto1.jpg" alt="Diapositiva de canto: Cantad al Señor un cántico nuevo" loading="lazy" width="1280" height="720"></div>
-      </article>
-
-      <article class="row row--flip wrap">
-        <div class="row__text">
-          <h3>Escrituras legibles desde la última fila</h3>
-          <p>Escribís <code>sal 23</code> o una frase y aparece el pasaje, con la cita grande y la versión discreta debajo.
-            Seis versiones libres incluidas, diecisiete tipografías y dieciocho fondos pensados para proyectar. Si tu
-            congregación usa otra versión, la importás.</p>
-        </div>
-        <div class="row__media"><img src="img/salmo150.jpg" alt="Salmo 150:6 con fondo dorado" loading="lazy" width="1280" height="720"></div>
-      </article>
-
-      <article class="row wrap">
-        <div class="row__text">
-          <h3>PDF y PowerPoint, tal como vienen</h3>
-          <p>Arrastrás el archivo y se proyecta diapositiva por diapositiva, sin exportar nada. Con el <strong>modo
-            libro</strong>, un PDF vertical se recorta y se divide en dos mitades para que el texto se lea grande.
-            Funciona con el presentador inalámbrico del orador.</p>
-        </div>
-        <div class="row__media row__media--paper"><img src="img/libro.jpg" alt="Página de un libro en PDF proyectada en modo libro" loading="lazy" width="868" height="787"></div>
-      </article>
-
-      <article class="row row--flip wrap">
-        <div class="row__text">
-          <h3>Himnarios con la pista sincronizada</h3>
-          <p>Elegís el himno por número y la letra avanza sola al ritmo del audio, cantado o instrumental. Funciona con la
-            carpeta del Himnario Adventista y con cualquier himnario organizado en carpetas.</p>
-        </div>
-        <div class="row__media row__media--ui">
-          <div class="hymn" aria-hidden="true">
-            <div class="hymn__search">Buscar por número o título</div>
-            <div class="hymn__item is-on"><b>100</b> Cuán grande es Él</div>
-            <div class="hymn__item"><b>101</b> Señor, mi Dios</div>
-            <div class="hymn__item"><b>102</b> A Dios sea la gloria</div>
-            <div class="hymn__progress"><span></span></div>
-            <div class="hymn__meta">Cantado · 1:24 de 3:18 · estrofa 2 de 5</div>
-          </div>
-        </div>
-      </article>
-    </section>
-
-    <!-- Live -->
-    <section class="section section--plum" id="en-vivo">
-      <div class="wrap">
-        <h2 class="title">Durante la reunión, un solo voluntario alcanza.</h2>
-      </div>
-      <div class="wrap live">
-        <div class="live__app">
-          <img src="img/app.jpg" alt="WorshipStudio en modo culto: orden del servicio a la izquierda, vista previa al centro y cantos a la derecha" loading="lazy" width="2000" height="1105">
-        </div>
-        <div class="live__notes">
-          <div>
-            <h3>Orden del servicio</h3>
-            <p>Lo preparás antes: cuenta regresiva, cantos, lecturas, presentaciones, rótulos y anuncios. En vivo apretás
-              <em>Siguiente elemento</em> y listo.</p>
-          </div>
-          <div>
-            <h3>Desde el celular</h3>
-            <p>Escaneás un código y pasás diapositivas desde cualquier teléfono de la misma red, sin instalar nada.</p>
-          </div>
-          <div>
-            <h3>Modo sencillo y modo técnico</h3>
-            <p>El voluntario ve solo lo necesario. Con un clic aparece todo OBS para quien maneja la transmisión.</p>
-          </div>
-        </div>
-      </div>
-      <div class="wrap trio">
-        <figure><img src="img/cuenta.jpg" alt="Cuenta regresiva Comenzamos en 04:59" loading="lazy" width="1280" height="720"><figcaption>Cuenta regresiva por minutos o hasta una hora.</figcaption></figure>
-        <figure><img src="img/escenario.jpg" alt="Monitor de escenario con la diapositiva actual, la siguiente, el reloj y el mensaje 5 minutos" loading="lazy" width="1280" height="720"><figcaption>Monitor para quien canta o predica: actual, siguiente, reloj y mensajes.</figcaption></figure>
-        <figure><img src="img/rotulo.jpg" alt="Rótulo con el nombre Ana Martínez y un mensaje urgente arriba" loading="lazy" width="1280" height="720"><figcaption>Rótulos de nombre y avisos urgentes encima de lo que esté al aire.</figcaption></figure>
-      </div>
-    </section>
-
-    <!-- Events -->
-    <section class="section">
-      <div class="wrap two">
-        <h2>De la reunión semanal al congreso anual.</h2>
-        <dl class="uses">
-          <div><dt>Reuniones semanales</dt><dd>Alabanza, lecturas y el mensaje con sus diapositivas.</dd></div>
-          <div><dt>Conferencias</dt><dd>El PDF de cada orador, su presentador inalámbrico y la transmisión a la vez.</dd></div>
-          <div><dt>Bodas y homenajes</dt><dd>Una carpeta de fotos se vuelve presentación con un clic.</dd></div>
-          <div><dt>Campamentos y retiros</dt><dd>Letras grandes, fondos en movimiento y anuncios entre actividades.</dd></div>
-          <div><dt>Clases y estudios</dt><dd>Material en PDF, pasajes y notas en la misma pantalla.</dd></div>
-        </dl>
-      </div>
-    </section>
-
-    <!-- Comparison -->
-    <section class="section section--cream">
-      <div class="wrap">
-        <h2 class="title">Un programa en lugar de tres.</h2>
-        <div class="table-wrap">
-          <table class="compare">
-            <thead><tr><th scope="col"></th><th scope="col">WorshipStudio</th><th scope="col">Programa de letras + OBS</th></tr></thead>
-            <tbody>
-              <tr><th scope="row">Letras, Escrituras y presentaciones</th><td class="us">Incluido</td><td>Programa de letras</td></tr>
-              <tr><th scope="row">Transmisión y grabación</th><td class="us">Incluido</td><td>Un segundo programa</td></tr>
-              <tr><th scope="row">Calidad en la transmisión</th><td class="us">Nativa, sin capturas</td><td>Captura de ventana</td></tr>
-              <tr><th scope="row">PDF y PowerPoint completos</th><td class="us">Arrastrar y soltar</td><td>A menudo, imagen por imagen</td></tr>
-              <tr><th scope="row">Costo</th><td class="us">Gratis para siempre</td><td>Con frecuencia, licencia o suscripción</td></tr>
-              <tr><th scope="row">Código</th><td class="us">Abierto (GPL)</td><td>Normalmente cerrado</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <ol class="wrap steps">
+        <li><span>1</span><h4>Descargá e instalá</h4><p>Un archivo, sin crear cuentas.</p></li>
+        <li><span>2</span><h4>Elegí qué mostrar</h4><p>Una canción, un pasaje o el PowerPoint del orador.</p></li>
+        <li><span>3</span><h4>Proyectá y transmití</h4><p>A la pantalla de la sala y, si querés, a YouTube.</p></li>
+      </ol>
     </section>
 
     <!-- Download -->
-    <section class="section" id="descargar">
-      <div class="wrap two">
+    <section class="section section--sand" id="descargar">
+      <div class="wrap download">
         <div>
-          <h2>Listo para tu próxima reunión.</h2>
-          <p class="prose">Descargás, abrís y proyectás. No hace falta crear una cuenta ni tener internet durante la reunión.</p>
+          <p class="eyebrow">Descargar</p>
+          <h2>Gratis. Para siempre.</h2>
+          <p class="sub sub--left">Sin versión paga, sin publicidad y sin límites.</p>
         </div>
-        <div class="downloads">
+        <div class="dls">
           <a class="dl" id="dl-mac" href="https://github.com/solsox/WorshipStudio/releases/latest/download/WorshipStudio-macOS-arm64.zip">
-            <span class="dl__os">macOS</span>
-            <span class="dl__meta">Apple Silicon (M1 o posterior) · versión 0.5</span>
-            <span class="btn btn--ember">Descargar</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.4 12.6c0-2.4 2-3.5 2-3.6-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.8-3-.8C6.9 7.3 5 8.6 5 11.4c0 1.7.6 3.5 1.4 4.7.7 1 1.5 2.1 2.5 2.1s1.4-.7 2.6-.7 1.5.7 2.6.7 1.7-1 2.4-2c.5-.7.9-1.5 1.1-2.3-.1 0-2.2-.9-2.2-3.3zM14.6 5.4c.6-.7.9-1.6.8-2.4-.8 0-1.7.5-2.3 1.2-.5.6-.9 1.5-.8 2.3.9.1 1.7-.4 2.3-1.1z"/></svg>
+            <span class="dl__t"><b>macOS</b><small>Apple Silicon · versión 0.5.1</small></span>
+            <span class="btn btn--primary">Descargar</span>
           </a>
-          <a class="dl dl--soon" id="dl-win" href="https://github.com/solsox/WorshipStudio/releases">
-            <span class="dl__os">Windows</span>
-            <span class="dl__meta">10 y 11 · en preparación</span>
-            <span class="btn btn--line">Avisame</span>
+          <a class="dl dl--soon" href="https://github.com/solsox/WorshipStudio/releases">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5 10 4.5v7H3zM11 4.4 21 3v8.5H11zM3 12.5h7v7l-7-1zM11 12.5h10V21l-10-1.4z"/></svg>
+            <span class="dl__t"><b>Windows</b><small>10 y 11 · muy pronto</small></span>
+            <span class="btn btn--ghost">Seguir versiones</span>
           </a>
-          <a class="dl dl--soon" id="dl-linux" href="https://github.com/solsox/WorshipStudio/blob/main/docs/desarrollo/compilar.md">
-            <span class="dl__os">Linux</span>
-            <span class="dl__meta">Ubuntu 24.04 · compilando el código</span>
-            <span class="btn btn--line">Instrucciones</span>
+          <a class="dl dl--soon" href="https://github.com/solsox/WorshipStudio/blob/main/docs/desarrollo/compilar.md">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M6 21c0-4 2.7-7 6-7s6 3 6 7z"/></svg>
+            <span class="dl__t"><b>Linux</b><small>Ubuntu 24.04 · desde el código</small></span>
+            <span class="btn btn--ghost">Instrucciones</span>
           </a>
-          <details class="note">
-            <summary>¿macOS dice que no puede verificar la app?</summary>
-            <p>Todavía no tiene el certificado de Apple; las donaciones ayudan a pagarlo. La primera vez, hacé clic
-              derecho sobre WorshipStudio, elegí <strong>Abrir</strong> y confirmá.</p>
-          </details>
+          <details class="note"><summary>¿macOS no deja abrirla la primera vez?</summary><p>Hacé clic derecho sobre WorshipStudio → Abrir → Abrir. Pasa porque todavía no tiene el certificado de Apple, que las donaciones ayudan a pagar.</p></details>
         </div>
       </div>
     </section>
 
-    <!-- Learn -->
-    <section class="section section--cream" id="aprender">
-      <div class="wrap">
-        <h2 class="title">Aprender en pocos minutos</h2>
-        <p class="prose">Videos cortos en español para el equipo de multimedia. Se publican aquí y en YouTube.</p>
-      </div>
-      <div class="wrap lessons">
-        <article class="lesson"><span class="lesson__n">1</span><h3>Tu primera reunión en diez minutos</h3><p>Instalar, elegir la pantalla del proyector y mostrar el primer canto.</p><span class="soon">Próximamente</span></article>
-        <article class="lesson"><span class="lesson__n">2</span><h3>Escribir cantos y coros</h3><p>Secciones, fondos y las teclas para saltar al coro.</p><span class="soon">Próximamente</span></article>
-        <article class="lesson"><span class="lesson__n">3</span><h3>El PDF o PowerPoint del orador</h3><p>Modo libro, presentador inalámbrico y ocultar la pantalla.</p><span class="soon">Próximamente</span></article>
-        <article class="lesson"><span class="lesson__n">4</span><h3>Transmitir en vivo</h3><p>YouTube, rótulos y Escrituras sobre la cámara.</p><span class="soon">Próximamente</span></article>
-      </div>
-    </section>
-
-    <!-- Open source -->
+    <!-- Open source + donate -->
     <section class="section">
-      <div class="wrap two">
-        <h2>Construido sobre OBS Studio, a la vista de todos.</h2>
-        <div class="prose">
-          <p>WorshipStudio es una versión de <a href="https://obsproject.com" rel="noopener">OBS Studio</a>, el programa de
-            transmisión libre más usado, con herramientas para reuniones. Todo lo que hace OBS sigue funcionando.</p>
-          <p>El código es abierto (GPL-2.0): cualquiera puede revisarlo, mejorarlo o adaptarlo. La aplicación no envía datos
-            ni pide cuentas, y tus cantos son archivos tuyos que podés copiar a otra computadora.</p>
-          <p><a class="link" href="https://github.com/solsox/WorshipStudio" rel="noopener">Ver el código</a>
-             <a class="link" href="https://github.com/solsox/WorshipStudio/blob/main/docs/producto/roadmap.md" rel="noopener">Hoja de ruta</a></p>
+      <div class="wrap duo">
+        <div class="card">
+          <p class="eyebrow">Código abierto</p>
+          <h3>Construido sobre OBS Studio, a la vista de todos.</h3>
+          <p>Todo lo que hace OBS sigue funcionando. El código es abierto (GPL-2.0), la app no envía datos y tus canciones son archivos tuyos.</p>
+          <p class="links"><a href="https://github.com/solsox/WorshipStudio" rel="noopener">Ver el código →</a><a href="https://github.com/solsox/WorshipStudio/blob/main/docs/producto/roadmap.md" rel="noopener">Hoja de ruta →</a></p>
         </div>
-      </div>
-    </section>
-
-    <!-- Donate -->
-    <section class="section section--plum" id="donar">
-      <div class="wrap two">
-        <div>
-          <h2>Gratis para todas las congregaciones. Sostenido por algunas.</h2>
-          <p class="prose prose--light">No hay versión paga ni publicidad. Si WorshipStudio le sirve a tu comunidad, tu
-            aporte ayuda a que siga así.</p>
-        </div>
-        <div class="give">
-          <p class="give__title">Tu donación se usa para</p>
-          <ol class="give__list">
-            <li>Firmar la app en Windows y macOS, para que se instale sin advertencias.</li>
-            <li>Desarrollar lo que viene: instalador de Windows e importadores de Holyrics y ProPresenter.</li>
-            <li>Grabar tutoriales y traducir la aplicación.</li>
-          </ol>
-          <a class="btn btn--gold btn--lg" href="https://github.com/sponsors/solsox" rel="noopener">Donar con GitHub Sponsors</a>
-          <a class="btn btn--line-light" href="https://wa.me/?text=Te%20comparto%20WorshipStudio%3A%20letras%2C%20Escrituras%2C%20himnarios%20y%20transmisi%C3%B3n%20en%20un%20solo%20programa%20gratuito.%20https%3A%2F%2Fsolsox.github.io%2FWorshipStudio%2F" rel="noopener">Compartir por WhatsApp</a>
-          <p class="give__small">También ayudás con una estrella en GitHub o contándonos qué falla.</p>
+        <div class="card card--ember" id="donar">
+          <p class="eyebrow eyebrow--light">Donar</p>
+          <h3>Gratis para todos. Sostenido por quienes pueden.</h3>
+          <p>Tu aporte paga los certificados para que se instale sin advertencias, el instalador de Windows y los tutoriales.</p>
+          <div class="card__cta">
+            <a class="btn btn--light" href="https://github.com/sponsors/solsox" rel="noopener">Donar</a>
+            <a class="btn btn--outline-light" href="https://wa.me/?text=Te%20comparto%20WorshipStudio%3A%20el%20programa%20gratis%20para%20proyectar%20y%20transmitir%20reuniones.%20https%3A%2F%2Fsolsox.github.io%2FWorshipStudio%2F" rel="noopener">Compartir por WhatsApp</a>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- FAQ -->
-    <section class="section" id="preguntas">
-      <div class="wrap two">
-        <h2>Preguntas frecuentes</h2>
-        <div class="faq">
-          <details><summary>¿Es gratis de verdad?</summary><p>Sí. Es software libre (GPL). No hay versión paga, límites ni marcas de agua.</p></details>
-          <details><summary>¿Sirve para mi congregación?</summary><p>Sirve para cualquier comunidad que cante, lea o presente en pantalla: iglesias de cualquier denominación, congregaciones, sinagogas, colegios y eventos. Vos elegís los textos, los cantos y el idioma.</p></details>
-          <details><summary>¿Necesito internet?</summary><p>No. Todo funciona sin conexión; solo hace falta internet para transmitir en vivo.</p></details>
-          <details><summary>¿Incluye la Reina-Valera 1960 y los himnarios?</summary><p>Incluye seis versiones libres de la Biblia (RV1909, RV1865, BES, PDT, VBL y KJV). La RV1960 y los himnarios tienen derechos de autor: cada comunidad puede importarlos si tiene permiso, y estamos gestionando autorizaciones.</p></details>
-          <details><summary>¿Cuándo sale para Windows?</summary><p>El código ya es compatible; el instalador llega en las próximas versiones. Seguí la página de versiones en GitHub.</p></details>
-          <details><summary>Ya uso OBS. ¿Pierdo mis escenas?</summary><p>No. WorshipStudio guarda su configuración aparte, así que podés tener los dos instalados.</p></details>
+    <section class="section section--sand" id="preguntas">
+      <div class="wrap faq">
+        <div>
+          <p class="eyebrow">Preguntas</p>
+          <h2>Lo que más nos preguntan.</h2>
+        </div>
+        <div class="faq__list">
+          <details><summary>¿Es gratis de verdad?</summary><p>Sí. Es software libre bajo licencia GPL: sin versión paga, sin límites y sin marcas de agua.</p></details>
+          <details><summary>¿Sirve para mi congregación?</summary><p>Sirve para cualquier comunidad que cante, lea o presente en una pantalla: iglesias de cualquier denominación, congregaciones, sinagogas, colegios y eventos.</p></details>
+          <details><summary>¿Necesito internet?</summary><p>No. Funciona sin conexión; solo hace falta internet para transmitir en vivo.</p></details>
+          <details><summary>¿Incluye la Reina-Valera 1960 y los himnarios?</summary><p>Trae seis versiones libres de la Biblia. La RV1960 y los himnarios tienen derechos de autor: cada comunidad puede importarlos si tiene permiso, y estamos gestionando autorizaciones.</p></details>
+          <details><summary>¿Cuándo sale para Windows?</summary><p>El código ya es compatible; el instalador llega en las próximas versiones.</p></details>
+          <details><summary>Ya uso OBS. ¿Pierdo mis escenas?</summary><p>No. WorshipStudio guarda su configuración aparte; podés tener los dos.</p></details>
         </div>
       </div>
     </section>
 
-    <!-- Final -->
+    <!-- Final CTA -->
     <section class="final">
-      <div class="wrap">
-        <h2>Preparalo en minutos.<br><span class="ink-ember">Viví la reunión.</span></h2>
-        <a class="btn btn--ember btn--lg" href="#descargar">Descargar gratis</a>
+      <div class="wrap final__in">
+        <img src="logo.svg" alt="" width="88" height="88">
+        <h2>Descargá WorshipStudio. Es gratis.</h2>
+        <p class="sub">Canciones, Biblia, presentaciones y transmisión, listos para tu próxima reunión.</p>
+        <a class="btn btn--primary btn--lg" href="#descargar">Descargar gratis</a>
       </div>
     </section>
   </main>
 
   <footer class="footer">
-    <div class="wrap footer__inner">
-      <a class="brand" href="#"><img src="logo.svg" alt="" width="28" height="28"><span class="brand__name"><em>Worship</em>Studio</span></a>
-      <p>Software libre (GPL-2.0) basado en <a href="https://obsproject.com" rel="noopener">OBS Studio</a>; no está afiliado al OBS Project.
-        Tipografías DM Serif Display e Inter (OFL). Textos bíblicos de la Reina-Valera 1909, de dominio público.</p>
-      <nav aria-label="Enlaces del pie">
-        <a href="https://github.com/solsox/WorshipStudio" rel="noopener">Código</a>
-        <a href="https://github.com/solsox/WorshipStudio/releases" rel="noopener">Versiones</a>
-        <a href="https://github.com/solsox/WorshipStudio/blob/main/LICENSE" rel="noopener">Licencia</a>
-        <a href="https://github.com/solsox/WorshipStudio/issues" rel="noopener">Reportar un problema</a>
-      </nav>
+    <div class="wrap footer__in">
+      <a class="brand" href="#"><img src="logo.svg" alt="" width="28" height="28"><span>WorshipStudio</span></a>
+      <p>Software libre (GPL-2.0) basado en <a href="https://obsproject.com" rel="noopener">OBS Studio</a>; no afiliado al OBS Project. Fotos de <a href="https://unsplash.com" rel="noopener">Unsplash</a>. Tipografías Bricolage Grotesque e Inter (OFL). Las diapositivas son capturas reales de la app con textos de la Reina-Valera 1909 (dominio público).</p>
+      <nav aria-label="Pie"><a href="https://github.com/solsox/WorshipStudio" rel="noopener">Código</a><a href="https://github.com/solsox/WorshipStudio/releases" rel="noopener">Versiones</a><a href="https://github.com/solsox/WorshipStudio/issues" rel="noopener">Reportar un problema</a></nav>
     </div>
   </footer>
 
