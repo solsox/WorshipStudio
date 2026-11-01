@@ -13,12 +13,16 @@ concurrency:
 jobs:
   macos:
     name: macOS (Apple Silicon)
-    runs-on: macos-15
+    runs-on: macos-26
     defaults:
       run:
         working-directory: app
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Usar Xcode 26.5 (lo exige OBS)
+        run: sudo xcode-select --switch /Applications/Xcode_26.5.app/Contents/Developer
       - name: Configurar
         run: |
           cmake --preset macos -B build_macos \
@@ -37,14 +41,16 @@ jobs:
 
   windows:
     name: Windows x64
-    runs-on: windows-2025
+    runs-on: windows-2025-vs2026
     defaults:
       run:
         working-directory: app
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Configurar
-        run: cmake --preset windows-x64 -G "Visual Studio 17 2022" -DENABLE_BROWSER=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF
+        run: cmake --preset windows-x64 -DENABLE_BROWSER=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF
       - name: Compilar
         run: cmake --build --preset windows-x64 --config RelWithDebInfo --parallel
       - name: Instalar
@@ -62,6 +68,8 @@ jobs:
         working-directory: app
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Dependencias
         run: |
           sudo apt-get update
@@ -75,7 +83,7 @@ jobs:
             libxinerama-dev libxcb1-dev libxcb-xfixes0-dev libxss-dev libglvnd-dev libxkbcommon-dev libasound2-dev \
             libfdk-aac-dev libfontconfig-dev libfreetype6-dev libjack-jackd2-dev libsndio-dev libspeexdsp-dev \
             libudev-dev libv4l-dev libva-dev libvlc-dev libpci-dev libdrm-dev nlohmann-json3-dev libwebsocketpp-dev \
-            libasio-dev libqrcodegencpp-dev librist-dev libsrt-openssl-dev libglib2.0-dev poppler-utils
+            libasio-dev libqrcodegencpp-dev libxcb-xinput-dev librist-dev libsrt-openssl-dev libglib2.0-dev poppler-utils
       - name: Configurar
         run: cmake --preset ubuntu -DENABLE_BROWSER=OFF -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF -DCMAKE_BUILD_TYPE=RelWithDebInfo
       - name: Compilar
