@@ -13,10 +13,18 @@ Funciona en **macOS, Windows y Linux**. Licencia **GPL-2.0** (fork de [OBS Studi
 - Modos Cantado, Instrumental y Solo letra, con avance automático sincronizado con el audio.
 - Acepta la carpeta del programa Himnario Adventista o carpetas simples `NNN - Titulo/` con imágenes y MP3.
 
+**Cantos y coros** (como en Holyrics)
+- Biblioteca de cantos propios con buscador por título o letra.
+- Editor: pegás la letra, cada párrafo es una diapositiva, `[Coro]` nombra secciones, vista previa exacta.
+- Fondo por canto o por diapositiva (degradados, color, imagen, video en bucle), tercio inferior sobre la cámara.
+- En vivo: C coro, P puente, 1-9 estrofa, L sin texto, B ocultar, atajos globales.
+
 **Biblia**
-- Seis versiones libres incluidas (RV1909, RV1865, BES, PDT, VBL, KJV) e importación de otras.
+- Seis versiones libres incluidas (RV1909, RV1865, BES, PDT, VBL, KJV) e importación de otras (p. ej. RV1960
+  si la iglesia tiene permiso).
 - Búsqueda por referencia (`Juan 3:16`, `jn 3 16`, `1 Cor 13:4-7`) o por frase.
-- Diseños con tipografías, degradados, imagen o video de fondo, pantalla completa o tercio inferior.
+- Cita grande con la versión debajo, 17 tipografías incluidas, 18 fondos (aurora boreal, rayos de luz,
+  estrellas, bokeh...), imagen o video de fondo, pantalla completa o tercio inferior.
 
 **Presentaciones**
 - PDF completo página por página, sin exportar imágenes a mano.
@@ -33,8 +41,8 @@ virtual, plugins y websocket. Lo que proyectan los paneles son escenas `WS ...` 
 
 ```
 app/              Código de la aplicación (fork de OBS Studio)
-  frontend/docks/ Paneles de WorshipStudio (Himnario, Biblia, Presentaciones)
-  frontend/data/worship/  Biblias libres incluidas
+  frontend/docks/ Paneles de WorshipStudio (Himnario, Cantos, Biblia, Presentaciones)
+  frontend/data/worship/  Biblias y tipografías libres incluidas
   tools/worship/  Herramientas (conversión de Biblias)
 docs/             Documentación: requerimientos, arquitectura, investigación, cómo compilar
 .github/          Compilación automática para macOS, Windows y Linux

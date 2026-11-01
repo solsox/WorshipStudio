@@ -31,7 +31,7 @@ Prioridad: **P1** imprescindible para un culto, **P2** muy útil, **P3** deseabl
 | RF-02.6 | Encuadre de diapositivas 4:3 en 16:9: fondo difuminado, estirar o barras negras. | P2 | Hecho |
 | RF-02.7 | Aceptar carpetas simples `NNN - Titulo/` con imágenes, MP3 y `tiempos.txt` opcional. | P2 | Hecho |
 | RF-02.8 | Editor de tiempos: grabar los cambios de diapositiva mientras suena el audio y guardarlos en `tiempos.txt`. | P2 | Pendiente |
-| RF-02.9 | Himnos y cantos propios en texto (no solo imágenes), con estrofas y coro. | P1 | Pendiente (ver RF-05) |
+| RF-02.9 | Himnos y cantos propios en texto (no solo imágenes), con estrofas y coro. | P1 | Hecho (panel Cantos, RF-05) |
 
 ## RF-03 Biblia
 
@@ -41,6 +41,10 @@ Prioridad: **P1** imprescindible para un culto, **P2** muy útil, **P3** deseabl
 | RF-03.2 | Versiones libres incluidas (RV1909, RV1865, BES, PDT, VBL, KJV) e importación de otras en JSON. | P1 | Hecho |
 | RF-03.3 | Cambiar de versión conservando el pasaje (también en vivo). | P2 | Hecho |
 | RF-03.4 | Diseño configurable: tipografía, fondos (degradados, color, imagen, video), pantalla completa o tercio inferior. | P1 | Hecho |
+| RF-03.8 | La referencia (p. ej. "Juan 3:16") se muestra grande, y la versión debajo en letra chica y espaciada. | P1 | Hecho |
+| RF-03.9 | 17 tipografías libres incluidas en la app, iguales en macOS, Windows y Linux. | P1 | Hecho |
+| RF-03.10 | 18 fondos estéticos generados (mesh, aurora boreal, rayos de luz, estrellas, bokeh). | P1 | Hecho |
+| RF-03.11 | Reina-Valera 1960 y otras versiones con derechos, mediante importación por parte de cada iglesia. | P1 | Parcial (importación hecha; no se puede incluir sin permiso, ver [contenido-con-derechos](../producto/contenido-con-derechos.md)) |
 | RF-03.5 | Dividir pasajes largos en varias diapositivas automáticamente. | P1 | Parcial (se reduce la letra; falta paginar) |
 | RF-03.6 | Mostrar dos versiones a la vez (p. ej. español e inglés) para cultos bilingües. | P2 | Pendiente |
 | RF-03.7 | Historial y favoritos de pasajes. | P3 | Pendiente |
@@ -72,15 +76,17 @@ Limitaciones conocidas de RF-04.2:
 - En Windows se usa PowerPoint mediante COM si está instalado, si no LibreOffice.
 - Keynote (`.key`) solo se puede abrir en macOS con Keynote instalado.
 
-## RF-05 Cantos y letras propias (pendiente)
+## RF-05 Cantos y coros propios
 
 | ID | Requerimiento | Prioridad | Estado |
 |----|---------------|-----------|--------|
-| RF-05.1 | Biblioteca de cantos con título, autor, letra por secciones (Estrofa 1, Coro, Puente...) y orden de secciones. | P1 | Pendiente |
-| RF-05.2 | Editor rápido: pegar la letra y dividir en diapositivas automáticamente por líneas en blanco. | P1 | Pendiente |
-| RF-05.3 | Botones para saltar a una sección en vivo (C = coro, P = puente, 1/2/3 = estrofas). | P1 | Pendiente |
-| RF-05.4 | Temas de diseño reutilizables (tipografía, fondo, posición) compartidos con la Biblia. | P2 | Pendiente |
-| RF-05.5 | Importar cantos de OpenLyrics/OpenLP, OpenSong, ProPresenter, EasyWorship, Holyrics y texto plano. | P2 | Pendiente |
+| RF-05.1 | Biblioteca de cantos con título, autor, letra por secciones (Estrofa 1, Coro, Puente...), búsqueda por título o letra. | P1 | Hecho |
+| RF-05.2 | Editor: pegar la letra, se divide en diapositivas por líneas en blanco, `[Coro]` nombra secciones, vista previa exacta. | P1 | Hecho |
+| RF-05.2b | Fondo por canto (degradados, color, imagen, video en bucle) y fondo propio por diapositiva. | P1 | Hecho |
+| RF-05.2c | "Sin texto" (solo fondo) y "Ocultar", tercio inferior sobre la cámara, título en la primera diapositiva. | P1 | Hecho |
+| RF-05.3 | Teclas para saltar a una sección en vivo (C coro, P puente, E estrofa, I intro, F final, 1-9 estrofa N) y atajos globales. | P1 | Hecho |
+| RF-05.4 | Temas de diseño reutilizables (tipografía, fondo, posición) compartidos con la Biblia. | P2 | Parcial (mismos fondos y tipografías; falta guardar temas con nombre) |
+| RF-05.5 | Importar cantos de OpenLyrics/OpenLP, OpenSong, ProPresenter, EasyWorship, Holyrics y texto plano. | P2 | Parcial (texto plano y JSON propio) |
 | RF-05.6 | Registro de uso para informes de derechos (CCLI u otras licencias), con número de licencia por canto. | P2 | Pendiente |
 | RF-05.7 | Letras con acordes para los músicos, con transposición de tono. | P3 | Pendiente |
 
@@ -136,7 +142,7 @@ Limitaciones conocidas de RF-04.2:
 |----|---------------|-----------|--------|
 | RF-11.1 | Subtítulos en vivo de la predicación (voz a texto local). | P3 | Pendiente |
 | RF-11.2 | Letras en dos idiomas en la misma diapositiva. | P2 | Pendiente |
-| RF-11.3 | Interfaz traducible (español primero, inglés y portugués después). | P2 | Parcial (textos en español) |
+| RF-11.3 | Interfaz traducible; español por defecto si el sistema lo tiene. | P2 | Hecho (75 idiomas heredados de OBS) |
 
 ## RF-12 Pruebas
 
@@ -145,3 +151,13 @@ Limitaciones conocidas de RF-04.2:
 | RF-12.1 | Autoprueba que use la salida real de OBS y guarde capturas y `reporte.txt`. | P1 | Hecho |
 | RF-12.2 | Autoprueba de presentaciones (`WORSHIPSTUDIO_SELFTEST_PRESENTATIONS`, `WORSHIPSTUDIO_SELFTEST_ONLY=presentaciones`). | P1 | Hecho |
 | RF-12.3 | Compilación automática en macOS, Windows y Linux en cada cambio (GitHub Actions). | P1 | Parcial (flujo escrito, falta ejecutarlo en GitHub) |
+
+## RF-13 Interfaz y experiencia
+
+| ID | Requerimiento | Prioridad | Estado |
+|----|---------------|-----------|--------|
+| RF-13.1 | Modo Culto (solo contenido y vista previa) y Modo Técnico (todo OBS), con un botón. | P1 | Pendiente |
+| RF-13.2 | Asistente de primera vez: pantalla del proyector, himnario, tema. | P2 | Pendiente |
+| RF-13.3 | Marca propia: nada visible dice "OBS" salvo el crédito en Acerca de. | P1 | Parcial (textos y título hechos; faltan icono y logo) |
+| RF-13.4 | Temas propios WorshipStudio Noche (predeterminado) y Día. | P1 | Hecho |
+| RF-13.5 | Actualizador propio (el heredado de OBS está desactivado). | P2 | Pendiente |
