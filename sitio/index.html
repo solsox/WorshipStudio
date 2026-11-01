@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WorshipStudio — Todo el culto en una sola pantalla</title>
+  <meta name="description" content="Programa gratis y de código abierto para proyectar letras, himnario, Biblia, PDF y PowerPoint, y transmitir el culto en vivo. Basado en OBS Studio. Para macOS, Windows y Linux.">
+  <meta property="og:title" content="WorshipStudio — Todo el culto en una sola pantalla">
+  <meta property="og:description" content="Letras, himnario, Biblia, presentaciones y transmisión en vivo. Gratis y libre para siempre.">
+  <meta property="og:image" content="img/biblia.jpg">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#0E0F14">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <a class="skip" href="#contenido">Saltar al contenido</a>
+
+  <header class="nav" id="arriba">
+    <div class="wrap nav__inner">
+      <a class="brand" href="#arriba" aria-label="WorshipStudio, inicio">
+        <img src="logo.svg" alt="" width="32" height="32">
+        <span>WorshipStudio</span>
+      </a>
+      <nav class="nav__links" aria-label="Secciones">
+        <a href="#funciones">Funciones</a>
+        <a href="#eventos">Eventos</a>
+        <a href="#tutoriales">Tutoriales</a>
+        <a href="#donar">Donar</a>
+        <a href="https://github.com/solsox/WorshipStudio" rel="noopener">GitHub</a>
+      </nav>
+      <a class="btn btn--primary btn--sm" href="#descargar">Descargar gratis</a>
+    </div>
+  </header>
+
+  <main id="contenido">
+    <!-- 1. Hero -->
+    <section class="hero">
+      <div class="wrap">
+        <p class="eyebrow"><span class="dot"></span> Gratis · Código abierto · En español</p>
+        <h1 class="hero__title">Todo el culto,<br>en una sola pantalla.</h1>
+        <p class="hero__lead">Letras, himnario, Biblia, PDF y PowerPoint en el proyector <em>y</em> en la transmisión en vivo,
+          desde el mismo programa. Tan simple que cualquier voluntario lo usa en cinco minutos; tan completo como OBS Studio,
+          porque está construido sobre él.</p>
+        <div class="hero__cta">
+          <a class="btn btn--primary btn--lg" id="cta-principal" href="#descargar">Descargar gratis</a>
+          <a class="btn btn--ghost btn--lg" href="#funciones">Ver qué hace</a>
+        </div>
+        <ul class="trust" aria-label="Garantías">
+          <li>Sin suscripciones ni marcas de agua</li>
+          <li>Funciona sin internet</li>
+          <li>Sin cuentas ni telemetría</li>
+        </ul>
+      </div>
+      <figure class="hero__shot wrap">
+        <div class="window">
+          <div class="window__bar" aria-hidden="true"><i></i><i></i><i></i><span>WorshipStudio</span></div>
+          <img src="img/app.jpg" alt="Ventana de WorshipStudio con los paneles de Cantos, Biblia y Presentaciones junto a la vista previa y el programa" loading="eager" width="2000" height="1100">
+        </div>
+        <figcaption>Captura real de la aplicación.</figcaption>
+      </figure>
+    </section>
+
+    <!-- 2. El problema -->
+    <section class="section section--tight">
+      <div class="wrap split">
+        <div>
+          <p class="eyebrow">El problema</p>
+          <h2>Tres programas abiertos y una persona corriendo.</h2>
+        </div>
+        <div class="prose">
+          <p>Hoy la mayoría de las iglesias usa un programa para las letras, otro para la transmisión, captura la ventana del
+            primero en el segundo, y exporta el PowerPoint página por página. Basta que falle una cosa para que el culto se
+            detenga.</p>
+          <p><strong>WorshipStudio une todo.</strong> Lo que proyectás es una escena de transmisión de verdad: nítida, sin
+            capturas, con transiciones, y lista para YouTube o Facebook.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Funciones -->
+    <section class="section" id="funciones">
+      <div class="wrap">
+        <p class="eyebrow">Funciones</p>
+        <h2 class="section__title">Hecho para el culto,<br>no adaptado a él.</h2>
+      </div>
+
+      <article class="feature wrap">
+        <div class="feature__text">
+          <span class="num">01</span>
+          <h3>Cantos y coros</h3>
+          <p>Pegás la letra y cada párrafo es una diapositiva. Ponés <code>[Coro]</code> y en vivo saltás con la tecla
+            <kbd>C</kbd>. Fondo por canto o por diapositiva: degradados, imagen o video en bucle.</p>
+          <ul class="ticks">
+            <li>Vista previa exacta mientras escribís</li>
+            <li><kbd>C</kbd> coro · <kbd>P</kbd> puente · <kbd>1</kbd>–<kbd>9</kbd> estrofas · <kbd>B</kbd> ocultar</li>
+            <li>Tercio inferior sobre la cámara para la transmisión</li>
+          </ul>
+        </div>
+        <div class="feature__media"><img src="img/canto.jpg" alt="Diapositiva de canto con fondo degradado rosa y la letra centrada" loading="lazy" width="1400" height="788"></div>
+      </article>
+
+      <article class="feature feature--reverse wrap">
+        <div class="feature__text">
+          <span class="num">02</span>
+          <h3>Biblia hermosa en segundos</h3>
+          <p>Escribí <code>jn 3 16</code> o una frase y listo. La cita aparece grande, con la versión discreta debajo. Seis
+            versiones libres incluidas y la opción de importar la que tu iglesia use.</p>
+          <ul class="ticks">
+            <li>17 tipografías y 18 fondos diseñados para proyectar</li>
+            <li>Pantalla completa o tercio inferior</li>
+            <li>Cambia de versión sin perder el pasaje</li>
+          </ul>
+        </div>
+        <div class="feature__media"><img src="img/biblia.jpg" alt="Juan 3:16 proyectado con la referencia grande en dorado y la versión Reina Valera 1909 debajo" loading="lazy" width="1400" height="788"></div>
+      </article>
+
+      <article class="feature wrap">
+        <div class="feature__text">
+          <span class="num">03</span>
+          <h3>PDF y PowerPoint, sin exportar nada</h3>
+          <p>Arrastrá el archivo y se proyecta diapositiva por diapositiva. Con el <strong>modo libro</strong>, un PDF
+            vertical se recorta y se divide en mitades para que el texto se lea grande desde el fondo del templo.</p>
+          <ul class="ticks">
+            <li>PDF, PowerPoint, Keynote, Impress e imágenes</li>
+            <li>Funciona con presentadores inalámbricos</li>
+            <li>La siguiente diapositiva ya está lista: cambio instantáneo</li>
+          </ul>
+        </div>
+        <div class="feature__media"><img src="img/libro.jpg" alt="Página de un libro en PDF proyectada en modo libro con texto grande y legible" loading="lazy" width="1400" height="788"></div>
+      </article>
+
+      <article class="feature feature--reverse wrap">
+        <div class="feature__text">
+          <span class="num">04</span>
+          <h3>Himnario con pista sincronizada</h3>
+          <p>Elegí el himno por número: la letra avanza sola al ritmo del audio cantado o instrumental. Compatible con la
+            carpeta del Himnario Adventista y con carpetas propias.</p>
+          <ul class="ticks">
+            <li>Cantado, instrumental o solo letra</li>
+            <li>Clic en cualquier estrofa y el audio salta con ella</li>
+          </ul>
+        </div>
+        <div class="feature__media feature__media--panel">
+          <div class="mini-ui" aria-hidden="true">
+            <div class="mini-ui__search">Buscar himno por número o título</div>
+            <div class="mini-ui__row is-on">100 · Cuán grande es Él</div>
+            <div class="mini-ui__row">101 · Señor, mi Dios</div>
+            <div class="mini-ui__row">102 · A Dios sea la gloria</div>
+            <div class="mini-ui__bar"><span style="width:42%"></span></div>
+            <div class="mini-ui__meta">Cantado · 1:24 / 3:18 · Estrofa 2 de 5</div>
+          </div>
+        </div>
+      </article>
+
+      <div class="wrap grid4">
+        <div class="tile"><h4>Transmisión y grabación</h4><p>YouTube, Facebook, cualquier RTMP. Escenas, cámaras, filtros y Studio Mode de OBS.</p></div>
+        <div class="tile"><h4>Atajos y clickers</h4><p>Avanzá desde un presentador inalámbrico o un Stream Deck, aunque la ventana no esté al frente.</p></div>
+        <div class="tile"><h4>En español</h4><p>Interfaz, Biblias y ejemplos pensados para iglesias hispanas. 75 idiomas disponibles.</p></div>
+        <div class="tile"><h4>Mac, Windows y Linux</h4><p>Un solo programa en las tres plataformas, con tus cantos en archivos que podés copiar.</p></div>
+      </div>
+    </section>
+
+    <!-- 4. Fondos -->
+    <section class="section section--dark">
+      <div class="wrap">
+        <p class="eyebrow eyebrow--light">Diseño</p>
+        <h2 class="section__title">Que se vea tan bien<br>como suena.</h2>
+        <p class="lead-light">Fondos generados a la resolución de tu proyector, tipografías elegidas para leer de lejos y
+          contraste cuidado. Sin buscar imágenes en internet.</p>
+      </div>
+      <div class="gallery wrap">
+        <img src="img/aurora.jpg" alt="Fondo aurora boreal" loading="lazy" width="900" height="506">
+        <img src="img/rayos.jpg" alt="Fondo rayos de luz" loading="lazy" width="900" height="506">
+        <img src="img/estrellas.jpg" alt="Fondo noche estrellada" loading="lazy" width="900" height="506">
+        <img src="img/bokeh.jpg" alt="Fondo bokeh dorado" loading="lazy" width="900" height="506">
+      </div>
+    </section>
+
+    <!-- 5. Eventos -->
+    <section class="section" id="eventos">
+      <div class="wrap">
+        <p class="eyebrow">Para cualquier evento</p>
+        <h2 class="section__title">Del culto del domingo<br>al congreso anual.</h2>
+      </div>
+      <div class="wrap cards">
+        <div class="card"><span class="card__tag">Cultos</span><h4>Alabanza, lectura y predicación</h4><p>Cantos, himnario, Biblia y el PowerPoint del sermón en el mismo lugar.</p></div>
+        <div class="card"><span class="card__tag">Conferencias</span><h4>Varios oradores, cero estrés</h4><p>Abrí el PDF de cada uno, avanzá con su clicker y transmití a la vez.</p></div>
+        <div class="card"><span class="card__tag">Bodas y homenajes</span><h4>Fotos, letras y video</h4><p>Una carpeta de fotos se vuelve presentación en un clic.</p></div>
+        <div class="card"><span class="card__tag">Campamentos</span><h4>Juveniles y retiros</h4><p>Letras grandes con fondos en movimiento y anuncios entre actividades.</p></div>
+      </div>
+    </section>
+
+    <!-- 6. Comparación -->
+    <section class="section section--soft">
+      <div class="wrap">
+        <p class="eyebrow">Por qué cambiar</p>
+        <h2 class="section__title">Un programa en vez de tres.</h2>
+        <div class="table-wrap">
+          <table class="compare">
+            <thead><tr><th scope="col"></th><th scope="col">WorshipStudio</th><th scope="col">Programa de letras + OBS</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Letras, Biblia y presentaciones</th><td class="yes">Incluido</td><td>Programa de letras</td></tr>
+              <tr><th scope="row">Transmisión y grabación</th><td class="yes">Incluido</td><td>Segundo programa</td></tr>
+              <tr><th scope="row">Calidad en el stream</th><td class="yes">Nativa, sin capturas</td><td>Captura de ventana</td></tr>
+              <tr><th scope="row">PDF y PowerPoint completos</th><td class="yes">Arrastrar y soltar</td><td>A menudo, imagen por imagen</td></tr>
+              <tr><th scope="row">Costo</th><td class="yes">Gratis para siempre</td><td>Con frecuencia, licencia o suscripción</td></tr>
+              <tr><th scope="row">Código</th><td class="yes">Abierto (GPL)</td><td>Normalmente cerrado</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Descargar -->
+    <section class="section download" id="descargar">
+      <div class="wrap download__inner">
+        <div>
+          <p class="eyebrow">Descargar</p>
+          <h2 class="section__title">Listo para el próximo domingo.</h2>
+          <p class="prose">Descargá, abrí y proyectá. No hace falta cuenta ni internet durante el culto.</p>
+        </div>
+        <div class="platforms">
+          <a class="platform" id="dl-mac" href="https://github.com/solsox/WorshipStudio/releases/latest/download/WorshipStudio-macOS-arm64.zip">
+            <span class="platform__os">macOS</span>
+            <span class="platform__meta">Apple Silicon (M1 o posterior) · .zip</span>
+            <span class="btn btn--primary">Descargar para Mac</span>
+          </a>
+          <a class="platform platform--soon" id="dl-win" href="https://github.com/solsox/WorshipStudio/releases">
+            <span class="platform__os">Windows</span>
+            <span class="platform__meta">10 y 11 · en preparación</span>
+            <span class="btn btn--ghost">Seguir las versiones</span>
+          </a>
+          <a class="platform platform--soon" id="dl-linux" href="https://github.com/solsox/WorshipStudio/blob/main/docs/desarrollo/compilar.md">
+            <span class="platform__os">Linux</span>
+            <span class="platform__meta">Ubuntu 24.04 · compilar desde el código</span>
+            <span class="btn btn--ghost">Ver instrucciones</span>
+          </a>
+        </div>
+        <details class="note">
+          <summary>¿macOS dice que no puede verificar la app?</summary>
+          <p>Todavía no está firmada con un certificado de Apple (las donaciones ayudan a pagarlo). Hacé clic derecho sobre
+            WorshipStudio → <strong>Abrir</strong> → <strong>Abrir</strong>. Solo la primera vez.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- 8. Tutoriales -->
+    <section class="section" id="tutoriales">
+      <div class="wrap">
+        <p class="eyebrow">Aprender</p>
+        <h2 class="section__title">Tutoriales cortos,<br>en español.</h2>
+        <p class="prose">Videos de pocos minutos para el equipo de multimedia. Se publican aquí y en YouTube.</p>
+      </div>
+      <div class="wrap cards cards--tutorials">
+        <div class="card card--video"><span class="badge">Próximamente</span><div class="thumb">1</div><h4>Tu primer culto en 10 minutos</h4><p>Instalar, elegir la pantalla del proyector y proyectar el primer canto.</p></div>
+        <div class="card card--video"><span class="badge">Próximamente</span><div class="thumb">2</div><h4>Escribir cantos y coros</h4><p>Secciones, fondos y teclas para saltar al coro.</p></div>
+        <div class="card card--video"><span class="badge">Próximamente</span><div class="thumb">3</div><h4>PDF y PowerPoint del predicador</h4><p>Modo libro, clickers y ocultar la pantalla.</p></div>
+        <div class="card card--video"><span class="badge">Próximamente</span><div class="thumb">4</div><h4>Transmitir el culto</h4><p>YouTube, Biblia en tercio inferior y cámaras.</p></div>
+      </div>
+    </section>
+
+    <!-- 9. Código abierto y confianza -->
+    <section class="section section--soft">
+      <div class="wrap split">
+        <div>
+          <p class="eyebrow">Código abierto</p>
+          <h2>Construido sobre el motor de transmisión más usado del mundo.</h2>
+        </div>
+        <div class="prose">
+          <p>WorshipStudio es una versión de <a href="https://obsproject.com" rel="noopener">OBS Studio</a> con herramientas
+            para el culto. Todo lo que hace OBS sigue funcionando; lo nuevo son los paneles de Himnario, Cantos, Biblia y
+            Presentaciones.</p>
+          <ul class="ticks">
+            <li>Licencia GPL-2.0: podés usarlo, estudiarlo, mejorarlo y compartirlo.</li>
+            <li>No envía datos. No hay telemetría ni cuentas.</li>
+            <li>Tus cantos son archivos JSON tuyos, fáciles de respaldar.</li>
+            <li>Hoja de ruta pública y cada cambio a la vista en GitHub.</li>
+          </ul>
+          <p><a class="link-arrow" href="https://github.com/solsox/WorshipStudio" rel="noopener">Ver el código en GitHub</a>
+             <a class="link-arrow" href="https://github.com/solsox/WorshipStudio/blob/main/docs/producto/roadmap.md" rel="noopener">Hoja de ruta</a></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. Donar -->
+    <section class="section donate" id="donar">
+      <div class="wrap donate__inner">
+        <div>
+          <p class="eyebrow eyebrow--light">Donar</p>
+          <h2 class="section__title">Gratis para todas las iglesias.<br>Sostenido por algunas.</h2>
+          <p class="lead-light">WorshipStudio no tiene versión paga ni publicidad. Si le sirve a tu iglesia, una donación
+            ayuda a que siga siendo así.</p>
+        </div>
+        <div class="donate__box">
+          <h3>¿A dónde va tu donación?</h3>
+          <ul class="ticks ticks--light">
+            <li>Certificados para firmar la app en Windows y macOS (sin advertencias al instalar)</li>
+            <li>Tiempo de desarrollo: orden del culto, control desde el celular, monitor de escenario</li>
+            <li>Tutoriales en video y traducciones</li>
+          </ul>
+          <a class="btn btn--gold btn--lg" href="https://github.com/sponsors/solsox" rel="noopener">Donar con GitHub Sponsors</a>
+          <p class="donate__alt">También ayudás si dejás una ⭐ en GitHub, compartís con otra iglesia o reportás un error.</p>
+          <a class="btn btn--ghost-light" id="share" href="https://wa.me/?text=Mir%C3%A1%20WorshipStudio%3A%20letras%2C%20himnario%2C%20Biblia%20y%20transmisi%C3%B3n%20en%20un%20solo%20programa%2C%20gratis.%20https%3A%2F%2Fsolsox.github.io%2FWorshipStudio%2F" rel="noopener">Compartir con otra iglesia</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11. Preguntas -->
+    <section class="section" id="preguntas">
+      <div class="wrap faq">
+        <div>
+          <p class="eyebrow">Preguntas frecuentes</p>
+          <h2>Lo que nos preguntan los equipos de multimedia.</h2>
+        </div>
+        <div class="faq__list">
+          <details><summary>¿De verdad es gratis?</summary><p>Sí. Es software libre bajo licencia GPL. No hay versión paga, límite de uso ni marca de agua.</p></details>
+          <details><summary>¿Necesito internet durante el culto?</summary><p>No. Todo funciona sin conexión. Solo necesitás internet para transmitir en vivo.</p></details>
+          <details><summary>¿Incluye la Reina-Valera 1960 y el himnario?</summary><p>Incluye seis Biblias libres (RV1909, RV1865, BES, PDT, VBL y KJV). La RV1960 y los himnarios tienen derechos de autor: cada iglesia puede importarlos si tiene permiso, y estamos gestionando autorizaciones para incluirlos.</p></details>
+          <details><summary>¿Funciona en Windows?</summary><p>El código ya es compatible con Windows y Linux; los instaladores se publican en las próximas versiones. Seguí la página de versiones en GitHub para enterarte.</p></details>
+          <details><summary>¿Ya uso OBS, pierdo mis escenas?</summary><p>No. WorshipStudio guarda su configuración aparte, así que podés tener los dos instalados.</p></details>
+          <details><summary>¿Cómo pido una función o reporto un error?</summary><p>Abrí un <a href="https://github.com/solsox/WorshipStudio/issues" rel="noopener">issue en GitHub</a>. Leemos todos.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12. CTA final -->
+    <section class="final">
+      <div class="wrap">
+        <h2>Este domingo, que la tecnología<br>no sea la protagonista.</h2>
+        <div class="hero__cta">
+          <a class="btn btn--primary btn--lg" href="#descargar">Descargar gratis</a>
+          <a class="btn btn--ghost btn--lg" href="https://github.com/solsox/WorshipStudio" rel="noopener">Ver en GitHub</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer__inner">
+      <div class="brand"><img src="logo.svg" alt="" width="24" height="24"><span>WorshipStudio</span></div>
+      <p>Software libre (GPL-2.0) basado en <a href="https://obsproject.com" rel="noopener">OBS Studio</a>. No afiliado al OBS Project.
+        Tipografía Inter (OFL). Las imágenes son capturas reales de la aplicación.</p>
+      <nav aria-label="Enlaces del pie">
+        <a href="https://github.com/solsox/WorshipStudio" rel="noopener">GitHub</a>
+        <a href="https://github.com/solsox/WorshipStudio/releases" rel="noopener">Versiones</a>
+        <a href="https://github.com/solsox/WorshipStudio/blob/main/LICENSE" rel="noopener">Licencia</a>
+        <a href="#donar">Donar</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
