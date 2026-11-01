@@ -45,6 +45,7 @@
 #include <docks/ServiceDock.hpp>
 #include <docks/SongsDock.hpp>
 #include <docks/WelcomeGuide.hpp>
+#include <docks/WorshipLive.hpp>
 #include <docks/WorshipModes.hpp>
 #include <docks/WorshipRender.hpp>
 #include <docks/WorshipSelfTest.hpp>
@@ -1332,6 +1333,14 @@ void OBSBasic::OBSInit()
 	config_set_bool(App()->GetUserConfig(), "WorshipStudio", "SongsDockPlaced", true);
 
 	/* Modo culto (simple) / Modo tecnico (all of OBS). */
+	/* Content requested from the phone remote. */
+	WorshipLive &live = WorshipLive::instance();
+	connect(&live, &WorshipLive::hymnRequested, hymnalDock,
+		[hymnalDock](int number) { hymnalDock->projectHymn(number, hymnalDock->audioModeIndex()); });
+	connect(&live, &WorshipLive::bibleRequested, bibleDock,
+		[bibleDock](const QString &reference) { bibleDock->projectQuery(reference, bibleDock->layoutIndex()); });
+	connect(&live, &WorshipLive::songRequested, songsDock, &SongsDock::projectSongById);
+
 	auto *modes = new WorshipModes(this, ui->viewMenu, ui->statusbar, liveToolsDock,
 				       {serviceDock, songsDock, hymnalDock, bibleDock, presentationDock},
 				       [this]() { on_resetDocks_triggered(true); });

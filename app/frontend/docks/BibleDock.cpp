@@ -800,6 +800,11 @@ bool BibleDock::project(const QVector<BibleVerseRef> &verses, bool fresh)
 	return true;
 }
 
+int BibleDock::layoutIndex() const
+{
+	return layoutCombo->currentIndex();
+}
+
 void BibleDock::toggleHidden()
 {
 	if (live)

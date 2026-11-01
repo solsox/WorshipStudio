@@ -433,6 +433,8 @@ struct SelfTest {
 			      QStringLiteral("estado por la API: %1").arg(state.value(QStringLiteral("title")).toString()));
 			remote->handleForTest("POST", QStringLiteral("/api/accion?a=siguiente&pin=%1").arg(pin));
 			remote->qrCode(240).save(outDir.absoluteFilePath(QStringLiteral("envivo-qr.png")));
+			check(state.contains(QStringLiteral("scenes")) && state.contains(QStringLiteral("sources")),
+			      QStringLiteral("estado con escenas y fuentes"));
 		});
 		add(700, [=]() {
 			check(songs->currentSlide() == 1, QStringLiteral("siguiente desde el celular (diapositiva %1)").arg(songs->currentSlide() + 1));
@@ -465,6 +467,24 @@ struct SelfTest {
 			capture(songs->outputScene(), QStringLiteral("envivo-orden-anuncio"));
 			liveTools->stopCountdown();
 			WorshipLive::instance().setStageMessage(QString());
+			WorshipRemote *remote = liveTools->remote();
+			remote->handleForTest("POST", QStringLiteral("/api/accion?a=biblia&cita=Juan%203%3A16&pin=%1").arg(remote->pin()));
+		});
+		add(800, [=]() {
+			const LiveState state = WorshipLive::instance().state();
+			check(state.source == QStringLiteral("Biblia") && state.title.contains(QStringLiteral("Juan 3:16")),
+			      QStringLiteral("pasaje pedido desde el celular: %1").arg(state.title));
+			WorshipRemote *remote = liveTools->remote();
+			const QString pin = remote->pin();
+			const QByteArray songsJson = remote->handleForTest("GET", QStringLiteral("/api/cantos?pin=%1").arg(pin));
+			check(songsJson.startsWith('['), QStringLiteral("lista de cantos para el celular"));
+			/* Switching to a user scene from the phone. */
+			OBSSceneAutoRelease camera = obs_scene_create("Camara (prueba)");
+			remote->handleForTest("POST", QStringLiteral("/api/accion?a=escena&nombre=Camara%20(prueba)&pin=%1").arg(pin));
+			OBSSourceAutoRelease program = obs_frontend_get_current_scene();
+			check(program && QT_UTF8(obs_source_get_name(program)) == QStringLiteral("Camara (prueba)"),
+			      QStringLiteral("cambio de escena desde el celular"));
+			obs_source_remove(obs_scene_get_source(camera));
 		});
 	}
 

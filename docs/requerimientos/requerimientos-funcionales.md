@@ -131,7 +131,7 @@ Limitaciones conocidas de RF-04.2:
 
 | ID | Requerimiento | Prioridad | Estado |
 |----|---------------|-----------|--------|
-| RF-10.1 | Control desde el celular o tablet en la red local (siguiente/anterior, elegir himno o pasaje) sin instalar nada (página web). | P2 | Hecho (pagina web con PIN y codigo QR, orden del culto incluido) |
+| RF-10.1 | Control desde el celular o tablet en la red local sin instalar nada (página web). | P2 | Hecho: siguiente/anterior/ocultar, pasar a pantalla, orden del culto, escenas, fuentes visibles y audio, himno por número, pasaje, cantos, transmitir/grabar y mensajes al escenario (PIN + QR) |
 | RF-10.2 | Compatibilidad con Stream Deck, MIDI y presentadores. | P2 | Parcial (atajos de OBS; Stream Deck vía websocket) |
 | RF-10.3 | Macros: una acción ejecuta varias (cambiar escena + mostrar rótulo + iniciar grabación). | P3 | Pendiente |
 | RF-10.4 | Salida NDI para otras computadoras o mezcladores. | P3 | Pendiente (plugin de terceros disponible) |

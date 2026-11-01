@@ -45,6 +45,11 @@ public:
 	int serviceCurrent() const { return serviceIndex; }
 	void requestServiceItem(int index) { emit serviceItemRequested(index); }
 
+	/* Content asked for from the phone; the docks show it. */
+	void requestHymn(int number) { emit hymnRequested(number); }
+	void requestBible(const QString &reference) { emit bibleRequested(reference); }
+	void requestSong(const QString &id) { emit songRequested(id); }
+
 public slots:
 	void next();
 	void previous();
@@ -55,6 +60,9 @@ signals:
 	void stageMessageChanged();
 	void serviceChanged();
 	void serviceItemRequested(int index);
+	void hymnRequested(int number);
+	void bibleRequested(const QString &reference);
+	void songRequested(const QString &id);
 
 private:
 	WorshipLive() = default;

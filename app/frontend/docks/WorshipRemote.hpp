@@ -42,4 +42,7 @@ private:
 	void onReadyRead(QTcpSocket *socket);
 	QByteArray respond(const QByteArray &method, const QString &target, int *status, QByteArray *contentType);
 	QByteArray stateJson() const;
+	void showScene(const QString &name);
+	void toggleSource(const QString &name);
+	void toggleMute(const QString &name);
 };

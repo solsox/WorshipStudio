@@ -496,6 +496,11 @@ QString PresentationCatalogDock::renderedSlide(int entryIndex, int slide) const
 	return WorshipRender::HymnSlide(path, static_cast<WorshipRender::SlideFit>(fitCombo->currentIndex()), canvas);
 }
 
+int PresentationCatalogDock::audioModeIndex() const
+{
+	return audioModeCombo->currentIndex();
+}
+
 bool PresentationCatalogDock::projectHymn(int number, int mode)
 {
 	searchEdit->clear();

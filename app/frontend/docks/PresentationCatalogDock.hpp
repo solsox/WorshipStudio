@@ -27,6 +27,8 @@ public:
 
 	/* Used by the self test. `mode`: 0 cantado, 1 instrumental, 2 solo letra. */
 	bool projectHymn(int number, int mode);
+	/* 0 cantado, 1 instrumental, 2 solo letra (as chosen in the dock). */
+	int audioModeIndex() const;
 	void goToSlide(int slide) { showSlide(slide, true); }
 	int currentSlide() const { return liveSlide; }
 	int slideCount() const { return liveEntry >= 0 ? (int)allEntries.at(liveEntry).slidePaths.size() : 0; }

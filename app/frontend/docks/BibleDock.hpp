@@ -41,6 +41,8 @@ public:
 
 	/* Searches and projects in one step (used by the self test). */
 	bool projectQuery(const QString &query, int layout);
+	/* 0 full screen, 1 lower third (as chosen in the dock). */
+	int layoutIndex() const;
 	bool selectVersion(const QString &abbrev);
 	QStringList versionAbbrevs() const;
 	void setStyle(const QString &fontFamily, int preset);

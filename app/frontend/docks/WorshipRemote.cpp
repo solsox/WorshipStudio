@@ -18,6 +18,9 @@
 #include "WorshipRemote.hpp"
 #include "WorshipLive.hpp"
 #include "WorshipOutput.hpp"
+#include "SongLibrary.hpp"
+
+#include <obs-frontend-api.h>
 
 #include <qrcodegen.hpp>
 #include <qt-wrappers.hpp>
@@ -46,54 +49,94 @@ const char *const RemotePage = R"HTML(<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0E0F14"><title>WorshipStudio · Control</title>
 <style>
-:root{--bg:#0E0F14;--s1:#16181F;--s2:#1D2029;--line:#2A2D38;--t:#F2F2F5;--m:#9AA0B4;--a:#E2582B;--g:#E8C46A}
+:root{--bg:#0E0F14;--s1:#16181F;--s2:#1D2029;--line:#2A2D38;--t:#F2F2F5;--m:#9AA0B4;--a:#E2582B;--g:#E8C46A;--ok:#30A46C;--red:#E5484D}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--bg);color:var(--t);font:16px/1.45 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom))}
-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+body{margin:0;background:var(--bg);color:var(--t);font:16px/1.45 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;padding:max(14px,env(safe-area-inset-top)) 14px calc(84px + env(safe-area-inset-bottom))}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .brand{font-weight:700;letter-spacing:-.02em}.live{font-size:13px;color:var(--m)}
-.live b{display:inline-block;width:8px;height:8px;border-radius:50%;background:#3DD68C;margin-right:6px}
-.card{background:var(--s1);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px}
+.live b{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:6px}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px}
 .k{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--m);margin-bottom:6px}
+.onair{display:flex;gap:8px;align-items:center;font-size:14px;margin:2px 0}.dot{width:9px;height:9px;border-radius:50%;flex:none}
 #title{font-weight:700;font-size:18px}#section{color:var(--g);font-size:14px;margin-top:2px}
-#current{font-size:22px;font-weight:600;white-space:pre-line;margin-top:10px;min-height:2.6em}
+#current{font-size:21px;font-weight:600;white-space:pre-line;margin-top:8px;min-height:2.4em}
 #next{color:var(--m);white-space:pre-line}
 .nav{display:grid;grid-template-columns:1fr 1.6fr;gap:10px;margin-bottom:10px}
-button{font:600 18px/1 inherit;font-family:inherit;border:0;border-radius:16px;padding:22px 10px;color:var(--t);background:var(--s2);border:1px solid var(--line)}
-button:active{transform:scale(.98)}.primary{background:var(--a);border-color:var(--a);color:#fff;font-size:22px}
-.row{display:grid;grid-template-columns:1fr;gap:10px}.on{background:var(--g);color:#1A1407;border-color:var(--g)}
-ol{list-style:none;margin:0;padding:0}li{padding:12px;border-radius:12px;display:flex;gap:10px;align-items:center}
-li+li{border-top:1px solid var(--line)}li.cur{background:var(--s2);color:#fff;font-weight:600}
-li span{color:var(--m);font-size:13px;min-width:22px}
-#login{display:none}#login input{width:100%;font:600 28px/1 inherit;letter-spacing:.4em;text-align:center;padding:16px;border-radius:14px;border:1px solid var(--line);background:var(--s2);color:var(--t);margin:10px 0}
-.err{color:#E85E75;font-size:14px;min-height:1.2em}
+button{font:600 17px/1.1 inherit;font-family:inherit;border:1px solid var(--line);border-radius:14px;padding:18px 10px;color:var(--t);background:var(--s2)}
+button:active{transform:scale(.98)}.primary{background:var(--a);border-color:var(--a);color:#fff;font-size:20px}
+.go{width:100%;background:var(--ok);border-color:var(--ok);color:#fff;margin-bottom:10px}
+.on{background:var(--g);color:#1A1407;border-color:var(--g)}.rec{background:var(--red);border-color:var(--red);color:#fff}
+.list{list-style:none;margin:0;padding:0}.list li{display:flex;align-items:center;gap:10px;padding:13px 10px;border-radius:12px}
+.list li+li{border-top:1px solid var(--line)}.list li.cur{background:var(--s2);font-weight:600}
+.list li span.n{color:var(--m);font-size:13px;min-width:22px}.list li .grow{flex:1}
+.tag{font-size:11px;font-weight:700;padding:3px 7px;border-radius:999px}.tag.p{background:var(--red)}.tag.w{background:var(--ok)}
+.pill{font:600 13px/1 inherit;padding:9px 12px;border-radius:999px;border:1px solid var(--line);background:var(--s2);color:var(--t)}
+.pill.off{color:var(--m);text-decoration:line-through}
+input{width:100%;font:600 20px/1 inherit;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--s2);color:var(--t);margin:6px 0 10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(14,15,20,.96);border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom));backdrop-filter:blur(12px)}
+.tabs a{text-align:center;color:var(--m);text-decoration:none;font-size:12px;font-weight:600;padding:6px 0;border-radius:10px}
+.tabs a.sel{color:#fff;background:var(--s2)}.tabs a i{display:block;font-style:normal;font-size:20px;line-height:1.2}
+section[data-tab]{display:none}section[data-tab].show{display:block}
+#login{display:none}.err{color:var(--red);font-size:14px;min-height:1.2em}
 </style></head><body>
 <header><div class="brand">WorshipStudio</div><div class="live" id="status"><b></b>Conectado</div></header>
-<section id="login" class="card"><div class="k">Código de acceso</div>
+<div id="login" class="card"><div class="k">Código de acceso</div>
 <p style="margin:0;color:var(--m)">Está en el panel <b>En vivo</b> de WorshipStudio.</p>
 <input id="pin" inputmode="numeric" maxlength="4" autocomplete="one-time-code"><div class="err" id="err"></div>
-<button class="primary" style="width:100%" onclick="savePin()">Entrar</button></section>
+<button class="primary" style="width:100%" onclick="savePin()">Entrar</button></div>
 <main id="app">
-<div class="card"><div class="k" id="source">En pantalla</div><div id="title">Nada en pantalla</div><div id="section"></div><div id="current"></div></div>
-<div class="nav"><button onclick="act('anterior')" aria-label="Anterior">◀︎ Anterior</button><button class="primary" onclick="act('siguiente')" aria-label="Siguiente">Siguiente ▶︎</button></div>
-<div class="row"><button id="hide" onclick="act('ocultar')">Ocultar pantalla</button></div>
-<div class="card" style="margin-top:12px"><div class="k">Siguiente</div><div id="next">—</div></div>
-<div class="card" id="svc" style="display:none"><div class="k">Orden del culto</div><ol id="items"></ol></div>
+<section data-tab="vivo" class="show">
+<div class="card"><div class="onair"><span class="dot" style="background:var(--red)"></span><b>EN PANTALLA</b>&nbsp;<span id="prog"></span></div>
+<div class="onair" id="waitRow"><span class="dot" style="background:var(--ok)"></span><b>EN ESPERA</b>&nbsp;<span id="prev"></span></div></div>
+<button class="go" id="goBtn" onclick="act('aire')">Pasar a pantalla ➜</button>
+<div class="card"><div class="k" id="source">Contenido</div><div id="title">Nada en pantalla</div><div id="section"></div><div id="current"></div></div>
+<div class="nav"><button onclick="act('anterior')">◀ Anterior</button><button class="primary" onclick="act('siguiente')">Siguiente ▶</button></div>
+<button id="hide" style="width:100%" onclick="act('ocultar')">Ocultar pantalla</button>
+<div class="card" style="margin-top:12px"><div class="k">Sigue</div><div id="next">—</div></div>
+<div class="card" id="svc" style="display:none"><div class="k">Orden del culto</div><ol class="list" id="items"></ol></div>
+</section>
+<section data-tab="escenas">
+<div class="card"><div class="k">Escenas</div><ul class="list" id="scenes"></ul></div>
+<div class="card"><div class="k">Fuentes en pantalla</div><p style="margin:0 0 8px;color:var(--m);font-size:14px">Tocá para mostrar u ocultar. 🔇 silencia el audio.</p><ul class="list" id="sources"></ul></div>
+</section>
+<section data-tab="contenido">
+<div class="card"><div class="k">Himno</div><input id="hymn" inputmode="numeric" placeholder="Número, ej. 100"><button class="primary" style="width:100%" onclick="act('himno',{n:val('hymn')})">Mostrar himno</button></div>
+<div class="card"><div class="k">Biblia</div><input id="bible" placeholder="Ej. Juan 3:16 o Sal 23"><button class="primary" style="width:100%" onclick="act('biblia',{cita:val('bible')})">Mostrar pasaje</button></div>
+<div class="card"><div class="k">Cantos</div><input id="songFilter" placeholder="Buscar canto" oninput="drawSongs()"><ul class="list" id="songs"></ul></div>
+</section>
+<section data-tab="mas">
+<div class="card"><div class="k">Transmisión y grabación</div><div class="row2"><button id="stream" onclick="confirmAct('transmision','¿Iniciar o detener la transmisión?')">Transmitir</button><button id="record" onclick="confirmAct('grabacion','¿Iniciar o detener la grabación?')">Grabar</button></div></div>
+<div class="card"><div class="k">Mensaje al escenario</div><input id="msg" placeholder="Ej. 5 minutos"><div class="row2"><button class="primary" onclick="act('mensaje',{texto:val('msg')})">Enviar</button><button onclick="document.getElementById('msg').value='';act('mensaje',{texto:''})">Borrar</button></div></div>
+</section>
 </main>
+<nav class="tabs"><a href="#" data-go="vivo" class="sel"><i>▶︎</i>En vivo</a><a href="#" data-go="escenas"><i>▦</i>Escenas</a><a href="#" data-go="contenido"><i>♪</i>Contenido</a><a href="#" data-go="mas"><i>•••</i>Más</a></nav>
 <script>
 let pin=localStorage.getItem('wsPin')||new URLSearchParams(location.search).get('pin')||'';
 if(new URLSearchParams(location.search).get('pin')){localStorage.setItem('wsPin',pin);history.replaceState(null,'','/');}
-const $=id=>document.getElementById(id);
+let songs=[];const $=id=>document.getElementById(id);const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const val=id=>$(id).value.trim();
+document.querySelectorAll('.tabs a').forEach(a=>a.onclick=e=>{e.preventDefault();document.querySelectorAll('.tabs a').forEach(x=>x.classList.toggle('sel',x===a));document.querySelectorAll('section[data-tab]').forEach(s=>s.classList.toggle('show',s.dataset.tab===a.dataset.go));if(a.dataset.go==='contenido'&&!songs.length)loadSongs();});
 function showLogin(msg){$('login').style.display='block';$('app').style.display='none';$('err').textContent=msg||'';}
 function savePin(){pin=$('pin').value.trim();localStorage.setItem('wsPin',pin);$('login').style.display='none';$('app').style.display='block';poll();}
 async function call(path,opts){const r=await fetch(path+(path.includes('?')?'&':'?')+'pin='+encodeURIComponent(pin),opts);if(r.status===401){showLogin('Código incorrecto');throw 0;}return r.json();}
-function render(s){$('source').textContent=s.source||'En pantalla';$('title').textContent=s.title||'Nada en pantalla';
+function friendly(n){if(!n)return 'nada';if(n.startsWith('WS ')){n=n.slice(3);if(n.endsWith(' B'))n=n.slice(0,-2);}return n;}
+function render(s){$('prog').textContent=friendly(s.program);$('waitRow').style.display=s.studio?'flex':'none';$('goBtn').style.display=s.studio?'block':'none';$('prev').textContent=friendly(s.preview);
+$('source').textContent=s.source||'Contenido';$('title').textContent=s.title||'Nada en pantalla';
 $('section').textContent=(s.section||'')+(s.count?'  ·  '+(s.index+1)+'/'+s.count:'');$('current').textContent=s.current||'';
 $('next').textContent=s.next||'—';$('hide').classList.toggle('on',!!s.hidden);$('hide').textContent=s.hidden?'Mostrar pantalla':'Ocultar pantalla';
 const it=s.service||[];$('svc').style.display=it.length?'block':'none';
-$('items').innerHTML=it.map((t,i)=>'<li class="'+(i===s.serviceIndex?'cur':'')+'" onclick="act(\'item\','+i+')"><span>'+(i+1)+'</span>'+t.replace(/</g,'&lt;')+'</li>').join('');
+$('items').innerHTML=it.map((t,i)=>'<li class="'+(i===s.serviceIndex?'cur':'')+'" onclick="act(\'item\',{n:'+i+'})"><span class="n">'+(i+1)+'</span><span class="grow">'+esc(t)+'</span></li>').join('');
+$('scenes').innerHTML=(s.scenes||[]).map(n=>'<li class="'+(n===s.program?'cur':'')+'" onclick="act(\'escena\',{nombre:'+JSON.stringify(n).replace(/"/g,'&quot;')+'})"><span class="grow">'+esc(n)+'</span>'+(n===s.program?'<span class="tag p">EN PANTALLA</span>':n===s.preview?'<span class="tag w">EN ESPERA</span>':'')+'</li>').join('')||'<li>No hay escenas propias todavía</li>';
+$('sources').innerHTML=(s.sources||[]).map(f=>{const n=JSON.stringify(f.nombre).replace(/"/g,'&quot;');return '<li><span class="grow">'+esc(friendly(f.nombre))+'</span>'+(f.audio?'<button class="pill'+(f.silencio?' off':'')+'" onclick="act(\'silencio\',{nombre:'+n+'})">'+(f.silencio?'🔇':'🔊')+'</button>':'')+'<button class="pill'+(f.visible?'':' off')+'" onclick="act(\'fuente\',{nombre:'+n+'})">'+(f.visible?'Visible':'Oculta')+'</button></li>';}).join('')||'<li>Sin fuentes</li>';
+$('stream').classList.toggle('rec',!!s.streaming);$('stream').textContent=s.streaming?'Detener transmisión':'Transmitir';
+$('record').classList.toggle('rec',!!s.recording);$('record').textContent=s.recording?'Detener grabación':'Grabar';
 $('status').innerHTML='<b></b>Conectado';}
-async function act(a,n){if(navigator.vibrate)navigator.vibrate(12);try{render(await call('/api/accion?a='+a+(n!==undefined?'&n='+n:''),{method:'POST'}));}catch(e){}}
-async function poll(){try{render(await call('/api/estado'));}catch(e){if(e!==0)$('status').innerHTML='<b style="background:#E85E75"></b>Sin conexión';}}
+async function act(a,params){if(navigator.vibrate)navigator.vibrate(12);const q=Object.entries(params||{}).map(([k,v])=>'&'+k+'='+encodeURIComponent(v)).join('');try{render(await call('/api/accion?a='+a+q,{method:'POST'}));}catch(e){}}
+function confirmAct(a,text){if(confirm(text))act(a);}
+async function loadSongs(){try{songs=await call('/api/cantos');drawSongs();}catch(e){}}
+function drawSongs(){const f=val('songFilter').toLowerCase();$('songs').innerHTML=songs.filter(s=>s.titulo.toLowerCase().includes(f)).map(s=>'<li onclick="act(\'canto\',{id:\''+s.id+'\'})"><span class="grow">'+esc(s.titulo)+'</span><span class="n">▶︎</span></li>').join('')||'<li>No hay cantos</li>';}
+async function poll(){try{render(await call('/api/estado'));}catch(e){if(e!==0)$('status').innerHTML='<b style="background:var(--red)"></b>Sin conexión';}}
 if(!pin)showLogin();else poll();setInterval(()=>{if(pin)poll();},1000);
 </script></body></html>)HTML";
 
@@ -270,6 +313,7 @@ QByteArray WorshipRemote::respond(const QByteArray &method, const QString &targe
 		const QString action = query.queryItemValue(QStringLiteral("a"));
 		WorshipLive &live = WorshipLive::instance();
 		/* Run on the UI thread; the state is refreshed by the next poll. */
+		const QString name = query.queryItemValue(QStringLiteral("nombre"), QUrl::FullyDecoded);
 		if (action == QStringLiteral("siguiente"))
 			live.next();
 		else if (action == QStringLiteral("anterior"))
@@ -278,8 +322,74 @@ QByteArray WorshipRemote::respond(const QByteArray &method, const QString &targe
 			live.toggleHidden();
 		else if (action == QStringLiteral("item"))
 			live.requestServiceItem(query.queryItemValue(QStringLiteral("n")).toInt());
+		else if (action == QStringLiteral("aire") && obs_frontend_preview_program_mode_active())
+			obs_frontend_preview_program_trigger_transition();
+		else if (action == QStringLiteral("escena"))
+			showScene(name);
+		else if (action == QStringLiteral("fuente"))
+			toggleSource(name);
+		else if (action == QStringLiteral("silencio"))
+			toggleMute(name);
+		else if (action == QStringLiteral("himno"))
+			live.requestHymn(query.queryItemValue(QStringLiteral("n")).toInt());
+		else if (action == QStringLiteral("biblia"))
+			live.requestBible(query.queryItemValue(QStringLiteral("cita"), QUrl::FullyDecoded));
+		else if (action == QStringLiteral("canto"))
+			live.requestSong(query.queryItemValue(QStringLiteral("id")));
+		else if (action == QStringLiteral("mensaje"))
+			live.setStageMessage(query.queryItemValue(QStringLiteral("texto"), QUrl::FullyDecoded).left(140));
+		else if (action == QStringLiteral("transmision"))
+			obs_frontend_streaming_active() ? obs_frontend_streaming_stop() : obs_frontend_streaming_start();
+		else if (action == QStringLiteral("grabacion"))
+			obs_frontend_recording_active() ? obs_frontend_recording_stop() : obs_frontend_recording_start();
+	}
+	if (path == QStringLiteral("/api/cantos")) {
+		QJsonArray songs;
+		for (const Song &song : SongLibrary::loadAll())
+			songs.append(QJsonObject{{QStringLiteral("id"), song.id}, {QStringLiteral("titulo"), song.title}});
+		return QJsonDocument(songs).toJson(QJsonDocument::Compact);
 	}
 	return stateJson();
+}
+
+namespace {
+/* Scenes the phone can switch to: the user's own (WorshipStudio scenes are
+ * driven by the content tabs). */
+bool userScene(const QString &name)
+{
+	return !name.startsWith(QStringLiteral("WS "));
+}
+
+obs_source_t *programSource()
+{
+	return obs_frontend_get_current_scene();
+}
+} // namespace
+
+void WorshipRemote::showScene(const QString &name)
+{
+	OBSSourceAutoRelease source = obs_get_source_by_name(QT_TO_UTF8(name));
+	if (!source || !obs_scene_from_source(source) || !userScene(name))
+		return;
+	if (obs_frontend_preview_program_mode_active())
+		obs_frontend_set_current_preview_scene(source);
+	else
+		obs_frontend_set_current_scene(source);
+}
+
+void WorshipRemote::toggleSource(const QString &name)
+{
+	OBSSourceAutoRelease program = programSource();
+	obs_scene_t *scene = program ? obs_scene_from_source(program) : nullptr;
+	if (obs_sceneitem_t *item = scene ? obs_scene_find_source(scene, QT_TO_UTF8(name)) : nullptr)
+		obs_sceneitem_set_visible(item, !obs_sceneitem_visible(item));
+}
+
+void WorshipRemote::toggleMute(const QString &name)
+{
+	OBSSourceAutoRelease source = obs_get_source_by_name(QT_TO_UTF8(name));
+	if (source && (obs_source_get_output_flags(source) & OBS_SOURCE_AUDIO))
+		obs_source_set_muted(source, !obs_source_muted(source));
 }
 
 QByteArray WorshipRemote::stateJson() const
@@ -297,5 +407,43 @@ QByteArray WorshipRemote::stateJson() const
 			   {QStringLiteral("message"), live.stageMessage()},
 			   {QStringLiteral("service"), QJsonArray::fromStringList(live.serviceItems())},
 			   {QStringLiteral("serviceIndex"), live.serviceCurrent()}};
+
+	const bool studio = obs_frontend_preview_program_mode_active();
+	OBSSourceAutoRelease program = programSource();
+	OBSSourceAutoRelease preview = studio ? obs_frontend_get_current_preview_scene() : nullptr;
+	object.insert(QStringLiteral("studio"), studio);
+	object.insert(QStringLiteral("program"), program ? QT_UTF8(obs_source_get_name(program)) : QString());
+	object.insert(QStringLiteral("preview"), preview ? QT_UTF8(obs_source_get_name(preview)) : QString());
+	object.insert(QStringLiteral("streaming"), obs_frontend_streaming_active());
+	object.insert(QStringLiteral("recording"), obs_frontend_recording_active());
+
+	QJsonArray scenes;
+	char **names = obs_frontend_get_scene_names();
+	for (char **name = names; name && *name; ++name) {
+		const QString scene = QT_UTF8(*name);
+		if (userScene(scene))
+			scenes.append(scene);
+	}
+	bfree(names);
+	object.insert(QStringLiteral("scenes"), scenes);
+
+	/* Sources of what is on screen, to show/hide them or mute them. */
+	QJsonArray sources;
+	if (obs_scene_t *scene = program ? obs_scene_from_source(program) : nullptr) {
+		obs_scene_enum_items(
+			scene,
+			[](obs_scene_t *, obs_sceneitem_t *item, void *data) {
+				obs_source_t *source = obs_sceneitem_get_source(item);
+				const bool audio = obs_source_get_output_flags(source) & OBS_SOURCE_AUDIO;
+				static_cast<QJsonArray *>(data)->prepend(
+					QJsonObject{{QStringLiteral("nombre"), QT_UTF8(obs_source_get_name(source))},
+						    {QStringLiteral("visible"), obs_sceneitem_visible(item)},
+						    {QStringLiteral("audio"), audio},
+						    {QStringLiteral("silencio"), audio && obs_source_muted(source)}});
+				return true;
+			},
+			&sources);
+	}
+	object.insert(QStringLiteral("sources"), sources);
 	return QJsonDocument(object).toJson(QJsonDocument::Compact);
 }
