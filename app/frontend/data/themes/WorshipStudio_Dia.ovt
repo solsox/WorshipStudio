@@ -1,0 +1,26 @@
+@OBSThemeMeta {
+    name: 'WorshipStudio Dia';
+    id: 'com.worshipstudio.Dia';
+    extends: 'com.obsproject.Yami.Light';
+    author: 'WorshipStudio';
+    dark: 'false';
+}
+
+/* Light theme for rehearsals and preparing services in bright rooms. */
+@OBSThemeVars {
+    --ws_indigo1: #8189F5;
+    --ws_indigo2: #636BE6;
+    --ws_indigo3: #4E55C7;
+    --ws_indigo4: #3C42A0;
+    --ws_indigo5: #2E3380;
+
+    --primary: var(--ws_indigo3);
+    --primary_light: var(--ws_indigo2);
+    --primary_lighter: var(--ws_indigo1);
+    --primary_dark: var(--ws_indigo4);
+    --primary_darker: var(--ws_indigo5);
+
+    --border_radius: 8px;
+    --border_radius_small: 6px;
+    --border_radius_large: 12px;
+}

@@ -22,6 +22,7 @@
 #include "WorshipRender.hpp"
 
 #include <qt-wrappers.hpp>
+#include <Idian/Utils.hpp>
 
 #include <QAbstractItemView>
 #include <QCryptographicHash>
@@ -137,6 +138,7 @@ SongsDock::SongsDock(const QString &objectName, const QString &title, QWidget *p
 	splitter->setStretchFactor(1, 3);
 
 	projectButton = new QPushButton(tr("Proyectar"), root);
+	idian::Utils::addClass(projectButton, "button-primary");
 	projectButton->setDefault(true);
 	previousButton = new QPushButton(tr("< Anterior"), root);
 	nextButton = new QPushButton(tr("Siguiente >"), root);
@@ -154,8 +156,10 @@ SongsDock::SongsDock(const QString &objectName, const QString &title, QWidget *p
 	liveRow->addWidget(hideButton);
 
 	liveLabel = new QLabel(root);
+	idian::Utils::addClass(liveLabel, "text-bold");
 	liveLabel->setWordWrap(true);
 	statusLabel = new QLabel(root);
+	idian::Utils::addClass(statusLabel, "text-muted");
 	statusLabel->setWordWrap(true);
 
 	layout->addWidget(searchEdit);

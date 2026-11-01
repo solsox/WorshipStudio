@@ -20,6 +20,7 @@
 #include "WorshipRender.hpp"
 
 #include <qt-wrappers.hpp>
+#include <Idian/Utils.hpp>
 
 #include <QAbstractItemView>
 #include <QComboBox>
@@ -129,6 +130,7 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 	previewLabel->setToolTip(tr("Vista previa de como se vera en pantalla"));
 
 	projectButton = new QPushButton(tr("Proyectar"), root);
+	idian::Utils::addClass(projectButton, "button-primary");
 	projectButton->setDefault(true);
 
 	fontSizeSpin = new QSpinBox(root);
@@ -180,6 +182,7 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 	liveRow->addWidget(clearButton);
 
 	statusLabel = new QLabel(root);
+	idian::Utils::addClass(statusLabel, "text-muted");
 	statusLabel->setWordWrap(true);
 
 	layout->addLayout(versionRow);

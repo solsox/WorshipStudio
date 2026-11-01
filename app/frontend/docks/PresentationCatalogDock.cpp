@@ -20,6 +20,7 @@
 #include "WorshipRender.hpp"
 
 #include <qt-wrappers.hpp>
+#include <Idian/Utils.hpp>
 
 #include <QAbstractItemView>
 #include <QComboBox>
@@ -89,6 +90,7 @@ PresentationCatalogDock::PresentationCatalogDock(const QString &objectName, cons
 	audioModeCombo->setCurrentIndex(qBound(0, WorshipOutput::ConfigString(ConfigAudioMode).toInt(), 2));
 
 	projectButton = new QPushButton(tr("Proyectar"), root);
+	idian::Utils::addClass(projectButton, "button-primary");
 	projectButton->setDefault(true);
 
 	auto *folderButton = new QPushButton(tr("Carpeta..."), root);
@@ -136,9 +138,11 @@ PresentationCatalogDock::PresentationCatalogDock(const QString &objectName, cons
 	liveRow->addWidget(stopButton);
 
 	liveLabel = new QLabel(root);
+	idian::Utils::addClass(liveLabel, "text-bold");
 	liveLabel->setWordWrap(true);
 
 	statusLabel = new QLabel(root);
+	idian::Utils::addClass(statusLabel, "text-muted");
 	statusLabel->setWordWrap(true);
 
 	auto *editionRow = new QHBoxLayout();

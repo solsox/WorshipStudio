@@ -10,6 +10,7 @@
 #include <qt-wrappers.hpp>
 
 #include <QDir>
+#include <QDockWidget>
 #include <QFile>
 #include <QFileInfo>
 #include <QImage>
@@ -365,6 +366,28 @@ struct SelfTest {
 		add(300, [=]() { songs->deleteSong(title); });
 	}
 
+	/* Screenshots of the main window with each WorshipStudio dock in front. */
+	void addInterfaceSteps()
+	{
+		const QList<QPointer<QDockWidget>> docks = {hymnal.data(), songs.data(), bible.data(),
+							     presentations.data()};
+		const QStringList names = {QStringLiteral("himnario"), QStringLiteral("cantos"), QStringLiteral("biblia"),
+					   QStringLiteral("presentaciones")};
+		for (int i = 0; i < docks.size(); ++i) {
+			add(400, [=]() {
+				if (docks.at(i)) {
+					docks.at(i)->show();
+					docks.at(i)->raise();
+				}
+			});
+			add(700, [=]() {
+				QWidget *window = hymnal->window();
+				const QString path = outDir.absoluteFilePath(QStringLiteral("interfaz-%1.png").arg(names.at(i)));
+				check(window && window->grab().save(path), QStringLiteral("captura de la interfaz %1").arg(path));
+			});
+		}
+	}
+
 	void runNext(int index)
 	{
 		if (index >= steps.size()) {
@@ -434,6 +457,8 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Songs
 		for (int i = 0; i < presentationFiles.size(); ++i)
 			test->addPresentationSteps(presentationFiles.at(i), i + 1);
 	}
+	if (wanted("interfaz"))
+		test->addInterfaceSteps();
 	if (wanted("cantos"))
 		test->addSongSteps();
 	if (wanted("biblia"))

@@ -21,6 +21,7 @@
 #include "WorshipRender.hpp"
 
 #include <qt-wrappers.hpp>
+#include <Idian/Utils.hpp>
 
 #include <QAbstractItemView>
 #include <QCheckBox>
@@ -190,6 +191,7 @@ PresentationDock::PresentationDock(const QString &objectName, const QString &tit
 	bookCheck->setChecked(WorshipOutput::ConfigString(ConfigBook) == QStringLiteral("1"));
 
 	projectButton = new QPushButton(tr("Proyectar"), root);
+	idian::Utils::addClass(projectButton, "button-primary");
 	projectButton->setDefault(true);
 
 	auto *projectRow = new QHBoxLayout();
@@ -209,8 +211,10 @@ PresentationDock::PresentationDock(const QString &objectName, const QString &tit
 	liveRow->addWidget(hideButton);
 
 	liveLabel = new QLabel(root);
+	idian::Utils::addClass(liveLabel, "text-bold");
 	liveLabel->setWordWrap(true);
 	statusLabel = new QLabel(root);
+	idian::Utils::addClass(statusLabel, "text-muted");
 	statusLabel->setWordWrap(true);
 
 	layout->addLayout(openRow);

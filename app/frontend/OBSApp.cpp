@@ -748,6 +748,24 @@ bool OBSApp::InitLocale()
 	}
 
 	if (!userLocale && defaultLang) {
+		/* WorshipStudio is made for Spanish speaking churches first: when the
+		 * system lists Spanish among its languages, use it even if it is not
+		 * the first one. Settings → General can still pick any language. */
+		for (auto &locale_ : GetPreferredLocales()) {
+			if (locale_.rfind("es-", 0) != 0)
+				continue;
+			string path;
+			if (GetDataFilePath(("locale/" + locale_ + ".ini").c_str(), path) ||
+			    GetDataFilePath("locale/es-ES.ini", path)) {
+				if (text_lookup_add(textLookup, path.c_str())) {
+					blog(LOG_INFO, "Using Spanish locale from '%s'", path.c_str());
+					locale = locale_;
+					QLocale::setDefault(QLocale(QString::fromStdString(locale).replace('-', '_')));
+					return true;
+				}
+			}
+		}
+
 		for (auto &locale_ : GetPreferredLocales()) {
 			if (locale_ == lang) {
 				return true;

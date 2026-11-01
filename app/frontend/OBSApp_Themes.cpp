@@ -1082,6 +1082,14 @@ bool OBSApp::InitTheme()
 
 	QString themeName = config_get_string(userConfig, "Appearance", "Theme");
 
+	/* Move existing installs from the stock OBS look to the WorshipStudio
+	 * theme once; a theme picked later by the user is kept. */
+	if (!config_get_bool(userConfig, "WorshipStudio", "ThemeMigrated")) {
+		if (themeName.isEmpty() || themeName.startsWith("com.obsproject.Yami"))
+			themeName = DEFAULT_THEME;
+		config_set_bool(userConfig, "WorshipStudio", "ThemeMigrated", true);
+	}
+
 	if (themeName.isEmpty() || !GetTheme(themeName)) {
 		if (!themeName.isEmpty()) {
 			blog(LOG_WARNING,

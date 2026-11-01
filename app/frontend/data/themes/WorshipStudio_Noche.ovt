@@ -1,0 +1,59 @@
+@OBSThemeMeta {
+    name: 'WorshipStudio Noche';
+    id: 'com.worshipstudio.Noche';
+    extends: 'com.obsproject.Yami';
+    author: 'WorshipStudio';
+    dark: 'true';
+}
+
+/* Calm, low-glare dark theme for the booth during a service: ink-blue
+ * neutrals, one indigo accent, rounded shapes and quiet borders. */
+@OBSThemeVars {
+    --grey1: #5C6178;
+    --grey2: #4A4F63;
+    --grey3: #3A3F51;
+    --grey4: #2E3241;
+    --grey5: #252836;
+    --grey6: #1D2029;
+    --grey7: #16181F;
+    --grey8: #0E0F14;
+
+    --ws_indigo1: #A5ACFF;
+    --ws_indigo2: #8189F5;
+    --ws_indigo3: #636BE6;
+    --ws_indigo4: #4E55C7;
+    --ws_indigo5: #3C42A0;
+
+    --primary: var(--ws_indigo3);
+    --primary_light: var(--ws_indigo2);
+    --primary_lighter: var(--ws_indigo1);
+    --primary_dark: var(--ws_indigo4);
+    --primary_darker: var(--ws_indigo5);
+
+    --text_muted: #9AA0B4;
+
+    --border_color: var(--grey4);
+    --border_radius: 8px;
+    --border_radius_small: 6px;
+    --border_radius_large: 12px;
+
+    --input_bg: var(--grey5);
+    --input_bg_hover: var(--grey4);
+    --input_bg_focus: var(--grey6);
+    --input_border: var(--grey4);
+    --input_border_hover: var(--grey2);
+    --input_border_focus: var(--primary_light);
+
+    --button_bg: var(--grey4);
+    --button_bg_hover: var(--grey3);
+    --button_bg_down: var(--grey6);
+    --button_border: var(--grey4);
+    --button_border_hover: var(--grey2);
+
+    --list_item_bg_selected: var(--primary);
+    --list_item_bg_hover: var(--grey4);
+
+    --scrollbar_handle: var(--grey3);
+    --scrollbar_bg: var(--grey6);
+    --scrollbar_border: var(--grey6);
+}
