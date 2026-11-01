@@ -1,0 +1,82 @@
+name: Compilar
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: compilar-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    name: macOS (Apple Silicon)
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configurar
+        run: |
+          cmake --preset macos -B build_macos \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 -DOBS_CODESIGN_IDENTITY=- \
+            -DENABLE_BROWSER=ON -DENABLE_WHATSNEW=OFF -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF
+      - name: Compilar
+        run: cmake --build build_macos --config RelWithDebInfo -- -quiet
+      - name: Empaquetar
+        run: |
+          mkdir -p ../dist
+          ditto -c -k --keepParent build_macos/frontend/RelWithDebInfo/WorshipStudio.app ../dist/WorshipStudio-macOS-arm64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WorshipStudio-macOS-arm64
+          path: dist/WorshipStudio-macOS-arm64.zip
+
+  windows:
+    name: Windows x64
+    runs-on: windows-2025
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configurar
+        run: cmake --preset windows-x64 -G "Visual Studio 17 2022" -DENABLE_BROWSER=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF
+      - name: Compilar
+        run: cmake --build --preset windows-x64 --config RelWithDebInfo --parallel
+      - name: Instalar
+        run: cmake --install build_x64 --prefix build_x64/install --config RelWithDebInfo
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WorshipStudio-Windows-x64
+          path: app/build_x64/install
+
+  linux:
+    name: Linux (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencias
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build pkg-config extra-cmake-modules \
+            qt6-base-dev qt6-base-private-dev libqt6svg6-dev \
+            libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev \
+            libcurl4-openssl-dev libjansson-dev libx11-xcb-dev libgl1-mesa-dev libgles2-mesa-dev libwayland-dev \
+            libpipewire-0.3-dev libpulse-dev libx264-dev libmbedtls-dev uthash-dev libsimde-dev libluajit-5.1-dev \
+            python3-dev swig libx11-dev libxcb-randr0-dev libxcb-shm0-dev libxcb-xinerama0-dev libxcb-composite0-dev \
+            libxinerama-dev libxcb1-dev libxcb-xfixes0-dev libxss-dev libglvnd-dev libxkbcommon-dev libasound2-dev \
+            libfdk-aac-dev libfontconfig-dev libfreetype6-dev libjack-jackd2-dev libsndio-dev libspeexdsp-dev \
+            libudev-dev libv4l-dev libva-dev libvlc-dev libpci-dev libdrm-dev nlohmann-json3-dev libwebsocketpp-dev \
+            libasio-dev libqrcodegencpp-dev librist-dev libsrt-openssl-dev libglib2.0-dev poppler-utils
+      - name: Configurar
+        run: cmake --preset ubuntu -DENABLE_BROWSER=OFF -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - name: Compilar
+        run: cmake --build build_ubuntu
