@@ -3,6 +3,7 @@
 #include "BibleDock.hpp"
 #include "PresentationCatalogDock.hpp"
 #include "PresentationDock.hpp"
+#include "SongsDock.hpp"
 #include "WorshipOutput.hpp"
 #include "WorshipRender.hpp"
 
@@ -61,6 +62,7 @@ struct SelfTest {
 	QPointer<PresentationCatalogDock> hymnal;
 	QPointer<BibleDock> bible;
 	QPointer<PresentationDock> presentations;
+	QPointer<SongsDock> songs;
 	QDir outDir;
 	QStringList report;
 	int failures = 0;
@@ -292,6 +294,77 @@ struct SelfTest {
 		});
 	}
 
+	void addAllBibleSteps()
+	{
+		addBibleStep(QStringLiteral("Juan 3:16"), 0, QStringLiteral("biblia-juan3-16"));
+		addBibleStep(QStringLiteral("1 Cor 13:4-7"), 0, QStringLiteral("biblia-1cor13-4-7"));
+		addBibleStep(QStringLiteral("Sal 23:1-6"), 0, QStringLiteral("biblia-salmo23-completo"));
+		addBibleStep(QStringLiteral("Romanos 8:31-39"), 0, QStringLiteral("biblia-romanos8-largo"));
+		addBibleStep(QStringLiteral("Jueces 1:1"), 0, QStringLiteral("biblia-jueces1-mayusculas"));
+		addBibleStep(QStringLiteral("Juan 3:16"), 1, QStringLiteral("biblia-juan3-16-tercio"));
+		addBibleStep(QStringLiteral("porque de tal manera amo"), 0, QStringLiteral("biblia-busqueda-frase"));
+
+		/* Every bundled version shows the same passage. */
+		for (const QString &abbrev : bible->versionAbbrevs()) {
+			add(200, [this, abbrev]() {
+				check(bible->selectVersion(abbrev), QStringLiteral("version %1 seleccionada").arg(abbrev));
+			});
+			addBibleStep(abbrev == QStringLiteral("KJV") ? QStringLiteral("John 3:16") : QStringLiteral("Juan 3:16"),
+					   0, QStringLiteral("version-%1").arg(abbrev.toLower()));
+		}
+		add(200, [this]() { bible->selectVersion(QStringLiteral("RV1909")); });
+
+		/* Fonts and backgrounds. */
+		const QStringList fonts = WorshipRender::RecommendedFonts();
+		const QStringList presets = WorshipRender::BackgroundPresetNames();
+		for (int i = 0; i < presets.size(); ++i) {
+			const QString font = fonts.value(i % qMax(1, (int)fonts.size()));
+			add(200, [this, font, i]() {
+				log(QStringLiteral("estilo: fondo %1, letra %2").arg(i).arg(font));
+				bible->setStyle(font, i);
+			});
+			addBibleStep(QStringLiteral("Sal 46:1-3"), 0,
+					   QStringLiteral("estilo-%1-%2").arg(i).arg(QString(font).replace(QLatin1Char(' '), QLatin1Char('_'))));
+		}
+		add(200, [this, fonts]() { bible->setStyle(fonts.value(0), 0); });
+	}
+
+	void addSongSteps()
+	{
+		const QString title = QStringLiteral("Autoprueba de cantos");
+		add(300, [=]() {
+			log(QStringLiteral("--- Cantos ---"));
+			songs->deleteSong(title);
+			check(songs->projectNewSong(title,
+						    QStringLiteral("[Estrofa 1]\nCuan grande es tu amor\nque llena mi corazon\n\n"
+								   "[Coro]\nTe alabare\npor siempre te alabare\n\n"
+								   "[Estrofa 2]\nEn la manana y en la noche\ncantare de tu bondad\n\n"
+								   "[Puente]\nSanto, santo, santo\n\n[Coro]\nTe alabare\npor siempre te alabare"),
+						    11),
+			      QStringLiteral("crear y proyectar canto"));
+		});
+		add(800, [=]() {
+			check(songs->currentSlide() == 0 && songs->slideCount() == 5,
+			      QStringLiteral("diapositiva 1/%1").arg(songs->slideCount()));
+			capture(songs->outputScene(), QStringLiteral("canto-estrofa1"));
+			songs->nextSlide();
+		});
+		add(600, [=]() {
+			check(songs->currentSlide() == 1, QStringLiteral("siguiente: coro"));
+			capture(songs->outputScene(), QStringLiteral("canto-coro"));
+			check(songs->jumpToSection(QLatin1Char('p')) && songs->currentSlide() == 3,
+			      QStringLiteral("tecla P: puente (diapositiva %1)").arg(songs->currentSlide() + 1));
+		});
+		add(600, [=]() {
+			capture(songs->outputScene(), QStringLiteral("canto-puente"));
+			check(songs->jumpToSection(QLatin1Char('c')) && songs->currentSlide() == 4,
+			      QStringLiteral("tecla C: siguiente coro (diapositiva %1)").arg(songs->currentSlide() + 1));
+			check(songs->jumpToSection(QLatin1Char('2')) && songs->currentSlide() == 2,
+			      QStringLiteral("tecla 2: estrofa 2 (diapositiva %1)").arg(songs->currentSlide() + 1));
+		});
+		add(300, [=]() { songs->deleteSong(title); });
+	}
+
 	void runNext(int index)
 	{
 		if (index >= steps.size()) {
@@ -308,7 +381,7 @@ struct SelfTest {
 			return;
 		}
 		QTimer::singleShot(steps.at(index).delayMs, [this, index]() {
-			if (!hymnal || !bible || !presentations)
+			if (!hymnal || !bible || !presentations || !songs)
 				return;
 			steps.at(index).run();
 			runNext(index + 1);
@@ -318,7 +391,7 @@ struct SelfTest {
 	void waitStep(int index, int waitedMs)
 	{
 		QTimer::singleShot(250, [this, index, waitedMs]() {
-			if (!hymnal || !bible || !presentations)
+			if (!hymnal || !bible || !presentations || !songs)
 				return;
 			if (steps.at(index).until() || waitedMs + 250 >= steps.at(index).delayMs)
 				runNext(index + 1);
@@ -329,12 +402,13 @@ struct SelfTest {
 };
 } // namespace
 
-void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, PresentationDock *presentations,
-			const QString &outputDir, std::function<void()> finished)
+void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, SongsDock *songs,
+			PresentationDock *presentations, const QString &outputDir, std::function<void()> finished)
 {
 	auto *test = new SelfTest();
 	test->hymnal = hymnal;
 	test->bible = bible;
+	test->songs = songs;
 	test->presentations = presentations;
 	QDir().mkpath(outputDir);
 	test->outDir = QDir(outputDir);
@@ -348,11 +422,23 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Prese
 			  .arg(WorshipOutput::CanvasWidth())
 			  .arg(WorshipOutput::CanvasHeight()));
 
-	const QStringList presentationFiles =
-		qEnvironmentVariable("WORSHIPSTUDIO_SELFTEST_PRESENTATIONS").split(QLatin1Char(';'), Qt::SkipEmptyParts);
-	for (int i = 0; i < presentationFiles.size(); ++i)
-		test->addPresentationSteps(presentationFiles.at(i), i + 1);
-	if (qEnvironmentVariable("WORSHIPSTUDIO_SELFTEST_ONLY") == QStringLiteral("presentaciones")) {
+	const QStringList only =
+		qEnvironmentVariable("WORSHIPSTUDIO_SELFTEST_ONLY").split(QLatin1Char(','), Qt::SkipEmptyParts);
+	const auto wanted = [&only](const char *section) {
+		return only.isEmpty() || only.contains(QString::fromLatin1(section));
+	};
+
+	if (wanted("presentaciones")) {
+		const QStringList presentationFiles = qEnvironmentVariable("WORSHIPSTUDIO_SELFTEST_PRESENTATIONS")
+							      .split(QLatin1Char(';'), Qt::SkipEmptyParts);
+		for (int i = 0; i < presentationFiles.size(); ++i)
+			test->addPresentationSteps(presentationFiles.at(i), i + 1);
+	}
+	if (wanted("cantos"))
+		test->addSongSteps();
+	if (wanted("biblia"))
+		test->addAllBibleSteps();
+	if (!wanted("himnario")) {
 		test->runNext(0);
 		return;
 	}
@@ -392,38 +478,6 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Prese
 				    QStringLiteral("de vuelta al himnario nuevo: %1 himnos").arg(test->hymnal->hymnCount()));
 		});
 	}
-
-	test->addBibleStep(QStringLiteral("Juan 3:16"), 0, QStringLiteral("biblia-juan3-16"));
-	test->addBibleStep(QStringLiteral("1 Cor 13:4-7"), 0, QStringLiteral("biblia-1cor13-4-7"));
-	test->addBibleStep(QStringLiteral("Sal 23:1-6"), 0, QStringLiteral("biblia-salmo23-completo"));
-	test->addBibleStep(QStringLiteral("Romanos 8:31-39"), 0, QStringLiteral("biblia-romanos8-largo"));
-	test->addBibleStep(QStringLiteral("Jueces 1:1"), 0, QStringLiteral("biblia-jueces1-mayusculas"));
-	test->addBibleStep(QStringLiteral("Juan 3:16"), 1, QStringLiteral("biblia-juan3-16-tercio"));
-	test->addBibleStep(QStringLiteral("porque de tal manera amo"), 0, QStringLiteral("biblia-busqueda-frase"));
-
-	/* Every bundled version shows the same passage. */
-	for (const QString &abbrev : bible->versionAbbrevs()) {
-		test->add(200, [test, abbrev]() {
-			test->check(test->bible->selectVersion(abbrev), QStringLiteral("version %1 seleccionada").arg(abbrev));
-		});
-		test->addBibleStep(abbrev == QStringLiteral("KJV") ? QStringLiteral("John 3:16") : QStringLiteral("Juan 3:16"),
-				   0, QStringLiteral("version-%1").arg(abbrev.toLower()));
-	}
-	test->add(200, [test]() { test->bible->selectVersion(QStringLiteral("RV1909")); });
-
-	/* Fonts and backgrounds. */
-	const QStringList fonts = WorshipRender::RecommendedFonts();
-	const QStringList presets = WorshipRender::BackgroundPresetNames();
-	for (int i = 0; i < presets.size(); ++i) {
-		const QString font = fonts.value(i % qMax(1, (int)fonts.size()));
-		test->add(200, [test, font, i]() {
-			test->log(QStringLiteral("estilo: fondo %1, letra %2").arg(i).arg(font));
-			test->bible->setStyle(font, i);
-		});
-		test->addBibleStep(QStringLiteral("Sal 46:1-3"), 0,
-				   QStringLiteral("estilo-%1-%2").arg(i).arg(QString(font).replace(QLatin1Char(' '), QLatin1Char('_'))));
-	}
-	test->add(200, [test, fonts]() { test->bible->setStyle(fonts.value(0), 0); });
 
 	test->runNext(0);
 }

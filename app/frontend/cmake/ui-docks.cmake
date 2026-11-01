@@ -11,6 +11,12 @@ target_sources(
     docks/PresentationCatalogDock.hpp
     docks/PresentationDock.cpp
     docks/PresentationDock.hpp
+    docks/SongEditor.cpp
+    docks/SongEditor.hpp
+    docks/SongLibrary.cpp
+    docks/SongLibrary.hpp
+    docks/SongsDock.cpp
+    docks/SongsDock.hpp
     docks/WorshipOutput.cpp
     docks/WorshipDocument.cpp
     docks/WorshipDocument.hpp

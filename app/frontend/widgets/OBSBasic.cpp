@@ -41,6 +41,8 @@
 #include <models/SceneCollection.hpp>
 #include <docks/PresentationCatalogDock.hpp>
 #include <docks/PresentationDock.hpp>
+#include <docks/SongsDock.hpp>
+#include <docks/WorshipRender.hpp>
 #include <docks/WorshipSelfTest.hpp>
 #include <settings/OBSBasicSettings.hpp>
 #include <utility/QuickTransition.hpp>
@@ -1254,6 +1256,10 @@ void OBSBasic::OBSInit()
 #endif
 
 	/* WorshipStudio native docks */
+	std::string fontsDir;
+	if (GetDataFilePath("worship/fuentes", fontsDir))
+		WorshipRender::RegisterBundledFonts(QT_UTF8(fontsDir.c_str()));
+
 	auto *hymnalDock = new PresentationCatalogDock("hymnalDock", QStringLiteral("Himnario"), this);
 	AddDockWidget(hymnalDock, Qt::RightDockWidgetArea);
 
@@ -1262,13 +1268,16 @@ void OBSBasic::OBSInit()
 	auto *bibleDock = new BibleDock("bibleDock", QStringLiteral("Biblia"), QT_UTF8(bibleDir.c_str()), this);
 	AddDockWidget(bibleDock, Qt::RightDockWidgetArea);
 
+	auto *songsDock = new SongsDock("songsDock", QStringLiteral("Cantos"), this);
+	AddDockWidget(songsDock, Qt::RightDockWidgetArea);
+
 	auto *presentationDock = new PresentationDock("presentationDock", QStringLiteral("Presentaciones"), this);
 	AddDockWidget(presentationDock, Qt::RightDockWidgetArea);
 
 	const QString selfTestDir = qEnvironmentVariable("WORSHIPSTUDIO_SELFTEST");
 	if (!selfTestDir.isEmpty()) {
-		QTimer::singleShot(5000, this, [this, hymnalDock, bibleDock, presentationDock, selfTestDir]() {
-			RunWorshipSelfTest(hymnalDock, bibleDock, presentationDock, selfTestDir,
+		QTimer::singleShot(5000, this, [this, hymnalDock, bibleDock, songsDock, presentationDock, selfTestDir]() {
+			RunWorshipSelfTest(hymnalDock, bibleDock, songsDock, presentationDock, selfTestDir,
 					   [this]() { QTimer::singleShot(500, this, &QWidget::close); });
 		});
 	}
@@ -1278,15 +1287,17 @@ void OBSBasic::OBSInit()
 	if (!dockStateStr) {
 		on_resetDocks_triggered(true);
 		for (QDockWidget *dock : {static_cast<QDockWidget *>(hymnalDock), static_cast<QDockWidget *>(bibleDock),
-					  static_cast<QDockWidget *>(presentationDock)}) {
+					  static_cast<QDockWidget *>(songsDock), static_cast<QDockWidget *>(presentationDock)}) {
 			dock->setFloating(false);
 			addDockWidget(Qt::RightDockWidgetArea, dock);
 		}
 		resizeDocks({hymnalDock}, {std::max(width() * 28 / 100, 340)}, Qt::Horizontal);
 		hymnalDock->show();
 		bibleDock->show();
+		songsDock->show();
 		presentationDock->show();
-		tabifyDockWidget(hymnalDock, bibleDock);
+		tabifyDockWidget(hymnalDock, songsDock);
+		tabifyDockWidget(songsDock, bibleDock);
 		tabifyDockWidget(bibleDock, presentationDock);
 		hymnalDock->raise();
 	} else {
@@ -1294,13 +1305,18 @@ void OBSBasic::OBSInit()
 		if (!restoreState(dockState)) {
 			on_resetDocks_triggered(true);
 		}
-		/* Layouts saved before the Presentaciones dock existed. */
+		/* Layouts saved before the Cantos and Presentaciones docks existed. */
 		if (!config_get_bool(App()->GetUserConfig(), "WorshipStudio", "PresentationDockPlaced")) {
 			tabifyDockWidget(bibleDock, presentationDock);
 			presentationDock->show();
 		}
+		if (!config_get_bool(App()->GetUserConfig(), "WorshipStudio", "SongsDockPlaced")) {
+			tabifyDockWidget(hymnalDock, songsDock);
+			songsDock->show();
+		}
 	}
 	config_set_bool(App()->GetUserConfig(), "WorshipStudio", "PresentationDockPlaced", true);
+	config_set_bool(App()->GetUserConfig(), "WorshipStudio", "SongsDockPlaced", true);
 
 	bool pre23Defaults = config_get_bool(App()->GetUserConfig(), "General", "Pre23Defaults");
 	if (pre23Defaults) {

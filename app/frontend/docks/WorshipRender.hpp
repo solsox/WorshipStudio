@@ -36,7 +36,11 @@ struct Background {
 /* Built-in gradient backgrounds, all with enough contrast for white text. */
 QStringList BackgroundPresetNames();
 
-/* Recommended fonts for projection that are installed on this system. */
+/* Loads the fonts shipped in data/worship/fuentes so they can be used
+ * without installing them. Call once at startup. */
+void RegisterBundledFonts(const QString &directory);
+
+/* Recommended fonts for projection: shipped ones first, then installed ones. */
 QStringList RecommendedFonts();
 
 struct BibleSlide {
@@ -53,6 +57,23 @@ struct BibleSlide {
 /* Draws the verses centered and auto-fitted. `fits` is false when the text
  * needed to be shrunk below the readable minimum. */
 QImage Bible(const BibleSlide &slide, const QSize &canvas, bool *fits = nullptr);
+
+enum class LyricsLayout { FullScreen = 0, LowerThird = 1 };
+
+struct LyricsSlide {
+	QString text;
+	QString footer;
+	QString fontFamily;
+	QString textColor;
+	int maxFontSize = 84;
+	bool uppercase = false;
+	LyricsLayout layout = LyricsLayout::FullScreen;
+	Background background;
+};
+
+/* Draws song lyrics centered and auto-fitted over the background (or in a
+ * band when shown as lower third over a camera). */
+QImage Lyrics(const LyricsSlide &slide, const QSize &canvas);
 
 /* Directory used for rendered images. */
 QString CacheDir(const QString &subdir);

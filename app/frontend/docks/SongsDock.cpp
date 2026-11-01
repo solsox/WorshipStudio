@@ -1,0 +1,720 @@
+/******************************************************************************
+    Copyright (C) 2026 by WorshipStudio Contributors
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+******************************************************************************/
+
+#include "SongsDock.hpp"
+#include "PresentationCatalogData.hpp"
+#include "SongEditor.hpp"
+#include "WorshipOutput.hpp"
+#include "WorshipRender.hpp"
+
+#include <qt-wrappers.hpp>
+
+#include <QAbstractItemView>
+#include <QCryptographicHash>
+#include <QDateTime>
+#include <QDir>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QHBoxLayout>
+#include <QJsonDocument>
+#include <QKeyEvent>
+#include <QLabel>
+#include <QLineEdit>
+#include <QListWidget>
+#include <QListWidgetItem>
+#include <QMessageBox>
+#include <QPixmap>
+#include <QPushButton>
+#include <QSplitter>
+#include <QTimer>
+#include <QVBoxLayout>
+
+#include "moc_SongsDock.cpp"
+
+namespace {
+constexpr const char *SceneName = "WS Cantos";
+constexpr const char *ScreenSourceName = "WS Cantos - Pantalla";
+constexpr const char *VideoSourceName = "WS Cantos - Video de fondo";
+constexpr const char *ConfigHotkeys = "SongsHotkeys";
+constexpr const char *ConfigExample = "SongsExampleCreated";
+const QSize ThumbnailSize(160, 90);
+
+void hotkeyNext(void *data, obs_hotkey_id, obs_hotkey_t *, bool pressed)
+{
+	if (pressed)
+		QMetaObject::invokeMethod(static_cast<SongsDock *>(data), "nextSlide", Qt::QueuedConnection);
+}
+
+void hotkeyPrevious(void *data, obs_hotkey_id, obs_hotkey_t *, bool pressed)
+{
+	if (pressed)
+		QMetaObject::invokeMethod(static_cast<SongsDock *>(data), "previousSlide", Qt::QueuedConnection);
+}
+
+void hotkeyHide(void *data, obs_hotkey_id, obs_hotkey_t *, bool pressed)
+{
+	if (pressed)
+		QMetaObject::invokeMethod(static_cast<SongsDock *>(data), "toggleHidden", Qt::QueuedConnection);
+}
+
+/* Section names start with these words; the key jumps to the next one. */
+QString sectionPrefix(QChar key)
+{
+	switch (key.toLower().unicode()) {
+	case 'c':
+		return QStringLiteral("coro");
+	case 'p':
+		return QStringLiteral("puente");
+	case 'f':
+		return QStringLiteral("final");
+	case 'i':
+		return QStringLiteral("intro");
+	case 'e':
+		return QStringLiteral("estrofa");
+	default:
+		return {};
+	}
+}
+} // namespace
+
+SongsDock::SongsDock(const QString &objectName, const QString &title, QWidget *parent) : OBSDock(title, parent)
+{
+	setObjectName(objectName);
+
+	auto *root = new QWidget(this);
+	auto *layout = new QVBoxLayout(root);
+	layout->setContentsMargins(8, 8, 8, 8);
+	layout->setSpacing(6);
+
+	searchEdit = new QLineEdit(root);
+	searchEdit->setPlaceholderText(tr("Buscar canto por titulo o letra"));
+	searchEdit->setClearButtonEnabled(true);
+
+	auto *newButton = new QPushButton(tr("Nuevo"), root);
+	auto *editButton = new QPushButton(tr("Editar"), root);
+	auto *deleteButton = new QPushButton(tr("Borrar"), root);
+	auto *importButton = new QPushButton(tr("Importar..."), root);
+	importButton->setToolTip(tr("Archivos .txt (una diapositiva por parrafo) o cantos .json de WorshipStudio"));
+
+	auto *libraryRow = new QHBoxLayout();
+	libraryRow->addWidget(newButton);
+	libraryRow->addWidget(editButton);
+	libraryRow->addWidget(deleteButton);
+	libraryRow->addWidget(importButton);
+
+	songsList = new QListWidget(root);
+	songsList->setSelectionMode(QAbstractItemView::SingleSelection);
+
+	slidesList = new QListWidget(root);
+	slidesList->setViewMode(QListView::IconMode);
+	slidesList->setIconSize(ThumbnailSize);
+	slidesList->setResizeMode(QListView::Adjust);
+	slidesList->setMovement(QListView::Static);
+	slidesList->setSpacing(4);
+	slidesList->setUniformItemSizes(true);
+	slidesList->setSelectionMode(QAbstractItemView::SingleSelection);
+	slidesList->installEventFilter(this);
+	slidesList->setToolTip(tr("Flechas o espacio: avanzar  |  C coro, P puente, 1-9 estrofa  |  L sin texto  |  B ocultar"));
+
+	auto *splitter = new QSplitter(Qt::Vertical, root);
+	splitter->addWidget(songsList);
+	splitter->addWidget(slidesList);
+	splitter->setStretchFactor(0, 2);
+	splitter->setStretchFactor(1, 3);
+
+	projectButton = new QPushButton(tr("Proyectar"), root);
+	projectButton->setDefault(true);
+	previousButton = new QPushButton(tr("< Anterior"), root);
+	nextButton = new QPushButton(tr("Siguiente >"), root);
+	clearButton = new QPushButton(tr("Sin texto"), root);
+	clearButton->setCheckable(true);
+	clearButton->setToolTip(tr("Deja solo el fondo en pantalla (tecla L)"));
+	hideButton = new QPushButton(tr("Ocultar"), root);
+	hideButton->setCheckable(true);
+	hideButton->setToolTip(tr("Quita el canto de la pantalla sin perder el lugar (tecla B)"));
+
+	auto *liveRow = new QHBoxLayout();
+	liveRow->addWidget(previousButton);
+	liveRow->addWidget(nextButton);
+	liveRow->addWidget(clearButton);
+	liveRow->addWidget(hideButton);
+
+	liveLabel = new QLabel(root);
+	liveLabel->setWordWrap(true);
+	statusLabel = new QLabel(root);
+	statusLabel->setWordWrap(true);
+
+	layout->addWidget(searchEdit);
+	layout->addLayout(libraryRow);
+	layout->addWidget(splitter, 1);
+	layout->addWidget(projectButton);
+	layout->addLayout(liveRow);
+	layout->addWidget(liveLabel);
+	layout->addWidget(statusLabel);
+	setWidget(root);
+
+	connect(searchEdit, &QLineEdit::textChanged, this, &SongsDock::onSearchChanged);
+	connect(searchEdit, &QLineEdit::returnPressed, this, &SongsDock::project);
+	connect(songsList, &QListWidget::currentRowChanged, this, &SongsDock::onSongChanged);
+	connect(songsList, &QListWidget::itemActivated, this, &SongsDock::project);
+	connect(slidesList, &QListWidget::itemClicked, this, &SongsDock::onSlideClicked);
+	connect(slidesList, &QListWidget::itemActivated, this, &SongsDock::onSlideClicked);
+	connect(newButton, &QPushButton::clicked, this, &SongsDock::onNewClicked);
+	connect(editButton, &QPushButton::clicked, this, &SongsDock::onEditClicked);
+	connect(deleteButton, &QPushButton::clicked, this, &SongsDock::onDeleteClicked);
+	connect(importButton, &QPushButton::clicked, this, &SongsDock::onImportClicked);
+	connect(projectButton, &QPushButton::clicked, this, &SongsDock::project);
+	connect(previousButton, &QPushButton::clicked, this, &SongsDock::previousSlide);
+	connect(nextButton, &QPushButton::clicked, this, &SongsDock::nextSlide);
+	connect(clearButton, &QPushButton::clicked, this, &SongsDock::toggleClearText);
+	connect(hideButton, &QPushButton::clicked, this, &SongsDock::toggleHidden);
+
+	registerHotkeys();
+	createExampleSong();
+	reload();
+}
+
+SongsDock::~SongsDock()
+{
+	saveHotkeys();
+	for (obs_hotkey_id id : {nextHotkey, previousHotkey, hideHotkey}) {
+		if (id != OBS_INVALID_HOTKEY_ID)
+			obs_hotkey_unregister(id);
+	}
+}
+
+void SongsDock::registerHotkeys()
+{
+	nextHotkey = obs_hotkey_register_frontend("WorshipStudio.Songs.Next", "Cantos: diapositiva siguiente",
+						  hotkeyNext, this);
+	previousHotkey = obs_hotkey_register_frontend("WorshipStudio.Songs.Previous", "Cantos: diapositiva anterior",
+						      hotkeyPrevious, this);
+	hideHotkey = obs_hotkey_register_frontend("WorshipStudio.Songs.Hide", "Cantos: ocultar / mostrar", hotkeyHide,
+						  this);
+
+	const QString json = WorshipOutput::ConfigString(ConfigHotkeys);
+	OBSDataAutoRelease data = json.isEmpty() ? nullptr : obs_data_create_from_json(QT_TO_UTF8(json));
+	if (!data)
+		return;
+	const std::pair<const char *, obs_hotkey_id> entries[] = {
+		{"next", nextHotkey}, {"previous", previousHotkey}, {"hide", hideHotkey}};
+	for (const auto &[name, id] : entries) {
+		OBSDataArrayAutoRelease array = obs_data_get_array(data, name);
+		obs_hotkey_load(id, array);
+	}
+}
+
+void SongsDock::saveHotkeys()
+{
+	OBSDataAutoRelease data = obs_data_create();
+	const std::pair<const char *, obs_hotkey_id> entries[] = {
+		{"next", nextHotkey}, {"previous", previousHotkey}, {"hide", hideHotkey}};
+	for (const auto &[name, id] : entries) {
+		OBSDataArrayAutoRelease array = obs_hotkey_save(id);
+		obs_data_set_array(data, name, array);
+	}
+	WorshipOutput::SetConfigString(ConfigHotkeys, QT_UTF8(obs_data_get_json(data)));
+}
+
+void SongsDock::createExampleSong()
+{
+	if (WorshipOutput::ConfigString(ConfigExample) == QStringLiteral("1"))
+		return;
+	WorshipOutput::SetConfigString(ConfigExample, QStringLiteral("1"));
+	if (!SongLibrary::loadAll().isEmpty())
+		return;
+
+	Song example;
+	example.title = tr("Ejemplo: como escribir un canto");
+	example.background.preset = 11;
+	example.slides = SongLibrary::parseText(
+		tr("[Estrofa 1]\nCada parrafo es una diapositiva\nescribi la letra en el editor\n\n"
+		   "[Coro]\nPone el nombre entre corchetes\ny salta al coro con la tecla C\n\n"
+		   "[Estrofa 2]\nElegi la tipografia y el fondo\npara el canto o para cada diapositiva\n\n"
+		   "[Coro]\nPone el nombre entre corchetes\ny salta al coro con la tecla C"));
+	SongLibrary::save(example);
+}
+
+void SongsDock::reload(const QString &selectId)
+{
+	songs = SongLibrary::loadAll();
+	rebuildList();
+	if (!selectId.isEmpty()) {
+		for (int row = 0; row < songsList->count(); ++row) {
+			if (songs.at(songsList->item(row)->data(Qt::UserRole).toInt()).id == selectId) {
+				songsList->setCurrentRow(row);
+				break;
+			}
+		}
+	}
+}
+
+void SongsDock::rebuildList()
+{
+	const QString filter = PresentationCatalogData::normalizeName(searchEdit->text());
+	QSignalBlocker blocker(songsList);
+	songsList->clear();
+	for (int i = 0; i < songs.size(); ++i) {
+		if (!filter.isEmpty() && !songs.at(i).searchBlob().contains(filter))
+			continue;
+		auto *item = new QListWidgetItem(songs.at(i).author.isEmpty()
+							 ? songs.at(i).title
+							 : QStringLiteral("%1  —  %2").arg(songs.at(i).title, songs.at(i).author));
+		item->setData(Qt::UserRole, i);
+		songsList->addItem(item);
+	}
+	blocker.unblock();
+
+	statusLabel->setText(songs.isEmpty() ? tr("Todavia no hay cantos. Usa \"Nuevo\" para escribir uno.")
+					     : tr("%1 cantos").arg(songsList->count()));
+	songsList->setCurrentRow(songsList->count() > 0 ? 0 : -1);
+	onSongChanged();
+}
+
+void SongsDock::onSearchChanged(const QString &)
+{
+	rebuildList();
+}
+
+void SongsDock::onSongChanged()
+{
+	QListWidgetItem *item = songsList->currentItem();
+	selectedSong = item ? item->data(Qt::UserRole).toInt() : -1;
+	rebuildSlides();
+	updateControls();
+}
+
+void SongsDock::rebuildSlides()
+{
+	QSignalBlocker blocker(slidesList);
+	slidesList->clear();
+	if (selectedSong < 0)
+		return;
+
+	const Song &song = songs.at(selectedSong);
+	for (int i = 0; i < song.slides.size(); ++i) {
+		const QImage image = WorshipRender::Lyrics(SongLibrary::lyricsSlide(song, i), ThumbnailSize * 2);
+		const QString label = song.slides.at(i).label.isEmpty() ? QString::number(i + 1) : song.slides.at(i).label;
+		auto *item = new QListWidgetItem(
+			QIcon(QPixmap::fromImage(image.scaled(ThumbnailSize, Qt::KeepAspectRatio, Qt::SmoothTransformation))),
+			label);
+		item->setData(Qt::UserRole, i);
+		slidesList->addItem(item);
+	}
+	if (live && song.id == liveSong.id && liveSlide >= 0)
+		slidesList->setCurrentRow(liveSlide);
+}
+
+int SongsDock::slideCount() const
+{
+	return live ? (int)liveSong.slides.size() : 0;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Library                                                                   */
+
+bool SongsDock::editSong(Song song)
+{
+	SongEditor editor(song, this);
+	if (editor.exec() != QDialog::Accepted)
+		return false;
+
+	Song saved = editor.song();
+	QString error;
+	if (!SongLibrary::save(saved, &error)) {
+		statusLabel->setText(tr("No se pudo guardar el canto: %1").arg(error));
+		return false;
+	}
+	reload(saved.id);
+
+	/* Editing the song that is on screen updates the screen. */
+	if (live && saved.id == liveSong.id) {
+		liveSong = saved;
+		showSlide(qMin(liveSlide, (int)liveSong.slides.size() - 1), true);
+	}
+	return true;
+}
+
+void SongsDock::onNewClicked()
+{
+	Song song;
+	song.fontFamily = WorshipRender::RecommendedFonts().value(0);
+	editSong(song);
+}
+
+void SongsDock::onEditClicked()
+{
+	if (selectedSong >= 0)
+		editSong(songs.at(selectedSong));
+}
+
+void SongsDock::onDeleteClicked()
+{
+	if (selectedSong < 0)
+		return;
+	const Song song = songs.at(selectedSong);
+	if (QMessageBox::question(this, tr("Borrar canto"), tr("¿Borrar \"%1\"? No se puede deshacer.").arg(song.title)) !=
+	    QMessageBox::Yes)
+		return;
+	SongLibrary::remove(song);
+	reload();
+}
+
+void SongsDock::onImportClicked()
+{
+	const QStringList files = QFileDialog::getOpenFileNames(this, tr("Importar cantos"), QDir::homePath(),
+								 tr("Cantos (*.txt *.json)"));
+	int imported = 0;
+	QString lastId, errors;
+	for (const QString &file : files) {
+		Song song;
+		QString error;
+		if (SongLibrary::importFile(file, &song, &error) && SongLibrary::save(song, &error)) {
+			++imported;
+			lastId = song.id;
+		} else {
+			errors += QStringLiteral("\n%1: %2").arg(QFileInfo(file).fileName(), error);
+		}
+	}
+	if (imported > 0)
+		reload(lastId);
+	if (!files.isEmpty())
+		statusLabel->setText(tr("%1 cantos importados.").arg(imported) + errors);
+}
+
+void SongsDock::deleteSong(const QString &title)
+{
+	for (const Song &song : SongLibrary::loadAll()) {
+		if (song.title == title)
+			SongLibrary::remove(song);
+	}
+	reload();
+}
+
+bool SongsDock::projectNewSong(const QString &title, const QString &text, int preset)
+{
+	Song song;
+	song.title = title;
+	song.fontFamily = WorshipRender::RecommendedFonts().value(0);
+	song.background.preset = preset;
+	song.showTitle = true;
+	song.slides = SongLibrary::parseText(text);
+	if (!SongLibrary::save(song))
+		return false;
+	searchEdit->clear();
+	reload(song.id);
+	return project();
+}
+
+/* ------------------------------------------------------------------------ */
+/* Live                                                                      */
+
+bool SongsDock::prepareOutput(const WorshipRender::Background &background)
+{
+	scene = WorshipOutput::EnsureScene(SceneName);
+	if (!scene)
+		return false;
+
+	const bool useVideo = background.kind == WorshipRender::BackgroundKind::Video &&
+			      liveSong.layout == WorshipRender::LyricsLayout::FullScreen;
+	obs_sceneitem_t *videoItem = obs_scene_find_source(scene, VideoSourceName);
+	if (useVideo) {
+		OBSDataAutoRelease settings = obs_data_create();
+		obs_data_set_bool(settings, "is_local_file", true);
+		obs_data_set_string(settings, "local_file", QT_TO_UTF8(background.path));
+		obs_data_set_bool(settings, "looping", true);
+		obs_data_set_bool(settings, "restart_on_activate", false);
+		bool created = false;
+		OBSSource video = WorshipOutput::EnsureSource(scene, VideoSourceName, "ffmpeg_source", settings, &created);
+		if (video) {
+			if (!created)
+				obs_source_update(video, settings);
+			WorshipOutput::FitItem(scene, video, 0.0f, 0.0f, 1.0f, 1.0f, OBS_ALIGN_CENTER,
+					       OBS_BOUNDS_SCALE_OUTER);
+			videoItem = obs_scene_find_source(scene, VideoSourceName);
+			/* The video always stays under the lyrics. */
+			obs_sceneitem_set_order(videoItem, OBS_ORDER_MOVE_BOTTOM);
+		}
+	}
+	if (videoItem)
+		obs_sceneitem_set_visible(videoItem, useVideo);
+
+	bool created = false;
+	OBSDataAutoRelease settings = obs_data_create();
+	screenSource = WorshipOutput::EnsureSource(scene, ScreenSourceName, "image_source", settings, &created);
+	if (created && screenSource)
+		WorshipOutput::FitItem(scene, screenSource, 0.0f, 0.0f, 1.0f, 1.0f);
+	return screenSource;
+}
+
+bool SongsDock::project()
+{
+	if (selectedSong < 0 || songs.at(selectedSong).slides.isEmpty())
+		return false;
+
+	liveSong = songs.at(selectedSong);
+	live = true;
+	hidden = false;
+	textCleared = false;
+	hideButton->setChecked(false);
+	clearButton->setChecked(false);
+
+	const int start = qMax(0, slidesList->currentRow());
+	showSlide(start, true);
+	setItemVisible(true);
+	WorshipOutput::ShowScene(scene);
+	return liveSlide >= 0;
+}
+
+QString SongsDock::renderedSlide(int slide) const
+{
+	const QSize canvas(WorshipOutput::CanvasWidth(), WorshipOutput::CanvasHeight());
+	WorshipRender::LyricsSlide lyrics = SongLibrary::lyricsSlide(liveSong, slide);
+	if (textCleared) {
+		lyrics.text.clear();
+		lyrics.footer.clear();
+	}
+
+	const QByteArray key = QJsonDocument(SongLibrary::backgroundToJson(lyrics.background)).toJson() +
+			       QStringLiteral("|%1|%2|%3|%4|%5|%6|%7|%8x%9")
+				       .arg(lyrics.text, lyrics.footer, lyrics.fontFamily)
+				       .arg(lyrics.maxFontSize)
+				       .arg(lyrics.uppercase)
+				       .arg((int)lyrics.layout)
+				       .arg(QFileInfo(lyrics.background.path).lastModified().toMSecsSinceEpoch())
+				       .arg(canvas.width())
+				       .arg(canvas.height())
+				       .toUtf8();
+	const QString hash = QString::fromLatin1(QCryptographicHash::hash(key, QCryptographicHash::Sha1).toHex().left(20));
+	const QString path = QDir(WorshipRender::CacheDir(QStringLiteral("songs"))).absoluteFilePath(hash + ".png");
+	if (!QFileInfo::exists(path))
+		WorshipRender::Lyrics(lyrics, canvas).save(path, "PNG");
+	return path;
+}
+
+void SongsDock::showSlide(int slide, bool force)
+{
+	if (!live) {
+		if (selectedSong >= 0) {
+			QSignalBlocker blocker(slidesList);
+			slidesList->setCurrentRow(slide);
+			project();
+		}
+		return;
+	}
+	if (liveSong.slides.isEmpty())
+		return;
+
+	slide = qBound(0, slide, (int)liveSong.slides.size() - 1);
+	if (slide == liveSlide && !force)
+		return;
+
+	const WorshipRender::LyricsSlide lyrics = SongLibrary::lyricsSlide(liveSong, slide);
+	if (!prepareOutput(lyrics.background))
+		return;
+
+	OBSDataAutoRelease settings = obs_data_create();
+	obs_data_set_string(settings, "file", QT_TO_UTF8(renderedSlide(slide)));
+	obs_source_update(screenSource, settings);
+	liveSlide = slide;
+
+	/* Prepare the next slide so the change is instant. */
+	if (slide + 1 < liveSong.slides.size()) {
+		const QString id = liveSong.id;
+		QTimer::singleShot(0, this, [this, id, slide]() {
+			if (live && liveSong.id == id && slide + 1 < liveSong.slides.size())
+				renderedSlide(slide + 1);
+		});
+	}
+
+	if (selectedSong >= 0 && songs.at(selectedSong).id == liveSong.id) {
+		QSignalBlocker blocker(slidesList);
+		slidesList->setCurrentRow(slide);
+	}
+	updateControls();
+	updateLiveLabel();
+}
+
+void SongsDock::onSlideClicked(QListWidgetItem *item)
+{
+	if (!item)
+		return;
+	/* Clicking a slide of another song starts that song there. */
+	if (!live || selectedSong < 0 || songs.at(selectedSong).id != liveSong.id) {
+		QSignalBlocker blocker(slidesList);
+		slidesList->setCurrentItem(item);
+		project();
+		return;
+	}
+	showSlide(item->data(Qt::UserRole).toInt());
+}
+
+void SongsDock::nextSlide()
+{
+	if (live)
+		showSlide(liveSlide + 1);
+}
+
+void SongsDock::previousSlide()
+{
+	if (live)
+		showSlide(liveSlide - 1);
+}
+
+bool SongsDock::jumpToSection(QChar key)
+{
+	if (!live)
+		return false;
+
+	int target = -1;
+	if (key.isDigit() && key != QLatin1Char('0')) {
+		/* "3" goes to Estrofa 3 (or the 3rd verse when labels have no number). */
+		const QString number = QString(key);
+		int verse = 0;
+		for (int i = 0; i < liveSong.slides.size() && target < 0; ++i) {
+			const QString label = PresentationCatalogData::normalizeName(liveSong.slides.at(i).label);
+			if (label.startsWith(QStringLiteral("estrofa")) || label.startsWith(QStringLiteral("verso"))) {
+				const bool newVerse = i == 0 || liveSong.slides.at(i - 1).label != liveSong.slides.at(i).label;
+				if (newVerse)
+					++verse;
+				if (newVerse && (label.endsWith(QLatin1Char(' ') + number) || verse == number.toInt()))
+					target = i;
+			}
+		}
+	} else {
+		const QString prefix = sectionPrefix(key);
+		if (prefix.isEmpty())
+			return false;
+		/* Next matching section after the current slide, wrapping around. */
+		const int count = (int)liveSong.slides.size();
+		for (int step = 1; step <= count && target < 0; ++step) {
+			const int i = (liveSlide + step) % count;
+			const QString label = PresentationCatalogData::normalizeName(liveSong.slides.at(i).label);
+			const bool sectionStart = i == 0 || liveSong.slides.at(i - 1).label != liveSong.slides.at(i).label;
+			if (sectionStart && label.startsWith(prefix))
+				target = i;
+		}
+	}
+
+	if (target < 0)
+		return false;
+	showSlide(target);
+	return true;
+}
+
+void SongsDock::setItemVisible(bool visible)
+{
+	if (!scene)
+		return;
+	for (const char *name : {ScreenSourceName, VideoSourceName}) {
+		if (obs_sceneitem_t *item = obs_scene_find_source(scene, name)) {
+			const bool isVideo = name == VideoSourceName;
+			const bool videoWanted = SongLibrary::lyricsSlide(liveSong, liveSlide).background.kind ==
+						 WorshipRender::BackgroundKind::Video;
+			obs_sceneitem_set_visible(item, visible && (!isVideo || videoWanted));
+		}
+	}
+}
+
+void SongsDock::toggleHidden()
+{
+	if (!live) {
+		hideButton->setChecked(false);
+		return;
+	}
+	hidden = !hidden;
+	setItemVisible(!hidden);
+	hideButton->setChecked(hidden);
+	updateLiveLabel();
+}
+
+void SongsDock::toggleClearText()
+{
+	if (!live) {
+		clearButton->setChecked(false);
+		return;
+	}
+	textCleared = !textCleared;
+	clearButton->setChecked(textCleared);
+	showSlide(liveSlide, true);
+}
+
+bool SongsDock::eventFilter(QObject *watched, QEvent *event)
+{
+	if (watched == slidesList && event->type() == QEvent::KeyPress) {
+		auto *keyEvent = static_cast<QKeyEvent *>(event);
+		switch (keyEvent->key()) {
+		case Qt::Key_Right:
+		case Qt::Key_Down:
+		case Qt::Key_PageDown:
+		case Qt::Key_Space:
+			if (!live)
+				project();
+			else
+				nextSlide();
+			return true;
+		case Qt::Key_Left:
+		case Qt::Key_Up:
+		case Qt::Key_PageUp:
+			previousSlide();
+			return true;
+		case Qt::Key_Return:
+		case Qt::Key_Enter:
+			showSlide(slidesList->currentRow());
+			return true;
+		case Qt::Key_B:
+		case Qt::Key_Period:
+			toggleHidden();
+			return true;
+		case Qt::Key_L:
+			toggleClearText();
+			return true;
+		default:
+			if (!keyEvent->text().isEmpty() && jumpToSection(keyEvent->text().at(0)))
+				return true;
+			break;
+		}
+	}
+	return OBSDock::eventFilter(watched, event);
+}
+
+void SongsDock::updateControls()
+{
+	projectButton->setEnabled(selectedSong >= 0 && !songs.at(selectedSong).slides.isEmpty());
+	previousButton->setEnabled(live && liveSlide > 0);
+	nextButton->setEnabled(live && liveSlide < liveSong.slides.size() - 1);
+	clearButton->setEnabled(live);
+	hideButton->setEnabled(live);
+}
+
+void SongsDock::updateLiveLabel()
+{
+	if (!live || liveSlide < 0) {
+		liveLabel->setText(tr("Sin proyeccion activa"));
+		return;
+	}
+	const SongSlide &slide = liveSong.slides.at(liveSlide);
+	QString text = tr("En vivo: %1  |  %2 (%3/%4)")
+			       .arg(liveSong.title, slide.label.isEmpty() ? tr("Diapositiva") : slide.label)
+			       .arg(liveSlide + 1)
+			       .arg(liveSong.slides.size());
+	if (textCleared)
+		text += tr("  |  SIN TEXTO");
+	if (hidden)
+		text += tr("  |  OCULTO");
+	liveLabel->setText(text);
+}
