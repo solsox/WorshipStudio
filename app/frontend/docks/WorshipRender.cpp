@@ -7,6 +7,7 @@
 #include <QFileInfo>
 #include <QFont>
 #include <QFontDatabase>
+#include <QFontMetricsF>
 #include <QLinearGradient>
 #include <QPainter>
 #include <QPainterPath>
@@ -655,6 +656,231 @@ QImage Lyrics(const LyricsSlide &slide, const QSize &canvas)
 		painter.drawText(QRectF(0, H * 0.88, W, H * 0.07), Qt::AlignCenter, slide.footer);
 	}
 
+	painter.end();
+	return output;
+}
+
+namespace {
+/* Largest font size (up to maxSize) so that `text` fits in `box`. */
+QFont fittedFont(const QString &family, int weight, const QString &text, const QRectF &box, int maxSize, int minSize,
+		 int flags)
+{
+	QFont font(family);
+	font.setWeight(static_cast<QFont::Weight>(weight));
+	for (int size = maxSize; size >= minSize; size -= 2) {
+		font.setPixelSize(size);
+		const QRectF needed = QFontMetricsF(font).boundingRect(box, flags, text);
+		if (needed.width() <= box.width() && needed.height() <= box.height())
+			return font;
+	}
+	font.setPixelSize(minSize);
+	return font;
+}
+
+void shadowedText(QPainter &painter, const QRectF &box, int flags, const QString &text, const QColor &color,
+		  qreal offset)
+{
+	painter.setPen(QColor(0, 0, 0, 140));
+	painter.drawText(box.translated(0, offset), flags, text);
+	painter.setPen(color);
+	painter.drawText(box, flags, text);
+}
+} // namespace
+
+QImage Countdown(const QString &title, const QString &time, const QString &footer, const Background &background,
+		 const QString &fontFamily, const QSize &canvas)
+{
+	const qreal W = canvas.width(), H = canvas.height(), scale = H / 1080.0;
+	const QString family = fontFamily.isEmpty() ? QStringLiteral("Montserrat") : fontFamily;
+	QImage output(canvas, QImage::Format_ARGB32_Premultiplied);
+	output.fill(Qt::transparent);
+	QPainter painter(&output);
+	painter.setRenderHint(QPainter::Antialiasing);
+	painter.setRenderHint(QPainter::TextAntialiasing);
+	drawBackground(painter, canvas, background);
+
+	if (!title.isEmpty()) {
+		QFont titleFont(family);
+		titleFont.setPixelSize(qRound(46 * scale));
+		titleFont.setWeight(QFont::Medium);
+		titleFont.setLetterSpacing(QFont::PercentageSpacing, 112);
+		titleFont.setCapitalization(QFont::AllUppercase);
+		painter.setFont(titleFont);
+		shadowedText(painter, QRectF(0, H * 0.22, W, H * 0.10), Qt::AlignCenter, title, QColor(255, 255, 255, 220),
+			     3 * scale);
+	}
+
+	QFont timeFont(family);
+	timeFont.setPixelSize(qRound(300 * scale));
+	timeFont.setWeight(QFont::Bold);
+	timeFont.setFeature("tnum", 1);
+	painter.setFont(timeFont);
+	shadowedText(painter, QRectF(0, H * 0.30, W, H * 0.40), Qt::AlignCenter, time, Qt::white, 6 * scale);
+
+	if (!footer.isEmpty()) {
+		QFont footerFont(family);
+		footerFont.setPixelSize(qRound(34 * scale));
+		footerFont.setWeight(QFont::Medium);
+		painter.setFont(footerFont);
+		shadowedText(painter, QRectF(0, H * 0.74, W, H * 0.08), Qt::AlignCenter, footer, AccentColor, 2 * scale);
+	}
+	painter.end();
+	return output;
+}
+
+QImage NameLowerThird(const QString &name, const QString &role, const QString &fontFamily, const QSize &canvas)
+{
+	const qreal W = canvas.width(), H = canvas.height(), scale = H / 1080.0;
+	const QString family = fontFamily.isEmpty() ? QStringLiteral("Montserrat") : fontFamily;
+	QImage output(canvas, QImage::Format_ARGB32_Premultiplied);
+	output.fill(Qt::transparent);
+	if (name.trimmed().isEmpty())
+		return output;
+
+	QPainter painter(&output);
+	painter.setRenderHint(QPainter::Antialiasing);
+	painter.setRenderHint(QPainter::TextAntialiasing);
+
+	QFont nameFont(family);
+	nameFont.setPixelSize(qRound(54 * scale));
+	nameFont.setWeight(QFont::Bold);
+	QFont roleFont(family);
+	roleFont.setPixelSize(qRound(30 * scale));
+	roleFont.setWeight(QFont::Medium);
+	roleFont.setLetterSpacing(QFont::PercentageSpacing, 108);
+
+	const qreal padX = 36 * scale, padY = 22 * scale;
+	const qreal nameW = QFontMetricsF(nameFont).horizontalAdvance(name);
+	const qreal roleW = role.isEmpty() ? 0 : QFontMetricsF(roleFont).horizontalAdvance(role);
+	const qreal width = qMin(W * 0.7, qMax(nameW, roleW) + padX * 2 + 10 * scale);
+	const qreal height = padY * 2 + 62 * scale + (role.isEmpty() ? 0 : 40 * scale);
+	const QRectF band(W * 0.06, H * 0.80 - height, width, height);
+
+	QPainterPath path;
+	path.addRoundedRect(band, 14 * scale, 14 * scale);
+	QLinearGradient gradient(band.topLeft(), band.bottomRight());
+	gradient.setColorAt(0, QColor(0x10, 0x14, 0x26, 235));
+	gradient.setColorAt(1, QColor(0x1C, 0x22, 0x40, 235));
+	painter.fillPath(path, gradient);
+	painter.save();
+	painter.setClipPath(path);
+	painter.fillRect(QRectF(band.left(), band.top(), 8 * scale, band.height()), AccentColor);
+	painter.restore();
+
+	painter.setFont(nameFont);
+	painter.setPen(Qt::white);
+	painter.drawText(QRectF(band.left() + padX, band.top() + padY, band.width() - padX * 1.5, 62 * scale),
+			 Qt::AlignLeft | Qt::AlignVCenter, name);
+	if (!role.isEmpty()) {
+		painter.setFont(roleFont);
+		painter.setPen(AccentColor);
+		painter.drawText(QRectF(band.left() + padX, band.top() + padY + 62 * scale, band.width() - padX * 1.5,
+					40 * scale),
+				 Qt::AlignLeft | Qt::AlignVCenter, role);
+	}
+	painter.end();
+	return output;
+}
+
+QImage UrgentMessage(const QString &text, const QString &fontFamily, const QSize &canvas)
+{
+	const qreal W = canvas.width(), H = canvas.height(), scale = H / 1080.0;
+	const QString family = fontFamily.isEmpty() ? QStringLiteral("Montserrat") : fontFamily;
+	QImage output(canvas, QImage::Format_ARGB32_Premultiplied);
+	output.fill(Qt::transparent);
+	if (text.trimmed().isEmpty())
+		return output;
+
+	QPainter painter(&output);
+	painter.setRenderHint(QPainter::Antialiasing);
+	painter.setRenderHint(QPainter::TextAntialiasing);
+	const QRectF band(W * 0.04, H * 0.04, W * 0.92, H * 0.11);
+	QPainterPath path;
+	path.addRoundedRect(band, 14 * scale, 14 * scale);
+	painter.fillPath(path, QColor(0xC0, 0x1C, 0x37, 240));
+	const QRectF textBox = band.adjusted(30 * scale, 8 * scale, -30 * scale, -8 * scale);
+	painter.setFont(fittedFont(family, QFont::DemiBold, text, textBox, qRound(48 * scale), qRound(20 * scale),
+				   Qt::AlignCenter | Qt::TextWordWrap));
+	painter.setPen(Qt::white);
+	painter.drawText(textBox, Qt::AlignCenter | Qt::TextWordWrap, text);
+	painter.end();
+	return output;
+}
+
+QImage StageDisplay(const StageInfo &info, const QSize &canvas)
+{
+	const qreal W = canvas.width(), H = canvas.height(), scale = H / 1080.0;
+	const QString family = QStringLiteral("Inter");
+	QImage output(canvas, QImage::Format_RGB32);
+	output.fill(QColor(0x0B, 0x0C, 0x10));
+	QPainter painter(&output);
+	painter.setRenderHint(QPainter::Antialiasing);
+	painter.setRenderHint(QPainter::TextAntialiasing);
+
+	/* Top bar: what is on screen and the clock. */
+	QFont small(family);
+	small.setPixelSize(qRound(34 * scale));
+	small.setWeight(QFont::Medium);
+	painter.setFont(small);
+	painter.setPen(QColor(0x9A, 0xA0, 0xB4));
+	const QString heading = info.section.isEmpty() ? info.title : info.title + QStringLiteral("  ·  ") + info.section;
+	painter.drawText(QRectF(W * 0.03, H * 0.02, W * 0.62, H * 0.07), Qt::AlignLeft | Qt::AlignVCenter,
+			 QFontMetrics(small).elidedText(heading, Qt::ElideRight, qRound(W * 0.62)));
+
+	QFont clock(family);
+	clock.setPixelSize(qRound(64 * scale));
+	clock.setWeight(QFont::Bold);
+	clock.setFeature("tnum", 1);
+	painter.setFont(clock);
+	painter.setPen(Qt::white);
+	painter.drawText(QRectF(W * 0.60, H * 0.01, W * 0.37, H * 0.09), Qt::AlignRight | Qt::AlignVCenter, info.clock);
+	if (!info.timer.isEmpty()) {
+		painter.setFont(small);
+		painter.setPen(AccentColor);
+		painter.drawText(QRectF(W * 0.60, H * 0.09, W * 0.37, H * 0.05), Qt::AlignRight | Qt::AlignVCenter,
+				 info.timer);
+	}
+
+	painter.fillRect(QRectF(W * 0.03, H * 0.145, W * 0.94, qMax(1.0, 2 * scale)), QColor(0x26, 0x29, 0x35));
+
+	/* Current slide, as big as possible. */
+	const QRectF currentBox(W * 0.04, H * 0.17, W * 0.92, H * 0.50);
+	QString current = info.current.trimmed();
+	if (info.hidden)
+		current = QStringLiteral("(pantalla oculta)");
+	else if (current.isEmpty())
+		current = info.title.isEmpty() ? QStringLiteral("Sin proyeccion") : QStringLiteral("(imagen en pantalla)");
+	painter.setFont(fittedFont(family, QFont::Bold, current, currentBox, qRound(110 * scale), qRound(30 * scale),
+				   Qt::AlignCenter | Qt::TextWordWrap));
+	painter.setPen(info.hidden ? QColor(0x9A, 0xA0, 0xB4) : Qt::white);
+	painter.drawText(currentBox, Qt::AlignCenter | Qt::TextWordWrap, current);
+
+	/* Next slide. */
+	painter.fillRect(QRectF(W * 0.03, H * 0.69, W * 0.94, qMax(1.0, 2 * scale)), QColor(0x26, 0x29, 0x35));
+	painter.setFont(small);
+	painter.setPen(QColor(0x63, 0x6B, 0xE6));
+	painter.drawText(QRectF(W * 0.04, H * 0.70, W * 0.3, H * 0.05), Qt::AlignLeft | Qt::AlignVCenter,
+			 QStringLiteral("SIGUIENTE"));
+	const QRectF nextBox(W * 0.04, H * 0.75, W * 0.92, info.message.isEmpty() ? H * 0.22 : H * 0.12);
+	if (!info.next.trimmed().isEmpty()) {
+		painter.setFont(fittedFont(family, QFont::Medium, info.next.trimmed(), nextBox, qRound(58 * scale),
+					   qRound(22 * scale), Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap));
+		painter.setPen(QColor(0xB8, 0xBD, 0xCC));
+		painter.drawText(nextBox, Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, info.next.trimmed());
+	}
+
+	/* Message from the booth. */
+	if (!info.message.isEmpty()) {
+		const QRectF band(W * 0.03, H * 0.88, W * 0.94, H * 0.10);
+		QPainterPath path;
+		path.addRoundedRect(band, 12 * scale, 12 * scale);
+		painter.fillPath(path, AccentColor);
+		const QRectF box = band.adjusted(24 * scale, 4 * scale, -24 * scale, -4 * scale);
+		painter.setFont(fittedFont(family, QFont::Bold, info.message, box, qRound(56 * scale), qRound(20 * scale),
+					   Qt::AlignCenter | Qt::TextWordWrap));
+		painter.setPen(QColor(0x1A, 0x14, 0x07));
+		painter.drawText(box, Qt::AlignCenter | Qt::TextWordWrap, info.message);
+	}
 	painter.end();
 	return output;
 }

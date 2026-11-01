@@ -16,6 +16,7 @@
 ******************************************************************************/
 
 #include "PresentationCatalogDock.hpp"
+#include "WorshipLive.hpp"
 #include "WorshipOutput.hpp"
 #include "WorshipRender.hpp"
 
@@ -161,6 +162,7 @@ PresentationCatalogDock::PresentationCatalogDock(const QString &objectName, cons
 	syncTimer = new QTimer(this);
 	syncTimer->setInterval(100);
 
+	WorshipLive::instance().registerTarget(QStringLiteral("Himnario"), this);
 	connect(searchEdit, &QLineEdit::textChanged, this, &PresentationCatalogDock::onSearchChanged);
 	connect(searchEdit, &QLineEdit::returnPressed, this, &PresentationCatalogDock::onProjectClicked);
 	connect(resultsList, &QListWidget::currentItemChanged, this, &PresentationCatalogDock::onCurrentHymnChanged);
@@ -430,6 +432,28 @@ void PresentationCatalogDock::showSlide(int slide, bool seekAudio)
 		selectSlideRow(slide);
 	updateControls();
 	updateLiveLabel();
+
+	LiveState state;
+	state.source = QStringLiteral("Himnario");
+	state.title = entry.displayLabel;
+	state.section = tr("Diapositiva %1 de %2").arg(slide + 1).arg(entry.slidePaths.size());
+	state.index = slide;
+	state.count = (int)entry.slidePaths.size();
+	if (obs_sceneitem_t *item = scene ? obs_scene_find_source(scene, SlideSourceName) : nullptr)
+		state.hidden = !obs_sceneitem_visible(item);
+	WorshipLive::instance().publish(state);
+}
+
+void PresentationCatalogDock::toggleHidden()
+{
+	if (liveEntry < 0 || !scene)
+		return;
+	if (obs_sceneitem_t *item = obs_scene_find_source(scene, SlideSourceName)) {
+		obs_sceneitem_set_visible(item, !obs_sceneitem_visible(item));
+		LiveState state = WorshipLive::instance().state();
+		state.hidden = !obs_sceneitem_visible(item);
+		WorshipLive::instance().publish(state);
+	}
 }
 
 QString PresentationCatalogDock::renderedSlide(int entryIndex, int slide) const
@@ -498,6 +522,7 @@ void PresentationCatalogDock::onStopClicked()
 	liveEntry = -1;
 	liveSlide = -1;
 	liveWithAudio = false;
+	WorshipLive::instance().clear(QStringLiteral("Himnario"));
 	slidesList->clearSelection();
 	updateControls();
 	updateLiveLabel();

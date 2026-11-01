@@ -17,6 +17,7 @@
 
 #include "PresentationDock.hpp"
 #include "WorshipDocument.hpp"
+#include "WorshipLive.hpp"
 #include "WorshipOutput.hpp"
 #include "WorshipRender.hpp"
 
@@ -264,6 +265,7 @@ PresentationDock::PresentationDock(const QString &objectName, const QString &tit
 		}
 	});
 
+	WorshipLive::instance().registerTarget(QStringLiteral("Presentaciones"), this);
 	registerHotkeys();
 	rebuildDecksList();
 	updateControls();
@@ -681,6 +683,20 @@ void PresentationDock::showSlide(int slide)
 	selectSlideRow(slide);
 	updateControls();
 	updateLiveLabel();
+	publishLive();
+}
+
+void PresentationDock::publishLive()
+{
+	LiveState state;
+	state.source = QStringLiteral("Presentaciones");
+	state.title = deck.title;
+	const Slide &current = slides.at(liveSlide);
+	state.section = tr("Pagina %1").arg(current.page + 1);
+	state.index = liveSlide;
+	state.count = (int)slides.size();
+	state.hidden = hidden;
+	WorshipLive::instance().publish(state);
 }
 
 void PresentationDock::nextSlide()
@@ -706,6 +722,7 @@ void PresentationDock::toggleHidden()
 		obs_sceneitem_set_visible(item, !hidden);
 	hideButton->setChecked(hidden);
 	updateLiveLabel();
+	publishLive();
 }
 
 void PresentationDock::stopLive()
@@ -720,6 +737,7 @@ void PresentationDock::stopLive()
 	hideButton->setChecked(false);
 	updateControls();
 	updateLiveLabel();
+	WorshipLive::instance().clear(QStringLiteral("Presentaciones"));
 }
 
 void PresentationDock::onSlideClicked(QListWidgetItem *item)

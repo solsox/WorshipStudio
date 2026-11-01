@@ -16,6 +16,7 @@
 ******************************************************************************/
 
 #include "BibleDock.hpp"
+#include "WorshipLive.hpp"
 #include "WorshipOutput.hpp"
 #include "WorshipRender.hpp"
 
@@ -201,6 +202,7 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 	connect(searchEdit, &QLineEdit::returnPressed, this, &BibleDock::onProjectClicked);
 	connect(resultsList, &QListWidget::itemSelectionChanged, this, &BibleDock::onSelectionChanged);
 	connect(resultsList, &QListWidget::itemActivated, this, &BibleDock::onProjectClicked);
+	WorshipLive::instance().registerTarget(QStringLiteral("Biblia"), this);
 	connect(projectButton, &QPushButton::clicked, this, &BibleDock::onProjectClicked);
 	connect(previousButton, &QPushButton::clicked, this, &BibleDock::onPreviousClicked);
 	connect(nextButton, &QPushButton::clicked, this, &BibleDock::onNextClicked);
@@ -787,7 +789,36 @@ bool BibleDock::project(const QVector<BibleVerseRef> &verses)
 	clearButton->setEnabled(true);
 	if (!wasLive)
 		WorshipOutput::ShowScene(scene);
+
+	LiveState state;
+	state.source = QStringLiteral("Biblia");
+	state.title = slide.reference + (slide.version.isEmpty() ? QString() : QStringLiteral(" · ") + slide.version);
+	QStringList text;
+	for (const BibleVerseRef &ref : verses)
+		text << verseText(ref);
+	state.current = text.join(QLatin1Char(' '));
+	/* The next block has the same size as the selection on screen. */
+	int lastRow = -1;
+	for (int row = 0; row < resultsList->count(); ++row) {
+		if (resultsList->item(row)->isSelected())
+			lastRow = row;
+	}
+	QStringList next;
+	for (int row = lastRow + 1; row >= 1 && row < qMin(lastRow + 1 + (int)verses.size(), resultsList->count()); ++row)
+		next << resultsList->item(row)->text();
+	state.next = next.join(QLatin1Char(' '));
+	state.index = qMax(0, lastRow);
+	state.count = resultsList->count();
+	WorshipLive::instance().publish(state);
 	return true;
+}
+
+void BibleDock::toggleHidden()
+{
+	if (live)
+		onClearClicked();
+	else
+		project(selectedVerses());
 }
 
 void BibleDock::onProjectClicked()
@@ -838,6 +869,11 @@ void BibleDock::onClearClicked()
 		obs_source_set_enabled(screenSource, false);
 	clearButton->setEnabled(false);
 	statusLabel->setText(tr("Pantalla limpia"));
+	LiveState state = WorshipLive::instance().state();
+	if (state.source == QStringLiteral("Biblia")) {
+		state.hidden = true;
+		WorshipLive::instance().publish(state);
+	}
 }
 
 bool BibleDock::selectVersion(const QString &abbrev)

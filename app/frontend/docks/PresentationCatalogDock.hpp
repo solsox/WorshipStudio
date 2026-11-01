@@ -35,6 +35,11 @@ public:
 	/* Switches edition and, if given, points it at a folder. Returns the previous folder. */
 	QString useEdition(int editionIndex, const QString &root);
 
+public slots:
+	void nextSlide() { onNextClicked(); }
+	void previousSlide() { onPreviousClicked(); }
+	void toggleHidden();
+
 private slots:
 	void onSearchChanged(const QString &text);
 	void onCurrentHymnChanged(QListWidgetItem *current, QListWidgetItem *previous);

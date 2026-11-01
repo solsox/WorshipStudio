@@ -18,6 +18,7 @@
 #include "SongsDock.hpp"
 #include "PresentationCatalogData.hpp"
 #include "SongEditor.hpp"
+#include "WorshipLive.hpp"
 #include "WorshipOutput.hpp"
 #include "WorshipRender.hpp"
 
@@ -109,7 +110,7 @@ SongsDock::SongsDock(const QString &objectName, const QString &title, QWidget *p
 	auto *editButton = new QPushButton(tr("Editar"), root);
 	auto *deleteButton = new QPushButton(tr("Borrar"), root);
 	auto *importButton = new QPushButton(tr("Importar..."), root);
-	importButton->setToolTip(tr("Archivos .txt (una diapositiva por parrafo) o cantos .json de WorshipStudio"));
+	importButton->setToolTip(tr("OpenLyrics (OpenLP), OpenSong, ChordPro, texto (.txt) o cantos de WorshipStudio"));
 
 	auto *libraryRow = new QHBoxLayout();
 	libraryRow->addWidget(newButton);
@@ -187,6 +188,7 @@ SongsDock::SongsDock(const QString &objectName, const QString &title, QWidget *p
 	connect(clearButton, &QPushButton::clicked, this, &SongsDock::toggleClearText);
 	connect(hideButton, &QPushButton::clicked, this, &SongsDock::toggleHidden);
 
+	WorshipLive::instance().registerTarget(QStringLiteral("Cantos"), this);
 	registerHotkeys();
 	createExampleSong();
 	reload();
@@ -381,7 +383,7 @@ void SongsDock::onDeleteClicked()
 void SongsDock::onImportClicked()
 {
 	const QStringList files = QFileDialog::getOpenFileNames(this, tr("Importar cantos"), QDir::homePath(),
-								 tr("Cantos (*.txt *.json)"));
+								 tr("Cantos (*.txt *.json *.xml *.cho *.chopro *.chordpro *.crd);;Todos los archivos (*)"));
 	int imported = 0;
 	QString lastId, errors;
 	for (const QString &file : files) {
@@ -422,6 +424,33 @@ bool SongsDock::projectNewSong(const QString &title, const QString &text, int pr
 	searchEdit->clear();
 	reload(song.id);
 	return project();
+}
+
+bool SongsDock::projectSongById(const QString &id)
+{
+	searchEdit->clear();
+	reload(id);
+	if (selectedSong < 0 || songs.at(selectedSong).id != id)
+		return false;
+	QSignalBlocker blocker(slidesList);
+	slidesList->setCurrentRow(0);
+	return project();
+}
+
+bool SongsDock::projectTransient(const Song &song)
+{
+	if (song.slides.isEmpty())
+		return false;
+	liveSong = song;
+	live = true;
+	hidden = false;
+	textCleared = false;
+	hideButton->setChecked(false);
+	clearButton->setChecked(false);
+	showSlide(0, true);
+	setItemVisible(true);
+	WorshipOutput::ShowScene(scene);
+	return liveSlide >= 0;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -551,6 +580,23 @@ void SongsDock::showSlide(int slide, bool force)
 	}
 	updateControls();
 	updateLiveLabel();
+	publishLive();
+}
+
+void SongsDock::publishLive()
+{
+	if (!live || liveSlide < 0)
+		return;
+	LiveState state;
+	state.source = QStringLiteral("Cantos");
+	state.title = liveSong.title;
+	state.current = textCleared ? QString() : liveSong.slides.at(liveSlide).text;
+	state.next = liveSlide + 1 < liveSong.slides.size() ? liveSong.slides.at(liveSlide + 1).text : QString();
+	state.section = liveSong.slides.at(liveSlide).label;
+	state.index = liveSlide;
+	state.count = (int)liveSong.slides.size();
+	state.hidden = hidden;
+	WorshipLive::instance().publish(state);
 }
 
 void SongsDock::onSlideClicked(QListWidgetItem *item)
@@ -644,6 +690,7 @@ void SongsDock::toggleHidden()
 	setItemVisible(!hidden);
 	hideButton->setChecked(hidden);
 	updateLiveLabel();
+	publishLive();
 }
 
 void SongsDock::toggleClearText()

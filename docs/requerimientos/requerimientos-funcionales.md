@@ -86,7 +86,7 @@ Limitaciones conocidas de RF-04.2:
 | RF-05.2c | "Sin texto" (solo fondo) y "Ocultar", tercio inferior sobre la cámara, título en la primera diapositiva. | P1 | Hecho |
 | RF-05.3 | Teclas para saltar a una sección en vivo (C coro, P puente, E estrofa, I intro, F final, 1-9 estrofa N) y atajos globales. | P1 | Hecho |
 | RF-05.4 | Temas de diseño reutilizables (tipografía, fondo, posición) compartidos con la Biblia. | P2 | Parcial (mismos fondos y tipografías; falta guardar temas con nombre) |
-| RF-05.5 | Importar cantos de OpenLyrics/OpenLP, OpenSong, ProPresenter, EasyWorship, Holyrics y texto plano. | P2 | Parcial (texto plano y JSON propio) |
+| RF-05.5 | Importar cantos de OpenLyrics/OpenLP, OpenSong, ProPresenter, EasyWorship, Holyrics y texto plano. | P2 | Hecho (OpenLyrics/OpenLP, OpenSong, ChordPro, texto, JSON propio; faltan ProPresenter y Holyrics) |
 | RF-05.6 | Registro de uso para informes de derechos (CCLI u otras licencias), con número de licencia por canto. | P2 | Pendiente |
 | RF-05.7 | Letras con acordes para los músicos, con transposición de tono. | P3 | Pendiente |
 
@@ -94,9 +94,9 @@ Limitaciones conocidas de RF-04.2:
 
 | ID | Requerimiento | Prioridad | Estado |
 |----|---------------|-----------|--------|
-| RF-06.1 | Lista ordenada del culto con elementos de cualquier panel: himno, pasaje, presentación, canto, video, imagen, cuenta regresiva, escena de OBS. | P1 | Pendiente |
-| RF-06.2 | Pasar al siguiente elemento con un botón o atajo; el elemento en vivo se resalta. | P1 | Pendiente |
-| RF-06.3 | Guardar y abrir servicios como archivo (`.wsservice`) para prepararlos en otra computadora. | P1 | Pendiente |
+| RF-06.1 | Lista ordenada del culto con elementos de cualquier panel: himno, pasaje, presentación, canto, video, imagen, cuenta regresiva, escena de OBS. | P1 | Hecho |
+| RF-06.2 | Pasar al siguiente elemento con un botón o atajo; el elemento en vivo se resalta. | P1 | Hecho |
+| RF-06.3 | Guardar y abrir servicios como archivo (`.wsservice`) para prepararlos en otra computadora. | P1 | Hecho (.wsservice, autoguardado) |
 | RF-06.4 | Duración estimada por elemento y hora prevista de fin. | P3 | Pendiente |
 | RF-06.5 | Importar el plan desde Planning Center Services. | P3 | Pendiente |
 
@@ -104,18 +104,18 @@ Limitaciones conocidas de RF-04.2:
 
 | ID | Requerimiento | Prioridad | Estado |
 |----|---------------|-----------|--------|
-| RF-07.1 | Salida separada para el escenario con diapositiva actual, siguiente, reloj y temporizador. | P2 | Pendiente |
-| RF-07.2 | Notas del predicador y mensajes del operador ("2 minutos", "Alargar"). | P2 | Pendiente |
+| RF-07.1 | Salida separada para el escenario con diapositiva actual, siguiente, reloj y temporizador. | P2 | Hecho (escena WS Escenario, proyector en cualquier pantalla) |
+| RF-07.2 | Notas del predicador y mensajes del operador ("2 minutos", "Alargar"). | P2 | Hecho (mensajes del operador y cronometro) |
 | RF-07.3 | Diseños de monitor de escenario configurables. | P3 | Pendiente |
 
 ## RF-08 Temporizadores, anuncios y superposiciones
 
 | ID | Requerimiento | Prioridad | Estado |
 |----|---------------|-----------|--------|
-| RF-08.1 | Cuenta regresiva hasta una hora ("El culto comienza en 04:59") o por duración. | P1 | Pendiente |
+| RF-08.1 | Cuenta regresiva hasta una hora ("El culto comienza en 04:59") o por duración. | P1 | Hecho |
 | RF-08.2 | Bucle de anuncios antes del culto (imágenes/videos con duración por elemento). | P2 | Pendiente |
-| RF-08.3 | Rótulos de nombre (tercio inferior) para predicador, cantantes, entrevistados. | P1 | Pendiente |
-| RF-08.4 | Mensaje urgente superpuesto (p. ej. "Padres del niño X, acercarse a la recepción"). | P2 | Pendiente |
+| RF-08.3 | Rótulos de nombre (tercio inferior) para predicador, cantantes, entrevistados. | P1 | Hecho |
+| RF-08.4 | Mensaje urgente superpuesto (p. ej. "Padres del niño X, acercarse a la recepción"). | P2 | Hecho |
 | RF-08.5 | Código QR para ofrendas, inscripciones o enlaces. | P3 | Pendiente |
 
 ## RF-09 Multimedia
@@ -131,7 +131,7 @@ Limitaciones conocidas de RF-04.2:
 
 | ID | Requerimiento | Prioridad | Estado |
 |----|---------------|-----------|--------|
-| RF-10.1 | Control desde el celular o tablet en la red local (siguiente/anterior, elegir himno o pasaje) sin instalar nada (página web). | P2 | Pendiente (websocket de OBS ya incluido) |
+| RF-10.1 | Control desde el celular o tablet en la red local (siguiente/anterior, elegir himno o pasaje) sin instalar nada (página web). | P2 | Hecho (pagina web con PIN y codigo QR, orden del culto incluido) |
 | RF-10.2 | Compatibilidad con Stream Deck, MIDI y presentadores. | P2 | Parcial (atajos de OBS; Stream Deck vía websocket) |
 | RF-10.3 | Macros: una acción ejecuta varias (cambiar escena + mostrar rótulo + iniciar grabación). | P3 | Pendiente |
 | RF-10.4 | Salida NDI para otras computadoras o mezcladores. | P3 | Pendiente (plugin de terceros disponible) |
@@ -156,7 +156,7 @@ Limitaciones conocidas de RF-04.2:
 
 | ID | Requerimiento | Prioridad | Estado |
 |----|---------------|-----------|--------|
-| RF-13.1 | Modo Culto (solo contenido y vista previa) y Modo Técnico (todo OBS), con un botón. | P1 | Pendiente |
+| RF-13.1 | Modo Culto (solo contenido y vista previa) y Modo Técnico (todo OBS), con un botón. | P1 | Hecho |
 | RF-13.2 | Asistente de primera vez: pantalla del proyector, himnario, tema. | P2 | Pendiente |
 | RF-13.3 | Marca propia: nada visible dice "OBS" salvo el crédito en Acerca de. | P1 | Parcial (textos y título hechos; faltan icono y logo) |
 | RF-13.4 | Temas propios WorshipStudio Noche (predeterminado) y Día. | P1 | Hecho |

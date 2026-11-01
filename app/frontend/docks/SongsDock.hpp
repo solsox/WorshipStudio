@@ -27,6 +27,10 @@ public:
 	void deleteSong(const QString &title);
 	void goToSlide(int slide) { showSlide(slide); }
 	bool jumpToSection(QChar key);
+	/* Used by the service order. */
+	bool projectSongById(const QString &id);
+	/* Projects a song that is not saved in the library (announcements). */
+	bool projectTransient(const Song &song);
 	int currentSlide() const { return liveSlide; }
 	int slideCount() const;
 	obs_scene_t *outputScene() const { return scene; }
@@ -87,6 +91,7 @@ private:
 	void setItemVisible(bool visible);
 	void updateControls();
 	void updateLiveLabel();
+	void publishLive();
 	void registerHotkeys();
 	void saveHotkeys();
 	void createExampleSong();

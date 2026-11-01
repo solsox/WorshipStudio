@@ -119,6 +119,7 @@ private:
 	void selectSlideRow(int slide);
 	void updateControls();
 	void updateLiveLabel();
+	void publishLive();
 	void setStatus(const QString &text, bool error = false);
 
 	QStringList recentKeys() const;

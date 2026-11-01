@@ -45,6 +45,12 @@ public:
 	obs_scene_t *outputScene() const { return scene; }
 	QString lastRenderedImage() const { return lastRenderPath; }
 
+public slots:
+	/* Remote control (phone, stage, hotkeys through WorshipLive). */
+	void nextSlide() { moveSelection(1); }
+	void previousSlide() { moveSelection(-1); }
+	void toggleHidden();
+
 protected:
 	void resizeEvent(QResizeEvent *event) override;
 

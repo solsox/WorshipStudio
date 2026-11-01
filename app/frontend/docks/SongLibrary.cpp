@@ -12,6 +12,7 @@
 #include <QStandardPaths>
 #include <QStringDecoder>
 #include <QUuid>
+#include <QXmlStreamReader>
 
 #include <algorithm>
 
@@ -242,6 +243,163 @@ QVector<SongSlide> parseText(const QString &text, const QVector<SongSlide> &prev
 	return slides;
 }
 
+
+namespace {
+/* "v1" -> "Estrofa 1", "c" -> "Coro"... (OpenLyrics and OpenSong tags). */
+QString sectionLabel(QString tag)
+{
+	tag = tag.trimmed().toLower();
+	const QString number = tag.mid(1).remove(QRegularExpression(QStringLiteral("[^0-9]")));
+	const auto withNumber = [&](const QString &name) { return number.isEmpty() ? name : name + QLatin1Char(' ') + number; };
+	if (tag.startsWith(QLatin1Char('v')))
+		return withNumber(QStringLiteral("Estrofa"));
+	if (tag.startsWith(QLatin1Char('c')))
+		return withNumber(QStringLiteral("Coro"));
+	if (tag.startsWith(QLatin1Char('b')))
+		return withNumber(QStringLiteral("Puente"));
+	if (tag.startsWith(QLatin1Char('p')))
+		return withNumber(QStringLiteral("Pre-coro"));
+	if (tag.startsWith(QLatin1Char('e')))
+		return QStringLiteral("Final");
+	if (tag.startsWith(QLatin1Char('i')))
+		return QStringLiteral("Intro");
+	if (tag.startsWith(QLatin1Char('t')))
+		return withNumber(QStringLiteral("Etiqueta"));
+	return tag.isEmpty() ? QString() : tag.left(1).toUpper() + tag.mid(1);
+}
+
+/* OpenLyrics (OpenLP, Worship Extreme, Quelea...). */
+bool parseOpenLyrics(const QByteArray &data, Song *song)
+{
+	QXmlStreamReader xml(data);
+	QStringList blocks;
+	QString verseName, lines;
+	bool inLines = false, inTitle = false, inAuthor = false;
+	while (!xml.atEnd()) {
+		xml.readNext();
+		const QString name = xml.name().toString();
+		if (xml.isStartElement()) {
+			if (name == QStringLiteral("title") && song->title.isEmpty())
+				inTitle = true;
+			else if (name == QStringLiteral("author") && song->author.isEmpty())
+				inAuthor = true;
+			else if (name == QStringLiteral("verse"))
+				verseName = xml.attributes().value(QStringLiteral("name")).toString();
+			else if (name == QStringLiteral("lines")) {
+				inLines = true;
+				lines.clear();
+			} else if (name == QStringLiteral("br") && inLines)
+				lines += QLatin1Char('\n');
+			else if (name == QStringLiteral("copyright"))
+				song->copyright = xml.readElementText(QXmlStreamReader::IncludeChildElements).trimmed();
+		} else if (xml.isCharacters() && !xml.isWhitespace()) {
+			if (inTitle)
+				song->title += xml.text().toString().trimmed();
+			else if (inAuthor)
+				song->author += xml.text().toString().trimmed();
+			else if (inLines)
+				lines += xml.text().toString();
+		} else if (xml.isEndElement()) {
+			if (name == QStringLiteral("title"))
+				inTitle = false;
+			else if (name == QStringLiteral("author"))
+				inAuthor = false;
+			else if (name == QStringLiteral("lines")) {
+				inLines = false;
+				const QString label = sectionLabel(verseName);
+				blocks << (label.isEmpty() ? QString() : QStringLiteral("[%1]\n").arg(label)) + lines.trimmed();
+			}
+		}
+	}
+	if (xml.hasError() || blocks.isEmpty())
+		return false;
+	song->slides = parseText(blocks.join(QStringLiteral("\n\n")));
+	return !song->slides.isEmpty();
+}
+
+/* OpenSong: [V1] markers, "." chord lines, ";" comments, "|" slide breaks. */
+bool parseOpenSong(const QByteArray &data, Song *song)
+{
+	QXmlStreamReader xml(data);
+	QString lyrics;
+	while (!xml.atEnd()) {
+		xml.readNext();
+		if (!xml.isStartElement())
+			continue;
+		const QString name = xml.name().toString();
+		if (name == QStringLiteral("title"))
+			song->title = xml.readElementText(QXmlStreamReader::IncludeChildElements).trimmed();
+		else if (name == QStringLiteral("author"))
+			song->author = xml.readElementText(QXmlStreamReader::IncludeChildElements).trimmed();
+		else if (name == QStringLiteral("copyright"))
+			song->copyright = xml.readElementText(QXmlStreamReader::IncludeChildElements).trimmed();
+		else if (name == QStringLiteral("lyrics"))
+			lyrics = xml.readElementText(QXmlStreamReader::IncludeChildElements);
+	}
+	if (lyrics.trimmed().isEmpty())
+		return false;
+
+	QStringList out;
+	for (QString line : lyrics.split(QLatin1Char('\n'))) {
+		if (line.startsWith(QLatin1Char('.')) || line.startsWith(QLatin1Char(';')))
+			continue;
+		const QString trimmed = line.trimmed();
+		if (trimmed.startsWith(QLatin1Char('[')) && trimmed.endsWith(QLatin1Char(']'))) {
+			out << QString() << QStringLiteral("[%1]").arg(sectionLabel(trimmed.mid(1, trimmed.size() - 2)));
+			continue;
+		}
+		if (trimmed == QStringLiteral("||") || trimmed == QStringLiteral("|")) {
+			out << QString();
+			continue;
+		}
+		line.replace(QStringLiteral("||"), QStringLiteral("\n\n")).replace(QLatin1Char('|'), QLatin1Char('\n'));
+		out << line.trimmed().remove(QRegularExpression(QStringLiteral("^[0-9]+\\s?")));
+	}
+	song->slides = parseText(out.join(QLatin1Char('\n')));
+	return !song->slides.isEmpty();
+}
+
+/* ChordPro: {title: ...}, {soc}...{eoc}, inline [G] chords. */
+bool parseChordPro(const QString &text, Song *song)
+{
+	const QRegularExpression directive(QStringLiteral("^\\{\\s*([a-z_]+)\\s*(?::\\s*(.*))?\\}$"),
+					   QRegularExpression::CaseInsensitiveOption);
+	const QRegularExpression chord(QStringLiteral("\\[[^\\]]*\\]"));
+	QStringList out;
+	int verse = 0;
+	for (const QString &raw : text.split(QLatin1Char('\n'))) {
+		const QString line = raw.trimmed();
+		const QRegularExpressionMatch match = directive.match(line);
+		if (match.hasMatch()) {
+			const QString key = match.captured(1).toLower();
+			const QString value = match.captured(2).trimmed();
+			if (key == QStringLiteral("title") || key == QStringLiteral("t"))
+				song->title = value;
+			else if (key == QStringLiteral("artist") || key == QStringLiteral("subtitle") || key == QStringLiteral("st"))
+				song->author = song->author.isEmpty() ? value : song->author;
+			else if (key == QStringLiteral("copyright"))
+				song->copyright = value;
+			else if (key == QStringLiteral("start_of_chorus") || key == QStringLiteral("soc"))
+				out << QString() << QStringLiteral("[Coro]");
+			else if (key == QStringLiteral("start_of_bridge") || key == QStringLiteral("sob"))
+				out << QString() << QStringLiteral("[Puente]");
+			else if (key == QStringLiteral("start_of_verse") || key == QStringLiteral("sov"))
+				out << QString() << QStringLiteral("[Estrofa %1]").arg(++verse);
+			else if (key == QStringLiteral("comment") || key == QStringLiteral("c"))
+				out << QString() << QStringLiteral("[%1]").arg(value);
+			else if (key.startsWith(QStringLiteral("end_of")) || key.startsWith(QStringLiteral("eo")))
+				out << QString();
+			continue;
+		}
+		if (line.startsWith(QLatin1Char('#')))
+			continue;
+		out << QString(line).remove(chord).simplified();
+	}
+	song->slides = parseText(out.join(QLatin1Char('\n')));
+	return !song->slides.isEmpty();
+}
+} // namespace
+
 bool importFile(const QString &path, Song *song, QString *error)
 {
 	QFile file(path);
@@ -264,6 +422,23 @@ bool importFile(const QString &path, Song *song, QString *error)
 		return true;
 	}
 
+	const QString suffix = QFileInfo(path).suffix().toLower();
+	const QByteArray head = data.left(512).trimmed();
+	if (head.startsWith("<?xml") || head.startsWith("<song")) {
+		Song imported;
+		const bool ok = data.contains("openlyrics.info") ? parseOpenLyrics(data, &imported)
+								 : parseOpenSong(data, &imported);
+		if (!ok) {
+			if (error)
+				*error = QStringLiteral("Formato XML no reconocido (se aceptan OpenLyrics y OpenSong).");
+			return false;
+		}
+		if (imported.title.isEmpty())
+			imported.title = QFileInfo(path).completeBaseName();
+		*song = imported;
+		return true;
+	}
+
 	/* Plain text: UTF-8, or Latin-1 for files written by older programs. */
 	auto decoder = QStringDecoder(QStringDecoder::Utf8);
 	QString text = decoder(data);
@@ -272,7 +447,16 @@ bool importFile(const QString &path, Song *song, QString *error)
 
 	Song imported;
 	imported.title = QFileInfo(path).completeBaseName();
-	imported.slides = parseText(text);
+	const bool chordPro = suffix == QStringLiteral("cho") || suffix == QStringLiteral("chopro") ||
+			      suffix == QStringLiteral("chordpro") || suffix == QStringLiteral("crd") ||
+			      text.contains(QStringLiteral("{title")) || text.contains(QStringLiteral("{t:"));
+	if (chordPro) {
+		parseChordPro(text, &imported);
+		if (imported.title.isEmpty())
+			imported.title = QFileInfo(path).completeBaseName();
+	} else {
+		imported.slides = parseText(text);
+	}
 	if (imported.slides.isEmpty()) {
 		if (error)
 			*error = QStringLiteral("El archivo esta vacio.");

@@ -8,6 +8,8 @@ class BibleDock;
 class PresentationCatalogDock;
 class PresentationDock;
 class SongsDock;
+class LiveToolsDock;
+class ServiceDock;
 
 /* Automated check of the hymnal and Bible projection. Started when the
  * WORSHIPSTUDIO_SELFTEST environment variable points to an output folder;
@@ -17,4 +19,5 @@ class SongsDock;
  * run to some sections, comma separated: himnario, biblia, cantos,
  * presentaciones. */
 void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, SongsDock *songs,
-			PresentationDock *presentations, const QString &outputDir, std::function<void()> finished);
+			PresentationDock *presentations, LiveToolsDock *liveTools, ServiceDock *service,
+			const QString &outputDir, std::function<void()> finished);

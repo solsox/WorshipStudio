@@ -75,6 +75,27 @@ struct LyricsSlide {
  * band when shown as lower third over a camera). */
 QImage Lyrics(const LyricsSlide &slide, const QSize &canvas);
 
+/* Full screen countdown: "El culto comienza en" + 04:59 over a background. */
+QImage Countdown(const QString &title, const QString &time, const QString &footer, const Background &background,
+		 const QString &fontFamily, const QSize &canvas);
+
+/* Transparent overlays shown on top of whatever is on air. */
+QImage NameLowerThird(const QString &name, const QString &role, const QString &fontFamily, const QSize &canvas);
+QImage UrgentMessage(const QString &text, const QString &fontFamily, const QSize &canvas);
+
+/* Confidence monitor for singers and preachers. */
+struct StageInfo {
+	QString clock;
+	QString title;
+	QString section;
+	QString current;
+	QString next;
+	QString message;
+	QString timer;
+	bool hidden = false;
+};
+QImage StageDisplay(const StageInfo &info, const QSize &canvas);
+
 /* Directory used for rendered images. */
 QString CacheDir(const QString &subdir);
 

@@ -41,7 +41,10 @@
 #include <models/SceneCollection.hpp>
 #include <docks/PresentationCatalogDock.hpp>
 #include <docks/PresentationDock.hpp>
+#include <docks/LiveToolsDock.hpp>
+#include <docks/ServiceDock.hpp>
 #include <docks/SongsDock.hpp>
+#include <docks/WorshipModes.hpp>
 #include <docks/WorshipRender.hpp>
 #include <docks/WorshipSelfTest.hpp>
 #include <settings/OBSBasicSettings.hpp>
@@ -1274,10 +1277,19 @@ void OBSBasic::OBSInit()
 	auto *presentationDock = new PresentationDock("presentationDock", QStringLiteral("Presentaciones"), this);
 	AddDockWidget(presentationDock, Qt::RightDockWidgetArea);
 
+	auto *liveToolsDock = new LiveToolsDock("liveToolsDock", QStringLiteral("En vivo"), this);
+	AddDockWidget(liveToolsDock, Qt::LeftDockWidgetArea);
+
+	auto *serviceDock = new ServiceDock("serviceDock", QStringLiteral("Orden del culto"), hymnalDock, songsDock, bibleDock,
+					    presentationDock, liveToolsDock, this);
+	AddDockWidget(serviceDock, Qt::LeftDockWidgetArea);
+
 	const QString selfTestDir = qEnvironmentVariable("WORSHIPSTUDIO_SELFTEST");
 	if (!selfTestDir.isEmpty()) {
-		QTimer::singleShot(5000, this, [this, hymnalDock, bibleDock, songsDock, presentationDock, selfTestDir]() {
-			RunWorshipSelfTest(hymnalDock, bibleDock, songsDock, presentationDock, selfTestDir,
+		QTimer::singleShot(5000, this, [this, hymnalDock, bibleDock, songsDock, presentationDock, liveToolsDock,
+						 serviceDock, selfTestDir]() {
+			RunWorshipSelfTest(hymnalDock, bibleDock, songsDock, presentationDock, liveToolsDock, serviceDock,
+					   selfTestDir,
 					   [this]() { QTimer::singleShot(500, this, &QWidget::close); });
 		});
 	}
@@ -1317,6 +1329,11 @@ void OBSBasic::OBSInit()
 	}
 	config_set_bool(App()->GetUserConfig(), "WorshipStudio", "PresentationDockPlaced", true);
 	config_set_bool(App()->GetUserConfig(), "WorshipStudio", "SongsDockPlaced", true);
+
+	/* Modo culto (simple) / Modo tecnico (all of OBS). */
+	auto *modes = new WorshipModes(this, ui->viewMenu, ui->statusbar, serviceDock, liveToolsDock,
+				       {songsDock, hymnalDock, bibleDock, presentationDock}, controlsDock);
+	QTimer::singleShot(0, modes, &WorshipModes::restore);
 
 	bool pre23Defaults = config_get_bool(App()->GetUserConfig(), "General", "Pre23Defaults");
 	if (pre23Defaults) {

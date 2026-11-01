@@ -34,6 +34,15 @@ Funciona en **macOS, Windows y Linux**. Licencia **GPL-2.0** (fork de [OBS Studi
 - **Modo libro**: recorta márgenes y divide páginas verticales en dos mitades para leer libros en pantalla.
 - Clickers, flechas, Re Pág/Av Pág, tecla B para ocultar y atajos globales.
 
+**En vivo**
+- **Modo culto** (solo lo necesario) y **modo técnico** (todo OBS) con un clic.
+- **Orden del culto**: cuenta regresiva, himnos, cantos, pasajes, presentaciones, rótulos, anuncios y escenas,
+  preparado antes y pasado con un botón. Se guarda como archivo `.wsservice`.
+- **Control desde el celular** por la red local (página web con PIN y código QR, sin instalar nada).
+- **Monitor de escenario**: diapositiva actual, siguiente, reloj, cronómetro y mensajes al escenario.
+- **Cuenta regresiva**, **rótulos de nombre** y **mensajes urgentes** sobre lo que esté al aire.
+- Importa cantos de OpenLP (OpenLyrics), OpenSong y ChordPro.
+
 **Todo OBS Studio**: escenas, cámaras, filtros, transiciones, Studio Mode, grabación, transmisión, cámara
 virtual, plugins y websocket. Lo que proyectan los paneles son escenas `WS ...` normales y editables.
 
@@ -41,10 +50,11 @@ virtual, plugins y websocket. Lo que proyectan los paneles son escenas `WS ...` 
 
 ```
 app/              Código de la aplicación (fork de OBS Studio)
-  frontend/docks/ Paneles de WorshipStudio (Himnario, Cantos, Biblia, Presentaciones)
+  frontend/docks/ Paneles de WorshipStudio (Himnario, Cantos, Biblia, Presentaciones, Orden, En vivo)
   frontend/data/worship/  Biblias y tipografías libres incluidas
   tools/worship/  Herramientas (conversión de Biblias)
-docs/             Documentación: requerimientos, arquitectura, investigación, cómo compilar
+docs/             Documentación: requerimientos, arquitectura, investigación, estrategia, cómo compilar
+sitio/            Página web pública (GitHub Pages)
 .github/          Compilación automática para macOS, Windows y Linux
 contenido-local/  (no se sube) himnarios y material con derechos de autor de cada iglesia
 ```

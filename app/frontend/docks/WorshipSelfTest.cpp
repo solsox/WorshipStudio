@@ -4,6 +4,14 @@
 #include "PresentationCatalogDock.hpp"
 #include "PresentationDock.hpp"
 #include "SongsDock.hpp"
+#include "LiveToolsDock.hpp"
+#include "ServiceDock.hpp"
+#include "SongLibrary.hpp"
+#include "WorshipLive.hpp"
+#include "WorshipRemote.hpp"
+#include <obs-frontend-api.h>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include "WorshipOutput.hpp"
 #include "WorshipRender.hpp"
 
@@ -11,6 +19,7 @@
 
 #include <QDir>
 #include <QDockWidget>
+#include <QMainWindow>
 #include <QFile>
 #include <QFileInfo>
 #include <QImage>
@@ -64,6 +73,8 @@ struct SelfTest {
 	QPointer<BibleDock> bible;
 	QPointer<PresentationDock> presentations;
 	QPointer<SongsDock> songs;
+	QPointer<LiveToolsDock> liveTools;
+	QPointer<ServiceDock> service;
 	QDir outDir;
 	QStringList report;
 	int failures = 0;
@@ -366,6 +377,134 @@ struct SelfTest {
 		add(300, [=]() { songs->deleteSong(title); });
 	}
 
+	/* Countdown, overlays, stage display, phone remote and service order. */
+	void addLiveSteps()
+	{
+		add(300, [=]() {
+			log(QStringLiteral("--- En vivo ---"));
+			liveTools->startCountdown(5, QStringLiteral("El culto comienza en"));
+		});
+		add(1200, [=]() {
+			check(liveTools->countdownRunning(), QStringLiteral("cuenta regresiva en marcha"));
+			capture(liveTools->countdownScene(), QStringLiteral("envivo-cuenta-regresiva"));
+			liveTools->stopCountdown();
+			songs->projectNewSong(QStringLiteral("Autoprueba en vivo"),
+					      QStringLiteral("[Coro]\nSanto es el Senor\nDios todopoderoso\n\n"
+							     "[Estrofa 1]\nLa tierra llena esta\nde su gloria"),
+					      12);
+		});
+		add(800, [=]() {
+			const LiveState state = WorshipLive::instance().state();
+			check(state.source == QStringLiteral("Cantos") && state.next.contains(QStringLiteral("tierra")),
+			      QStringLiteral("hub en vivo: %1 / siguiente: %2").arg(state.source, state.next.left(30)));
+			liveTools->showName(QStringLiteral("Pr. Daniel Gomez"), QStringLiteral("Mensaje: Fe que transforma"));
+			liveTools->showUrgentMessage(QStringLiteral("Padres de Sofia, por favor acercarse a la recepcion"));
+		});
+		add(900, [=]() {
+			OBSSourceAutoRelease program = obs_frontend_get_current_scene();
+			obs_scene_t *scene = obs_scene_from_source(program);
+			check(scene && obs_scene_find_source(scene, "WS Superposiciones"),
+			      QStringLiteral("superposiciones sobre la escena al aire"));
+			capture(scene, QStringLiteral("envivo-rotulo-y-mensaje"));
+			liveTools->hideUrgentMessage();
+			liveTools->hideName();
+			WorshipLive::instance().setStageMessage(QStringLiteral("5 minutos"));
+			QMetaObject::invokeMethod(liveTools, "refreshStage");
+		});
+		/* Stage display without opening a projector window. */
+		add(300, [=]() { liveTools->ensureStage(); });
+		add(600, [=]() {
+			check(liveTools->stageScene() != nullptr, QStringLiteral("monitor de escenario creado"));
+			capture(liveTools->stageScene(), QStringLiteral("envivo-monitor-escenario"));
+		});
+		add(300, [=]() {
+			WorshipRemote *remote = liveTools->remote();
+			const QString pin = remote->pin();
+			const QByteArray page = remote->handleForTest("GET", QStringLiteral("/"));
+			check(page.contains("WorshipStudio") && page.contains("Siguiente"), QStringLiteral("pagina del celular"));
+			const QByteArray denied = remote->handleForTest("GET", QStringLiteral("/api/estado?pin=0000x"));
+			check(denied.contains("error"), QStringLiteral("sin codigo no hay acceso"));
+			const QJsonObject state = QJsonDocument::fromJson(remote->handleForTest(
+				"GET", QStringLiteral("/api/estado?pin=%1").arg(pin))).object();
+			check(state.value(QStringLiteral("source")).toString() == QStringLiteral("Cantos"),
+			      QStringLiteral("estado por la API: %1").arg(state.value(QStringLiteral("title")).toString()));
+			remote->handleForTest("POST", QStringLiteral("/api/accion?a=siguiente&pin=%1").arg(pin));
+			remote->qrCode(240).save(outDir.absoluteFilePath(QStringLiteral("envivo-qr.png")));
+		});
+		add(700, [=]() {
+			check(songs->currentSlide() == 1, QStringLiteral("siguiente desde el celular (diapositiva %1)").arg(songs->currentSlide() + 1));
+			songs->deleteSong(QStringLiteral("Autoprueba en vivo"));
+
+			ServiceItem countdown;
+			countdown.kind = ServiceItem::Countdown;
+			countdown.number = 3;
+			countdown.value = QStringLiteral("Comenzamos en");
+			ServiceItem bibleItem;
+			bibleItem.kind = ServiceItem::Bible;
+			bibleItem.value = QStringLiteral("Salmos 23:1-3");
+			ServiceItem announcement;
+			announcement.kind = ServiceItem::Announcement;
+			announcement.title = QStringLiteral("Anuncio");
+			announcement.value = QStringLiteral("Cena de jovenes\nViernes 19:00");
+			service->setItems({countdown, bibleItem, announcement});
+			check(service->activate(0), QStringLiteral("orden del culto: cuenta regresiva"));
+		});
+		add(800, [=]() {
+			check(service->activateNext() && service->currentItem() == 1, QStringLiteral("orden del culto: pasaje"));
+			check(WorshipLive::instance().serviceItems().size() == 3, QStringLiteral("orden visible en el celular"));
+		});
+		add(800, [=]() {
+			capture(bible->outputScene(), QStringLiteral("envivo-orden-pasaje"));
+			WorshipLive::instance().requestServiceItem(2);
+		});
+		add(800, [=]() {
+			check(service->currentItem() == 2, QStringLiteral("orden del culto: anuncio pedido desde el celular"));
+			capture(songs->outputScene(), QStringLiteral("envivo-orden-anuncio"));
+			liveTools->stopCountdown();
+			WorshipLive::instance().setStageMessage(QString());
+		});
+	}
+
+	void addImportSteps()
+	{
+		add(200, [=]() {
+			log(QStringLiteral("--- Importar cantos ---"));
+			const QString openLyrics = outDir.absoluteFilePath(QStringLiteral("canto-openlyrics.xml"));
+			QFile f1(openLyrics);
+			if (f1.open(QIODevice::WriteOnly))
+				f1.write(R"(<?xml version="1.0" encoding="UTF-8"?>
+<song xmlns="http://openlyrics.info/namespace/2009/song" version="0.9"><properties><titles><title>Canto OpenLyrics</title></titles><authors><author>Autor</author></authors></properties>
+<lyrics><verse name="v1"><lines>Primera linea<br/>Segunda linea</lines></verse><verse name="c1"><lines>Coro uno<br/>Coro dos</lines></verse></lyrics></song>)");
+			f1.close();
+			Song song;
+			QString error;
+			check(SongLibrary::importFile(openLyrics, &song, &error) && song.slides.size() == 2 &&
+				      song.slides.at(1).label == QStringLiteral("Coro 1") && song.title == QStringLiteral("Canto OpenLyrics"),
+			      QStringLiteral("OpenLyrics: %1 diapositivas, %2").arg(song.slides.size()).arg(error));
+
+			const QString openSong = outDir.absoluteFilePath(QStringLiteral("canto-opensong"));
+			QFile f2(openSong);
+			if (f2.open(QIODevice::WriteOnly))
+				f2.write("<?xml version=\"1.0\"?><song><title>Canto OpenSong</title><author>X</author><lyrics>[V1]\n.G   D\n Linea uno\n Linea dos\n[C]\n Coro aqui</lyrics></song>");
+			f2.close();
+			Song song2;
+			check(SongLibrary::importFile(openSong, &song2, &error) && song2.slides.size() == 2 &&
+				      song2.slides.at(0).text == QStringLiteral("Linea uno\nLinea dos"),
+			      QStringLiteral("OpenSong: %1 diapositivas").arg(song2.slides.size()));
+
+			const QString chordPro = outDir.absoluteFilePath(QStringLiteral("canto.cho"));
+			QFile f3(chordPro);
+			if (f3.open(QIODevice::WriteOnly))
+				f3.write("{title: Canto ChordPro}\n{artist: Y}\n[G]Linea [D]uno\nLinea dos\n\n{soc}\n[C]Coro final\n{eoc}\n");
+			f3.close();
+			Song song3;
+			check(SongLibrary::importFile(chordPro, &song3, &error) && song3.slides.size() == 2 &&
+				      song3.slides.at(0).text == QStringLiteral("Linea uno\nLinea dos") &&
+				      song3.slides.at(1).label == QStringLiteral("Coro"),
+			      QStringLiteral("ChordPro: %1 diapositivas, titulo %2").arg(song3.slides.size()).arg(song3.title));
+		});
+	}
+
 	/* Screenshots of the main window with each WorshipStudio dock in front. */
 	void addInterfaceSteps()
 	{
@@ -373,6 +512,24 @@ struct SelfTest {
 							     presentations.data()};
 		const QStringList names = {QStringLiteral("himnario"), QStringLiteral("cantos"), QStringLiteral("biblia"),
 					   QStringLiteral("presentaciones")};
+		/* A wide single preview reads better in screenshots; restored after. */
+		auto studioWas = std::make_shared<bool>(false);
+		add(300, [=]() {
+			*studioWas = obs_frontend_preview_program_mode_active();
+			obs_frontend_set_preview_program_mode(false);
+			if (auto *window = qobject_cast<QMainWindow *>(hymnal->window())) {
+				QList<QDockWidget *> docksToSize;
+				QList<int> widths;
+				for (QDockWidget *dock : window->findChildren<QDockWidget *>()) {
+					if (dock->isVisible() && !dock->isFloating() &&
+					    window->dockWidgetArea(dock) != Qt::NoDockWidgetArea) {
+						docksToSize << dock;
+						widths << window->width() * 19 / 100;
+					}
+				}
+				window->resizeDocks(docksToSize, widths, Qt::Horizontal);
+			}
+		});
 		for (int i = 0; i < docks.size(); ++i) {
 			add(400, [=]() {
 				if (docks.at(i)) {
@@ -386,6 +543,7 @@ struct SelfTest {
 				check(window && window->grab().save(path), QStringLiteral("captura de la interfaz %1").arg(path));
 			});
 		}
+		add(200, [=]() { obs_frontend_set_preview_program_mode(*studioWas); });
 	}
 
 	void runNext(int index)
@@ -426,9 +584,12 @@ struct SelfTest {
 } // namespace
 
 void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, SongsDock *songs,
-			PresentationDock *presentations, const QString &outputDir, std::function<void()> finished)
+			PresentationDock *presentations, LiveToolsDock *liveTools, ServiceDock *service,
+			const QString &outputDir, std::function<void()> finished)
 {
 	auto *test = new SelfTest();
+	test->liveTools = liveTools;
+	test->service = service;
 	test->hymnal = hymnal;
 	test->bible = bible;
 	test->songs = songs;
@@ -457,6 +618,10 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Songs
 		for (int i = 0; i < presentationFiles.size(); ++i)
 			test->addPresentationSteps(presentationFiles.at(i), i + 1);
 	}
+	if (wanted("envivo"))
+		test->addLiveSteps();
+	if (wanted("importar"))
+		test->addImportSteps();
 	if (wanted("interfaz"))
 		test->addInterfaceSteps();
 	if (wanted("cantos"))
