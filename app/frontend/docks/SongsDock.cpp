@@ -25,6 +25,7 @@
 #include <qt-wrappers.hpp>
 #include <Idian/Utils.hpp>
 
+#include <algorithm>
 #include <QAbstractItemView>
 #include <QCryptographicHash>
 #include <QDateTime>
@@ -54,20 +55,26 @@ constexpr const char *VideoSourceName = "WS Cantos - Video de fondo";
 constexpr const char *ConfigExample = "SongsExampleCreated";
 const QSize ThumbnailSize(160, 90);
 
-/* Section names start with these words; the key jumps to the next one. */
-QString sectionPrefix(QChar key)
+/* Section names start with these words (in the languages WorshipStudio is
+ * translated to, compared without accents); the key jumps to the next one. */
+QStringList sectionPrefixes(QChar key)
 {
 	switch (key.toLower().unicode()) {
 	case 'c':
-		return QStringLiteral("coro");
+		return {QStringLiteral("coro"), QStringLiteral("estribillo"), QStringLiteral("chorus"),
+			QStringLiteral("refrao"), QStringLiteral("refrain"), QStringLiteral("ritornello"),
+			QStringLiteral("refren")};
 	case 'p':
-		return QStringLiteral("puente");
+		return {QStringLiteral("puente"), QStringLiteral("bridge"), QStringLiteral("ponte"),
+			QStringLiteral("pont"), QStringLiteral("brucke")};
 	case 'f':
-		return QStringLiteral("final");
+		return {QStringLiteral("final"), QStringLiteral("ending"), QStringLiteral("outro"),
+			QStringLiteral("fin"), QStringLiteral("schluss")};
 	case 'i':
-		return QStringLiteral("intro");
+		return {QStringLiteral("intro"), QStringLiteral("introducao")};
 	case 'e':
-		return QStringLiteral("estrofa");
+		return {QStringLiteral("estrofa"), QStringLiteral("estrofe"), QStringLiteral("verse"), QStringLiteral("verso"),
+			QStringLiteral("couplet"), QStringLiteral("strophe"), QStringLiteral("strofa")};
 	default:
 		return {};
 	}
@@ -580,8 +587,8 @@ bool SongsDock::jumpToSection(QChar key)
 			}
 		}
 	} else {
-		const QString prefix = sectionPrefix(key);
-		if (prefix.isEmpty())
+		const QStringList prefixes = sectionPrefixes(key);
+		if (prefixes.isEmpty())
 			return false;
 		/* Next matching section after the current slide, wrapping around. */
 		const int count = (int)liveSong.slides.size();
@@ -589,7 +596,8 @@ bool SongsDock::jumpToSection(QChar key)
 			const int i = (liveSlide + step) % count;
 			const QString label = PresentationCatalogData::normalizeName(liveSong.slides.at(i).label);
 			const bool sectionStart = i == 0 || liveSong.slides.at(i - 1).label != liveSong.slides.at(i).label;
-			if (sectionStart && label.startsWith(prefix))
+			if (sectionStart && std::any_of(prefixes.begin(), prefixes.end(),
+							[&](const QString &prefix) { return label.startsWith(prefix); }))
 				target = i;
 		}
 	}

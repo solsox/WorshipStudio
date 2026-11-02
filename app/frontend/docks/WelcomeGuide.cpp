@@ -1,11 +1,17 @@
 #include "WelcomeGuide.hpp"
 #include "LiveToolsDock.hpp"
 #include "WorshipOutput.hpp"
+#include "WorshipTranslator.hpp"
+
+#include <OBSApp.hpp>
+#include <utility/platform.hpp>
+#include <util/config-file.h>
 
 #include <obs-frontend-api.h>
 #include <Idian/Utils.hpp>
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPainter>
@@ -15,7 +21,11 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
+#include <string>
+
 #include "moc_WelcomeGuide.cpp"
+
+extern bool restart;
 
 namespace {
 constexpr const char *ConfigGuide = "GuideShown";
@@ -122,9 +132,52 @@ WelcomeGuide::WelcomeGuide(LiveToolsDock *liveTools_, QWidget *parent) : QDialog
 	nextButton->setDefault(true);
 	auto *skipButton = new QPushButton(tr("Saltar guía"), this);
 
+	/* Language first, so the rest of the guide is read in it. Only languages
+	 * with WorshipStudio fully translated are offered. */
+	auto *languageBox = new QWidget(this);
+	auto *languageRow = new QHBoxLayout(languageBox);
+	languageRow->setContentsMargins(0, 0, 0, 0);
+	auto *languageCombo = new QComboBox(languageBox);
+	languageCombo->setMinimumWidth(220);
+	std::string languagesDir;
+	GetDataFilePath("worship/idiomas", languagesDir);
+	const QStringList translated = WorshipTranslator::available(QString::fromStdString(languagesDir));
+	const QString current = QString::fromUtf8(App()->GetLocale());
+	for (const auto &locale : GetLocaleNames()) {
+		const QString code = QString::fromStdString(locale.first);
+		const QString language = code.section(QLatin1Char('-'), 0, 0);
+		if (language != QStringLiteral("es") && !translated.contains(code) && !translated.contains(language))
+			continue;
+		languageCombo->addItem(QString::fromStdString(locale.second), code);
+		if (code == current)
+			languageCombo->setCurrentIndex(languageCombo->count() - 1);
+	}
+	languageCombo->model()->sort(0);
+	languageCombo->setCurrentIndex(languageCombo->findData(current));
+	auto *languageLabel = new QLabel(QStringLiteral("🌐 ") + tr("Idioma"), languageBox);
+	languageRow->addWidget(languageLabel);
+	languageRow->addWidget(languageCombo);
+	languageRow->addStretch(1);
+	connect(languageCombo, &QComboBox::activated, this, [this, languageCombo, current]() {
+		const QString code = languageCombo->currentData().toString();
+		if (code.isEmpty() || code == current)
+			return;
+		/* The interface language is read at startup: save, show the guide
+		 * again in the new language and restart. */
+		config_set_string(App()->GetUserConfig(), "General", "Language", code.toUtf8().constData());
+		config_save_safe(App()->GetUserConfig(), "tmp", nullptr);
+		WorshipOutput::SetConfigString(ConfigGuide, QStringLiteral("0"));
+		restart = true;
+		QWidget *window = parentWidget() ? parentWidget()->window() : nullptr;
+		reject();
+		if (window)
+			QTimer::singleShot(0, window, &QWidget::close);
+	});
+
 	addPage(Everything, tr("Todo lo que va en la pantalla, en un solo lugar"),
 		tr("WorshipStudio proyecta canciones, Biblia, himnarios y presentaciones, y si querés también "
-		   "transmite y graba en vivo. Todo desde esta misma ventana."));
+		   "transmite y graba en vivo. Todo desde esta misma ventana."),
+		languageBox);
 	addPage(Screens, tr("Dos pantallas: lo que preparás y lo que ve la gente"),
 		tr("<b style='color:#30A46C'>EN ESPERA</b> (izquierda) es tu borrador: ahí aparece lo que elegís, "
 		   "y nadie lo ve todavía.<br><b style='color:#E5484D'>EN PANTALLA</b> (derecha) es exactamente lo "

@@ -2,8 +2,10 @@
 
 #include <QColor>
 #include <QDialog>
+#include <QMap>
 
 class QButtonGroup;
+class QHBoxLayout;
 class QLabel;
 class QPushButton;
 
@@ -18,15 +20,22 @@ public:
 	/* Saved accent (the brand ember by default), also used by the phone page. */
 	static QColor savedAccent();
 	static bool savedLight();
+	/* Background shades of the saved base ("ciruela", "mate", "blanco"...). */
+	static QString savedBase();
+	static QMap<QString, QString> baseVariables(const QString &id);
 
 private:
 	QColor accent;
 	bool light = false;
 	QPushButton *darkButton = nullptr;
 	QPushButton *lightButton = nullptr;
+	QString base;
 	QLabel *status = nullptr;
+	QHBoxLayout *baseRow = nullptr;
+	QList<QPushButton *> baseButtons;
 	QList<QPushButton *> swatches;
 
+	void rebuildBases();
 	void apply();
 	void refreshSelection();
 };

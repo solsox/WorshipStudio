@@ -32,6 +32,7 @@
 #include <QHash>
 #include <QColor>
 #include <QPalette>
+#include <QMap>
 #include <QPointer>
 #include <QUuid>
 
@@ -177,7 +178,8 @@ public:
 	bool SetTheme(const QString &name);
 	/* WorshipStudio appearance: a theme on top of WorshipStudio Noche (dark)
 	 * or Dia (light) with the chosen accent color. */
-	bool SetWorshipAppearance(const QColor &accent, bool light);
+	/* `base` replaces theme variables (the --greyN background shades). */
+	bool SetWorshipAppearance(const QColor &accent, bool light, const QMap<QString, QString> &base = {});
 	bool IsThemeDark() const { return currentTheme ? currentTheme->isDark : false; }
 	QStyle *GetInvisibleCursorStyle();
 

@@ -1,4 +1,5 @@
 #include "WorshipDocument.hpp"
+#include <QCoreApplication>
 
 #include <CoreGraphics/CoreGraphics.h>
 
@@ -66,7 +67,7 @@ int PdfPageCount(const QString &pdfPath, QString *error)
 	CGPDFDocumentRef document = documentFor(pdfPath);
 	if (!document) {
 		if (error)
-			*error = QStringLiteral("No se pudo abrir el PDF (puede estar dañado o protegido con clave).");
+			*error = QCoreApplication::translate("WorshipStudio", "No se pudo abrir el PDF (puede estar dañado o protegido con clave).");
 		return 0;
 	}
 	return (int)CGPDFDocumentGetNumberOfPages(document);

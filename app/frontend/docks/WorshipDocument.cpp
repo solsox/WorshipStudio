@@ -158,7 +158,7 @@ int PdfPageCount(const QString &pdfPath, QString *error)
 {
 	if (QStandardPaths::findExecutable(QStringLiteral("pdfinfo")).isEmpty()) {
 		if (error)
-			*error = QStringLiteral("Falta poppler-utils (pdfinfo/pdftoppm). Instalalo con el gestor de "
+			*error = QCoreApplication::translate("WorshipStudio", "Falta poppler-utils (pdfinfo/pdftoppm). Instalalo con el gestor de "
 						"paquetes de tu sistema.");
 		return 0;
 	}
@@ -169,7 +169,7 @@ int PdfPageCount(const QString &pdfPath, QString *error)
 			return line.mid(6).trimmed().toInt();
 	}
 	if (error)
-		*error = QStringLiteral("No se pudo leer el PDF.");
+		*error = QCoreApplication::translate("WorshipStudio", "No se pudo leer el PDF.");
 	return 0;
 }
 

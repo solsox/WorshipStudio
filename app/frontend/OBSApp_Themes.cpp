@@ -1126,7 +1126,7 @@ bool OBSApp::InitTheme()
 	return true;
 }
 
-bool OBSApp::SetWorshipAppearance(const QColor &accent, bool light)
+bool OBSApp::SetWorshipAppearance(const QColor &accent, bool light, const QMap<QString, QString> &base)
 {
 	if (!accent.isValid())
 		return false;
@@ -1158,6 +1158,11 @@ bool OBSApp::SetWorshipAppearance(const QColor &accent, bool light)
 	for (int i = 0; i < 5; ++i) {
 		const QRegularExpression shade(QStringLiteral("--ws_ember%1:[^;]*;").arg(i + 1));
 		body.replace(shade, QStringLiteral("--ws_ember%1: %2;").arg(i + 1).arg(shades[i].name()));
+	}
+
+	for (auto it = base.cbegin(); it != base.cend(); ++it) {
+		const QRegularExpression variable(QStringLiteral("--%1:[^;]*;").arg(QRegularExpression::escape(it.key())));
+		body.replace(variable, QStringLiteral("--%1: %2;").arg(it.key(), it.value()));
 	}
 
 	const QString theme = QStringLiteral("@OBSThemeMeta {\n"

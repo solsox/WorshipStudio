@@ -1,5 +1,6 @@
 #include "WorshipSelfTest.hpp"
 
+#include "AppearanceDialog.hpp"
 #include "BackgroundLibrary.hpp"
 #include "BibleCatalog.hpp"
 #include "BibleDock.hpp"
@@ -12,7 +13,9 @@
 #include "WorshipLive.hpp"
 #include "WorshipRemote.hpp"
 #include "WelcomeGuide.hpp"
+#include "WorshipTranslator.hpp"
 #include <OBSApp.hpp>
+#include <utility/platform.hpp>
 #include <QStackedWidget>
 #include <obs-frontend-api.h>
 #include <QJsonArray>
@@ -706,12 +709,17 @@ struct SelfTest {
 		struct Look {
 			const char *color;
 			bool light;
+			const char *base;
 			const char *name;
 		};
-		const Look looks[] = {{"#2C78DB", true, "claro-azul"},
-				      {"#24966C", false, "oscuro-esmeralda"},
-				      {"#D63E73", true, "claro-rosa"},
-				      {"#E2582B", false, "oscuro-brasa"}};
+		/* Light then dark again: the dark base must come back, not the stock grey. */
+		const Look looks[] = {{"#2C78DB", true, "blanco", "claro-blanco-azul"},
+				      {"#24966C", false, "mate", "oscuro-mate-esmeralda"},
+				      {"#D63E73", true, "vainilla", "claro-vainilla-rosa"},
+				      {"#C08A1E", true, "hueso", "claro-hueso-dorado"},
+				      {"#2C78DB", false, "profundo", "oscuro-profundo-azul"},
+				      {"#8752DE", false, "grafito", "oscuro-grafito-violeta"},
+				      {"#E2582B", false, "ciruela", "oscuro-ciruela-brasa"}};
 		auto previous = std::make_shared<QString>();
 		add(200, [=]() {
 			log(QStringLiteral("--- Apariencia ---"));
@@ -722,8 +730,13 @@ struct SelfTest {
 			const QColor color(QString::fromLatin1(look.color));
 			const bool light = look.light;
 			const QString name = QString::fromLatin1(look.name);
+			const QMap<QString, QString> base = AppearanceDialog::baseVariables(QString::fromLatin1(look.base));
 			add(300, [=]() {
-				check(App()->SetWorshipAppearance(color, light), QStringLiteral("aplicar %1").arg(name));
+				check(base.size() >= 8, QStringLiteral("fondo %1 definido").arg(name));
+				check(App()->SetWorshipAppearance(color, light, base), QStringLiteral("aplicar %1").arg(name));
+				const QString window = qApp->palette().color(QPalette::Window).name().toUpper();
+				check(window == base.value(QStringLiteral("grey7")).toUpper(),
+				      QStringLiteral("fondo de ventana %1 (pedido %2)").arg(window, base.value(QStringLiteral("grey7"))));
 				check(App()->IsThemeDark() == !light, QStringLiteral("modo %1 aplicado").arg(light ? "claro" : "oscuro"));
 				log(QStringLiteral("resaltado de la paleta: %1 (pedido %2)")
 					    .arg(qApp->palette().color(QPalette::Highlight).name(), color.name()));
@@ -738,6 +751,61 @@ struct SelfTest {
 			if (!previous->isEmpty())
 				App()->SetTheme(*previous);
 		});
+	}
+
+	/* Every translation loads complete, and windows built afterwards use it. */
+	void addLanguageSteps()
+	{
+		add(100, [this]() {
+			log(QStringLiteral("--- Idiomas ---"));
+			std::string dir;
+			GetDataFilePath("worship/idiomas", dir);
+			const QString directory = QString::fromStdString(dir);
+			QFile templateFile(QDir(directory).absoluteFilePath(QStringLiteral("plantilla.json")));
+			const int total = templateFile.open(QIODevice::ReadOnly)
+						  ? (int)QJsonDocument::fromJson(templateFile.readAll()).object().size()
+						  : 0;
+			const QStringList languages = WorshipTranslator::available(directory);
+			check(languages.size() >= 6, QStringLiteral("idiomas: %1").arg(languages.join(QStringLiteral(", "))));
+			for (const QString &language : languages) {
+				QFile file(QDir(directory).absoluteFilePath(language + QStringLiteral(".json")));
+				file.open(QIODevice::ReadOnly);
+				const QJsonObject texts = QJsonDocument::fromJson(file.readAll()).object();
+				int done = 0;
+				for (auto it = texts.begin(); it != texts.end(); ++it)
+					done += it.value().toString().isEmpty() ? 0 : 1;
+				check(total > 0 && done == total,
+				      QStringLiteral("idioma %1: %2 de %3 textos").arg(language).arg(done).arg(total));
+			}
+		});
+		for (const char *code : {"en-US", "ko-KR"}) {
+			const QString locale = QString::fromLatin1(code);
+			auto translator = std::make_shared<WorshipTranslator *>(nullptr);
+			auto guide = std::make_shared<QPointer<WelcomeGuide>>();
+			add(100, [=]() {
+				std::string dir;
+				GetDataFilePath("worship/idiomas", dir);
+				*translator = new WorshipTranslator(qApp);
+				check((*translator)->load(QString::fromStdString(dir), locale),
+				      QStringLiteral("cargar traduccion %1").arg(locale));
+				qApp->installTranslator(*translator);
+				check(QCoreApplication::translate("BibleDock", "Más Biblias...") != QStringLiteral("Más Biblias..."),
+				      QStringLiteral("%1: Más Biblias... -> %2")
+					      .arg(locale, QCoreApplication::translate("BibleDock", "Más Biblias...")));
+				*guide = new WelcomeGuide(liveTools, hymnal->window());
+				(*guide)->resize(760, 660);
+				(*guide)->show();
+			});
+			add(600, [=]() {
+				if (*guide) {
+					(*guide)->grab().save(outDir.absoluteFilePath(QStringLiteral("idioma-guia-%1.png").arg(locale)));
+					(*guide)->close();
+					(*guide)->deleteLater();
+				}
+				qApp->removeTranslator(*translator);
+				delete *translator;
+			});
+		}
 	}
 
 	void addGuideSteps()
@@ -1008,6 +1076,8 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Songs
 		test->addStudioSteps();
 	if (wanted("guia"))
 		test->addGuideSteps();
+	if (wanted("idiomas"))
+		test->addLanguageSteps();
 	if (wanted("apariencia"))
 		test->addAppearanceSteps();
 	if (wanted("envivo"))

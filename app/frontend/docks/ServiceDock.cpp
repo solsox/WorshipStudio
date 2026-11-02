@@ -16,6 +16,7 @@
 ******************************************************************************/
 
 #include "ServiceDock.hpp"
+#include <QCoreApplication>
 #include "BibleDock.hpp"
 #include "LiveToolsDock.hpp"
 #include "PresentationCatalogDock.hpp"
@@ -51,7 +52,10 @@
 
 namespace {
 constexpr const char *ConfigExample = "ServiceExampleCreated";
-const QString FileFilter = QStringLiteral("Orden del culto (*.wsservice)");
+QString fileFilter()
+{
+	return QCoreApplication::translate("WorshipStudio", "Orden del culto (*.wsservice)");
+}
 } // namespace
 
 QJsonObject ServiceItem::toJson() const
@@ -86,7 +90,7 @@ QString ServiceItem::kindName() const
 	case Presentation:
 		return QStringLiteral("Presentacion");
 	case Countdown:
-		return QStringLiteral("Cuenta regresiva");
+		return QCoreApplication::translate("WorshipStudio", "Cuenta regresiva");
 	case Name:
 		return QStringLiteral("Rotulo");
 	case Announcement:
@@ -173,7 +177,7 @@ ServiceDock::ServiceDock(const QString &objectName, const QString &title, Presen
 		changed();
 	});
 	connect(openButton, &QPushButton::clicked, this, [this]() {
-		const QString path = QFileDialog::getOpenFileName(this, tr("Abrir orden del culto"), QDir::homePath(), FileFilter);
+		const QString path = QFileDialog::getOpenFileName(this, tr("Abrir orden del culto"), QDir::homePath(), fileFilter());
 		if (!path.isEmpty() && load(path)) {
 			filePath = path;
 			changed();
@@ -183,7 +187,7 @@ ServiceDock::ServiceDock(const QString &objectName, const QString &title, Presen
 		QString path = QFileDialog::getSaveFileName(this, tr("Guardar orden del culto"),
 							    filePath.isEmpty() ? QDir::home().absoluteFilePath(tr("Culto.wsservice"))
 									       : filePath,
-							    FileFilter);
+							    fileFilter());
 		if (path.isEmpty())
 			return;
 		if (!path.endsWith(QStringLiteral(".wsservice")))

@@ -94,8 +94,8 @@ QString PresentationCatalogData::normalizeName(const QString &text)
 
 QString PresentationCatalogData::editionName(HymnalEdition edition)
 {
-	return edition == HymnalEdition::New2009 ? QStringLiteral("Himnario nuevo (2009)")
-						 : QStringLiteral("Himnario antiguo (1962)");
+	return edition == HymnalEdition::New2009 ? QCoreApplication::translate("WorshipStudio", "Himnario nuevo (2009)")
+						 : QCoreApplication::translate("WorshipStudio", "Himnario antiguo (1962)");
 }
 
 /* A folder looks like this edition when its name says so. */
@@ -210,7 +210,7 @@ QVector<PresentationEntry> PresentationCatalogData::loadHymnCatalog(HymnalEditio
 		*usedRoot = root;
 	if (root.isEmpty()) {
 		if (error)
-			*error = QStringLiteral("No se encontro la carpeta del %1.").arg(editionName(edition).toLower());
+			*error = QCoreApplication::translate("WorshipStudio", "No se encontro la carpeta del %1.").arg(editionName(edition).toLower());
 		return {};
 	}
 
@@ -289,7 +289,7 @@ QVector<PresentationEntry> PresentationCatalogData::loadFromFolders(const QStrin
 	}
 
 	if (entries.isEmpty() && error)
-		*error = QStringLiteral("La carpeta no contiene himnos (carpetas \"NNN - Titulo\" con imagenes).");
+		*error = QCoreApplication::translate("WorshipStudio", "La carpeta no contiene himnos (carpetas \"NNN - Titulo\" con imagenes).");
 	return entries;
 }
 
@@ -298,7 +298,7 @@ QVector<PresentationEntry> PresentationCatalogData::loadFromCatalog(const QStrin
 	const QString html = appText(findCatalogFile(root));
 	if (html.isEmpty()) {
 		if (error)
-			*error = QStringLiteral("No se pudo leer Resources/index.html.");
+			*error = QCoreApplication::translate("WorshipStudio", "No se pudo leer Resources/index.html.");
 		return {};
 	}
 
@@ -355,7 +355,7 @@ QVector<PresentationEntry> PresentationCatalogData::loadFromCatalog(const QStrin
 	}
 
 	if (entries.isEmpty() && error)
-		*error = QStringLiteral("No se pudieron leer himnos desde el catalogo.");
+		*error = QCoreApplication::translate("WorshipStudio", "No se pudieron leer himnos desde el catalogo.");
 
 	return entries;
 }

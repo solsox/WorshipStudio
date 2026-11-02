@@ -1,4 +1,5 @@
 #include "SongLibrary.hpp"
+#include <QCoreApplication>
 #include "PresentationCatalogData.hpp"
 
 #include <QDateTime>
@@ -414,7 +415,7 @@ bool importFile(const QString &path, Song *song, QString *error)
 		const QJsonObject object = QJsonDocument::fromJson(data).object();
 		if (object.value(QStringLiteral("format")).toString() != QStringLiteral("worshipstudio-song")) {
 			if (error)
-				*error = QStringLiteral("No es un canto de WorshipStudio.");
+				*error = QCoreApplication::translate("WorshipStudio", "No es un canto de WorshipStudio.");
 			return false;
 		}
 		*song = fromJson(object);
@@ -430,7 +431,7 @@ bool importFile(const QString &path, Song *song, QString *error)
 								 : parseOpenSong(data, &imported);
 		if (!ok) {
 			if (error)
-				*error = QStringLiteral("Formato XML no reconocido (se aceptan OpenLyrics y OpenSong).");
+				*error = QCoreApplication::translate("WorshipStudio", "Formato XML no reconocido (se aceptan OpenLyrics y OpenSong).");
 			return false;
 		}
 		if (imported.title.isEmpty())
@@ -459,7 +460,7 @@ bool importFile(const QString &path, Song *song, QString *error)
 	}
 	if (imported.slides.isEmpty()) {
 		if (error)
-			*error = QStringLiteral("El archivo esta vacio.");
+			*error = QCoreApplication::translate("WorshipStudio", "El archivo esta vacio.");
 		return false;
 	}
 	*song = imported;

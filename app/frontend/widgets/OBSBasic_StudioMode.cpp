@@ -18,6 +18,7 @@
 ******************************************************************************/
 
 #include "OBSBasic.hpp"
+#include <QCoreApplication>
 #include "OBSProjector.hpp"
 
 #include <utility/display-helpers.hpp>
@@ -39,6 +40,7 @@ QString FriendlySceneName(obs_source_t *scene)
 			name.chop(2);
 		if (name == QStringLiteral("Presentacion"))
 			name = QStringLiteral("Presentación");
+		name = QCoreApplication::translate("WorshipStudio", name.toUtf8().constData());
 	}
 	return name;
 }

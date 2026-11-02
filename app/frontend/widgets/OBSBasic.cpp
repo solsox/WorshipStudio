@@ -31,6 +31,7 @@
 #include <docks/YouTubeAppDock.hpp>
 #endif
 #include <docks/BackgroundLibrary.hpp>
+#include <docks/WorshipTranslator.hpp>
 #include <docks/WorshipVersion.hpp>
 #include <QDesktopServices>
 #include <QSysInfo>
@@ -1266,6 +1267,17 @@ void OBSBasic::OBSInit()
 	}
 #endif
 
+	/* WorshipStudio native docks, in the interface language (texts without a
+	 * translation stay in Spanish). Installed last, so it is asked first. */
+	std::string languagesDir;
+	if (GetDataFilePath("worship/idiomas", languagesDir)) {
+		auto *translator = new WorshipTranslator(qApp);
+		if (translator->load(QT_UTF8(languagesDir.c_str()), QT_UTF8(App()->GetLocale())))
+			qApp->installTranslator(translator);
+		else
+			delete translator;
+	}
+
 	/* WorshipStudio native docks */
 	std::string fontsDir;
 	if (GetDataFilePath("worship/fuentes", fontsDir))
@@ -1274,24 +1286,24 @@ void OBSBasic::OBSInit()
 	if (GetDataFilePath("worship/fondos", backgroundsDir))
 		BackgroundLibrary::SetBundledDir(QT_UTF8(backgroundsDir.c_str()));
 
-	auto *hymnalDock = new PresentationCatalogDock("hymnalDock", QStringLiteral("Himnario"), this);
+	auto *hymnalDock = new PresentationCatalogDock("hymnalDock", QCoreApplication::translate("WorshipStudio", "Himnario"), this);
 	AddDockWidget(hymnalDock, Qt::RightDockWidgetArea);
 
 	std::string bibleDir;
 	GetDataFilePath("worship/biblias", bibleDir);
-	auto *bibleDock = new BibleDock("bibleDock", QStringLiteral("Biblia"), QT_UTF8(bibleDir.c_str()), this);
+	auto *bibleDock = new BibleDock("bibleDock", QCoreApplication::translate("WorshipStudio", "Biblia"), QT_UTF8(bibleDir.c_str()), this);
 	AddDockWidget(bibleDock, Qt::RightDockWidgetArea);
 
-	auto *songsDock = new SongsDock("songsDock", QStringLiteral("Cantos"), this);
+	auto *songsDock = new SongsDock("songsDock", QCoreApplication::translate("WorshipStudio", "Cantos"), this);
 	AddDockWidget(songsDock, Qt::RightDockWidgetArea);
 
-	auto *presentationDock = new PresentationDock("presentationDock", QStringLiteral("Presentaciones"), this);
+	auto *presentationDock = new PresentationDock("presentationDock", QCoreApplication::translate("WorshipStudio", "Presentaciones"), this);
 	AddDockWidget(presentationDock, Qt::RightDockWidgetArea);
 
-	auto *liveToolsDock = new LiveToolsDock("liveToolsDock", QStringLiteral("En vivo"), this);
+	auto *liveToolsDock = new LiveToolsDock("liveToolsDock", QCoreApplication::translate("WorshipStudio", "En vivo"), this);
 	AddDockWidget(liveToolsDock, Qt::LeftDockWidgetArea);
 
-	auto *serviceDock = new ServiceDock("serviceDock", QStringLiteral("Orden del culto"), hymnalDock, songsDock, bibleDock,
+	auto *serviceDock = new ServiceDock("serviceDock", QCoreApplication::translate("WorshipStudio", "Orden del culto"), hymnalDock, songsDock, bibleDock,
 					    presentationDock, liveToolsDock, this);
 	AddDockWidget(serviceDock, Qt::LeftDockWidgetArea);
 
@@ -1356,7 +1368,7 @@ void OBSBasic::OBSInit()
 					 [this]() { on_resetDocks_triggered(true); });
 	QTimer::singleShot(0, layout, &WorshipLayout::restore);
 
-	auto *appearanceAction = new QAction(QStringLiteral("Personalizar apariencia..."), this);
+	auto *appearanceAction = new QAction(QCoreApplication::translate("WorshipStudio", "Personalizar apariencia..."), this);
 	ui->viewMenu->insertAction(ui->viewMenu->actions().value(0), appearanceAction);
 	connect(appearanceAction, &QAction::triggered, this, [this]() {
 		auto *dialog = new AppearanceDialog(this);
@@ -1364,7 +1376,7 @@ void OBSBasic::OBSInit()
 		dialog->open();
 	});
 
-	auto *guideAction = new QAction(QStringLiteral("Guía de inicio de WorshipStudio"), this);
+	auto *guideAction = new QAction(QCoreApplication::translate("WorshipStudio", "Guía de inicio de WorshipStudio"), this);
 	ui->menuBasic_MainMenu_Help->insertAction(ui->menuBasic_MainMenu_Help->actions().value(0), guideAction);
 	connect(guideAction, &QAction::triggered, this, [this, liveToolsDock]() {
 		auto *guide = new WelcomeGuide(liveToolsDock, this);
@@ -1372,15 +1384,17 @@ void OBSBasic::OBSInit()
 		guide->open();
 	});
 	/* Comments and bug reports by email: no account or extra service needed. */
-	auto *feedbackAction = new QAction(QStringLiteral("Enviar comentarios o reportar un error..."), this);
+	auto *feedbackAction = new QAction(QCoreApplication::translate("WorshipStudio", "Enviar comentarios o reportar un error..."), this);
 	ui->menuBasic_MainMenu_Help->insertAction(ui->menuBasic_MainMenu_Help->actions().value(1), feedbackAction);
 	connect(feedbackAction, &QAction::triggered, this, []() {
-		const QString body = QStringLiteral("Contanos qué pasó o qué te gustaría (si es un error, los pasos para "
-						    "que vuelva a pasar):\n\n\n---\nWorshipStudio %1\n%2 (%3)\n")
+		const QString body = QCoreApplication::translate("WorshipStudio",
+								 "Contanos qué pasó o qué te gustaría (si es un error, "
+								 "los pasos para que vuelva a pasar):")
+					     .append(QStringLiteral("\n\n\n---\nWorshipStudio %1\n%2 (%3)\n"))
 					     .arg(QStringLiteral(WORSHIPSTUDIO_VERSION_TEXT), QSysInfo::prettyProductName(),
 						  QSysInfo::currentCpuArchitecture());
 		QUrlQuery query;
-		query.addQueryItem(QStringLiteral("subject"), QStringLiteral("Comentario sobre WorshipStudio"));
+		query.addQueryItem(QStringLiteral("subject"), QCoreApplication::translate("WorshipStudio", "Comentario sobre WorshipStudio"));
 		query.addQueryItem(QStringLiteral("body"), body);
 		QUrl url(QStringLiteral("mailto:contact.worshipstudio@gmail.com"));
 		url.setQuery(query);
