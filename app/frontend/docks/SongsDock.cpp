@@ -52,7 +52,6 @@ namespace {
 constexpr const char *SceneName = "WS Cantos";
 constexpr const char *ScreenSourceName = "WS Cantos - Pantalla";
 constexpr const char *VideoSourceName = "WS Cantos - Video de fondo";
-constexpr const char *ConfigExample = "SongsExampleCreated";
 const QSize ThumbnailSize(160, 90);
 
 /* Section names start with these words (in the languages WorshipStudio is
@@ -95,6 +94,7 @@ SongsDock::SongsDock(const QString &objectName, const QString &title, QWidget *p
 	searchEdit->setClearButtonEnabled(true);
 
 	auto *newButton = new QPushButton(tr("Nuevo"), root);
+	newButton->setObjectName(QStringLiteral("songsNew"));
 	auto *editButton = new QPushButton(tr("Editar"), root);
 	auto *deleteButton = new QPushButton(tr("Borrar"), root);
 	auto *importButton = new QPushButton(tr("Importar..."), root);
@@ -107,6 +107,7 @@ SongsDock::SongsDock(const QString &objectName, const QString &title, QWidget *p
 	libraryRow->addWidget(importButton);
 
 	songsList = new QListWidget(root);
+	songsList->setObjectName(QStringLiteral("songsList"));
 	songsList->setSelectionMode(QAbstractItemView::SingleSelection);
 
 	slidesList = new QListWidget(root);
@@ -165,29 +166,9 @@ SongsDock::SongsDock(const QString &objectName, const QString &title, QWidget *p
 	connect(clearButton, &QPushButton::clicked, this, &SongsDock::toggleClearText);
 
 	WorshipLive::instance().registerTarget(QStringLiteral("Cantos"), this);
-	createExampleSong();
 	reload();
 }
 
-
-void SongsDock::createExampleSong()
-{
-	if (WorshipOutput::ConfigString(ConfigExample) == QStringLiteral("1"))
-		return;
-	WorshipOutput::SetConfigString(ConfigExample, QStringLiteral("1"));
-	if (!SongLibrary::loadAll().isEmpty())
-		return;
-
-	Song example;
-	example.title = tr("Ejemplo: como escribir un canto");
-	example.background.preset = 11;
-	example.slides = SongLibrary::parseText(
-		tr("[Estrofa 1]\nCada parrafo es una diapositiva\nescribi la letra en el editor\n\n"
-		   "[Coro]\nPone el nombre entre corchetes\ny salta al coro con la tecla C\n\n"
-		   "[Estrofa 2]\nElegi la tipografia y el fondo\npara el canto o para cada diapositiva\n\n"
-		   "[Coro]\nPone el nombre entre corchetes\ny salta al coro con la tecla C"));
-	SongLibrary::save(example);
-}
 
 void SongsDock::reload(const QString &selectId)
 {

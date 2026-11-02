@@ -16,6 +16,7 @@
 ******************************************************************************/
 
 #include "OBSApp.hpp"
+#include <docks/LanguageDialog.hpp>
 
 #include <components/Multiview.hpp>
 #include <dialogs/LogUploadDialog.hpp>
@@ -722,6 +723,22 @@ bool OBSApp::MigrateGlobalSettings()
 bool OBSApp::InitLocale()
 {
 	ProfileScope("OBSApp::InitLocale");
+
+	/* WorshipStudio asks for the language on the first start, whatever the
+	 * system language is (that one is only suggested). */
+	if (!config_get_bool(userConfig, "General", "WorshipLanguageAsked") &&
+	    qEnvironmentVariableIsEmpty("WORSHIPSTUDIO_SELFTEST")) {
+		QStringList preferred;
+		for (const std::string &code : GetPreferredLocales())
+			preferred << QString::fromStdString(code);
+		const char *saved = config_has_user_value(userConfig, "General", "Language")
+					    ? config_get_string(userConfig, "General", "Language")
+					    : "";
+		const QString chosen = AskWorshipLanguage(QString::fromUtf8(saved ? saved : ""), preferred);
+		config_set_string(userConfig, "General", "Language", chosen.toUtf8().constData());
+		config_set_bool(userConfig, "General", "WorshipLanguageAsked", true);
+		config_save_safe(userConfig, "tmp", nullptr);
+	}
 
 	const char *lang = config_get_string(userConfig, "General", "Language");
 	bool userLocale = config_has_user_value(userConfig, "General", "Language");

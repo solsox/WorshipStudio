@@ -6,23 +6,28 @@
     dark: 'true';
 }
 
-/* Calm, low-glare dark theme for the booth during a service: deep plum
- * neutrals (same as the website), one ember accent (same as the logo), rounded shapes and quiet borders. */
+/* Calm, low-glare dark theme for the booth during a service: warm ink black
+ * neutrals, bone primary buttons, rounded shapes and quiet borders. */
 @OBSThemeVars {
-    --grey1: #6E5A78;
-    --grey2: #58465F;
-    --grey3: #46374E;
-    --grey4: #382B3F;
-    --grey5: #2C2132;
-    --grey6: #221A27;
-    --grey7: #1A131E;
-    --grey8: #110C14;
+    --grey1: #6E6862;
+    --grey2: #4E4944;
+    --grey3: #3A3632;
+    --grey4: #2D2A27;
+    --grey5: #22201E;
+    --grey6: #1A1817;
+    --grey7: #131211;
+    --grey8: #0C0B0A;
 
-    --ws_ember1: #FFB394;
-    --ws_ember2: #F57A4A;
-    --ws_ember3: #E2582B;
-    --ws_ember4: #C2441C;
-    --ws_ember5: #943314;
+    --ws_ember1: #8A8276;
+    --ws_ember2: #6E675D;
+    --ws_ember3: #5A544B;
+    --ws_ember4: #46413A;
+    --ws_ember5: #34302B;
+
+    /* Primary buttons: bone with ink text (selections use the shades above). */
+    --ws_button1: #F1EBE0;
+    --ws_button2: #E6DED0;
+    --ws_on_button: #1B1915;
 
     --primary: var(--ws_ember3);
     --primary_light: var(--ws_ember2);
@@ -30,7 +35,7 @@
     --primary_dark: var(--ws_ember4);
     --primary_darker: var(--ws_ember5);
 
-    --text_muted: #B4A5BC;
+    --text_muted: #A39D95;
 
     --border_color: var(--grey4);
     --border_radius: 8px;
@@ -90,20 +95,21 @@ QDockWidget::float-button:hover {
 }
 
 .button-primary {
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 var(--ws_ember2), stop: 1 var(--ws_ember3));
-    border: 1px solid var(--ws_ember3);
-    color: #FFFFFF;
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 var(--ws_button1), stop: 1 var(--ws_button2));
+    border: 1px solid var(--ws_button2);
+    color: var(--ws_on_button);
     font-weight: 600;
 }
 
 .button-primary:hover,
 .button-primary:focus {
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 var(--ws_ember1), stop: 1 var(--ws_ember2));
-    border: 1px solid var(--ws_ember2);
+    background: var(--ws_button1);
+    border: 1px solid var(--ws_button1);
+    color: var(--ws_on_button);
 }
 
 QPushButton:checked {
-    border: 1px solid var(--ws_ember2);
+    border: 1px solid var(--ws_ember1);
 }
 
 QLineEdit:focus,
@@ -111,5 +117,5 @@ QPlainTextEdit:focus,
 QTextEdit:focus,
 QSpinBox:focus,
 QComboBox:focus {
-    border: 1px solid var(--ws_ember2);
+    border: 1px solid var(--ws_ember1);
 }

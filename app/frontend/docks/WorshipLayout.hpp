@@ -35,5 +35,6 @@ private:
 	std::function<void()> resetDefaultDocks;
 
 	void filterSceneList();
+	void filterSources();
 	static void onFrontendEvent(enum obs_frontend_event event, void *data);
 };

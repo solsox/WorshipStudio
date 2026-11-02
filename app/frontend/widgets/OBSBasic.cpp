@@ -51,7 +51,7 @@
 #include <docks/ServiceDock.hpp>
 #include <docks/SongsDock.hpp>
 #include <docks/AppearanceDialog.hpp>
-#include <docks/WelcomeGuide.hpp>
+#include <docks/GuidedTour.hpp>
 #include <docks/WorshipLive.hpp>
 #include <docks/WorshipLayout.hpp>
 #include <docks/WorshipRender.hpp>
@@ -1384,11 +1384,7 @@ void OBSBasic::OBSInit()
 
 	auto *guideAction = new QAction(QCoreApplication::translate("WorshipStudio", "Guía de inicio de WorshipStudio"), this);
 	ui->menuBasic_MainMenu_Help->insertAction(ui->menuBasic_MainMenu_Help->actions().value(0), guideAction);
-	connect(guideAction, &QAction::triggered, this, [this, liveToolsDock]() {
-		auto *guide = new WelcomeGuide(liveToolsDock, this);
-		guide->setAttribute(Qt::WA_DeleteOnClose);
-		guide->open();
-	});
+	connect(guideAction, &QAction::triggered, this, [this]() { GuidedTour::start(this); });
 	/* Comments and bug reports by email: no account or extra service needed. */
 	auto *feedbackAction = new QAction(QCoreApplication::translate("WorshipStudio", "Enviar comentarios o reportar un error..."), this);
 	ui->menuBasic_MainMenu_Help->insertAction(ui->menuBasic_MainMenu_Help->actions().value(1), feedbackAction);
@@ -1407,7 +1403,7 @@ void OBSBasic::OBSInit()
 		QDesktopServices::openUrl(url);
 	});
 	if (qEnvironmentVariableIsEmpty("WORSHIPSTUDIO_SELFTEST"))
-		QTimer::singleShot(1500, this, [this, liveToolsDock]() { WelcomeGuide::showOnFirstRun(liveToolsDock, this); });
+		QTimer::singleShot(1500, this, [this]() { GuidedTour::showOnFirstRun(this); });
 
 	bool pre23Defaults = config_get_bool(App()->GetUserConfig(), "General", "Pre23Defaults");
 	if (pre23Defaults) {

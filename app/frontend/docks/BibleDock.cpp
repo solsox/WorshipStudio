@@ -122,6 +122,7 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 	versionRow->addWidget(importButton);
 
 	searchEdit = new QLineEdit(root);
+	searchEdit->setObjectName(QStringLiteral("bibleSearch"));
 	searchEdit->setPlaceholderText(tr("Juan 3:16, Sal 23, 1 Cor 13:4-7 o una frase"));
 	searchEdit->setClearButtonEnabled(true);
 

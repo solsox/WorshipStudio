@@ -51,7 +51,6 @@
 #include "moc_ServiceDock.cpp"
 
 namespace {
-constexpr const char *ConfigExample = "ServiceExampleCreated";
 QString fileFilter()
 {
 	return QCoreApplication::translate("WorshipStudio", "Orden del culto (*.wsservice)");
@@ -211,8 +210,7 @@ ServiceDock::ServiceDock(const QString &objectName, const QString &title, Presen
 	connect(list->model(), &QAbstractItemModel::rowsMoved, this, [this]() { QTimer::singleShot(0, this, &ServiceDock::syncFromList); });
 	connect(&WorshipLive::instance(), &WorshipLive::serviceItemRequested, this, &ServiceDock::activate);
 
-	if (!load(autosavePath()))
-		createExample();
+	load(autosavePath());
 	rebuild();
 	WorshipLive::instance().setService({}, -1);
 	changed();
@@ -224,37 +222,6 @@ QString ServiceDock::autosavePath()
 	const QString dir = QDir(base).absoluteFilePath(QStringLiteral("WorshipStudio/servicios"));
 	QDir().mkpath(dir);
 	return QDir(dir).absoluteFilePath(QStringLiteral("actual.wsservice"));
-}
-
-void ServiceDock::createExample()
-{
-	if (WorshipOutput::ConfigString(ConfigExample) == QStringLiteral("1"))
-		return;
-	WorshipOutput::SetConfigString(ConfigExample, QStringLiteral("1"));
-
-	ServiceItem countdown;
-	countdown.kind = ServiceItem::Countdown;
-	countdown.number = 5;
-	countdown.value = tr("El culto comienza en");
-	countdown.title = tr("Cuenta regresiva de 5 minutos");
-	ServiceItem welcome;
-	welcome.kind = ServiceItem::Announcement;
-	welcome.title = tr("Bienvenida");
-	welcome.value = tr("Bienvenidos\n\nNos alegra que estes aqui");
-	ServiceItem hymn;
-	hymn.kind = ServiceItem::Hymn;
-	hymn.number = 1;
-	hymn.title = tr("Himno 1");
-	ServiceItem reading;
-	reading.kind = ServiceItem::Bible;
-	reading.value = QStringLiteral("Salmos 100");
-	reading.title = QStringLiteral("Salmos 100");
-	ServiceItem preacher;
-	preacher.kind = ServiceItem::Name;
-	preacher.value = tr("Nombre del predicador");
-	preacher.extra = tr("Mensaje");
-	preacher.title = tr("Rotulo: predicador");
-	items = {countdown, welcome, hymn, reading, preacher};
 }
 
 void ServiceDock::setItems(const QVector<ServiceItem> &newItems)

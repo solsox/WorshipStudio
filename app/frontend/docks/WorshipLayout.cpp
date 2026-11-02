@@ -3,6 +3,8 @@
 
 #include <QAction>
 #include <QDockWidget>
+#include <QAbstractItemModel>
+#include <QListView>
 #include <QListWidget>
 #include <QMainWindow>
 #include <QMenu>
@@ -32,6 +34,19 @@ WorshipLayout::WorshipLayout(QMainWindow *window_, QMenu *viewMenu, QDockWidget 
 	}
 
 	obs_frontend_add_event_callback(&WorshipLayout::onFrontendEvent, this);
+
+	/* WorshipStudio's helper sources (overlays nested in the user's scenes)
+	 * stay out of the sources list too. */
+	if (auto *sources = window->findChild<QListView *>(QStringLiteral("sources")); sources && sources->model()) {
+		QAbstractItemModel *model = sources->model();
+		auto refilter = [this]() {
+			QMetaObject::invokeMethod(this, &WorshipLayout::filterSources, Qt::QueuedConnection);
+		};
+		connect(model, &QAbstractItemModel::rowsInserted, this, refilter);
+		connect(model, &QAbstractItemModel::modelReset, this, refilter);
+		connect(model, &QAbstractItemModel::layoutChanged, this, refilter);
+		connect(model, &QAbstractItemModel::rowsMoved, this, refilter);
+	}
 }
 
 WorshipLayout::~WorshipLayout()
@@ -60,6 +75,18 @@ void WorshipLayout::filterSceneList()
 	}
 }
 
+void WorshipLayout::filterSources()
+{
+	auto *sources = window->findChild<QListView *>(QStringLiteral("sources"));
+	if (!sources || !sources->model())
+		return;
+	QAbstractItemModel *model = sources->model();
+	for (int row = 0; row < model->rowCount(); ++row) {
+		const QString name = model->data(model->index(row, 0), Qt::AccessibleTextRole).toString();
+		sources->setRowHidden(row, name.startsWith(QStringLiteral("WS ")));
+	}
+}
+
 void WorshipLayout::restore()
 {
 	if (WorshipOutput::ConfigString(ConfigLayoutVersion) != QString::fromLatin1(LayoutVersion)) {
@@ -67,6 +94,7 @@ void WorshipLayout::restore()
 		WorshipOutput::SetConfigString(ConfigLayoutVersion, QString::fromLatin1(LayoutVersion));
 	}
 	filterSceneList();
+	filterSources();
 }
 
 void WorshipLayout::applyLayout()

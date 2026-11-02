@@ -112,7 +112,7 @@ const char *const RemotePage = R"HTML(<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0E0F14"><title>WorshipStudio · Control</title>
 <style>
-:root{--bg:#0E0F14;--s1:#16181F;--s2:#1D2029;--line:#2A2D38;--t:#F2F2F5;--m:#9AA0B4;--a:#E2582B;--g:#E8C46A;--ok:#30A46C;--red:#E5484D}
+:root{--bg:#0C0B0A;--s1:#131211;--s2:#1A1817;--line:#2D2A27;--t:#F4F1EC;--m:#A39D95;--a:#E6DED0;--on:#1B1915;--g:#E8C46A;--ok:#30A46C;--red:#E5484D}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--bg);color:var(--t);font:16px/1.45 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;padding:max(14px,env(safe-area-inset-top)) 14px calc(84px + env(safe-area-inset-bottom))}
 header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -126,7 +126,7 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 #next{color:var(--m);white-space:pre-line}
 .nav{display:grid;grid-template-columns:1fr 1.6fr;gap:10px;margin-bottom:10px}
 button{font:600 17px/1.1 inherit;font-family:inherit;border:1px solid var(--line);border-radius:14px;padding:18px 10px;color:var(--t);background:var(--s2)}
-button:active{transform:scale(.98)}.primary{background:var(--a);border-color:var(--a);color:#fff;font-size:20px}
+button:active{transform:scale(.98)}.primary{background:var(--a);border-color:var(--a);color:var(--on);font-size:20px}
 .go{width:100%;background:var(--ok);border-color:var(--ok);color:#fff;margin-bottom:10px}
 .on{background:var(--g);color:#1A1407;border-color:var(--g)}.rec{background:var(--red);border-color:var(--red);color:#fff}
 .list{list-style:none;margin:0;padding:0}.list li{display:flex;align-items:center;gap:10px;padding:13px 10px;border-radius:12px}
@@ -194,7 +194,7 @@ let x0=null;$('cardNow').addEventListener('touchstart',e=>{x0=e.touches[0].clien
 $('cardNow').addEventListener('touchend',e=>{if(x0===null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;if(Math.abs(dx)>50)act(dx<0?'siguiente':'anterior');});
 async function wake(){try{if('wakeLock' in navigator)await navigator.wakeLock.request('screen');}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake();});wake();
-function render(s){if(s.accent)document.documentElement.style.setProperty('--a',s.accent);if(studio!==!!s.studio){studio=!!s.studio;thumbs();}$('prog').textContent=friendly(s.program);$('waitRow').style.display=s.studio?'block':'none';$('waitRow').parentNode.style.gridTemplateColumns=s.studio?'1fr 1fr':'1fr';$('goBtn').style.display=s.studio?'block':'none';$('prev').textContent=friendly(s.preview);
+function render(s){if(s.accent){const r=document.documentElement.style,n=parseInt(s.accent.slice(1),16);r.setProperty('--a',s.accent);r.setProperty('--on',((n>>16)*299+(n>>8&255)*587+(n&255)*114)/255000>.6?'#1B1915':'#fff');}if(studio!==!!s.studio){studio=!!s.studio;thumbs();}$('prog').textContent=friendly(s.program);$('waitRow').style.display=s.studio?'block':'none';$('waitRow').parentNode.style.gridTemplateColumns=s.studio?'1fr 1fr':'1fr';$('goBtn').style.display=s.studio?'block':'none';$('prev').textContent=friendly(s.preview);
 $('source').textContent=t(s.source||'Contenido');$('title').textContent=s.title||t('Nada en pantalla');
 $('section').textContent=(s.section||'')+(s.count?'  ·  '+(s.index+1)+'/'+s.count:'');$('current').textContent=s.current||'';
 $('next').textContent=s.next||'—';$('hide').classList.toggle('on',!!s.hidden);$('hide').textContent=t(s.hidden?'Mostrar pantalla':'Ocultar pantalla');

@@ -11,6 +11,10 @@ target_sources(
     docks/BibleCatalog.hpp
     docks/BibleDock.cpp
     docks/BibleDock.hpp
+    docks/GuidedTour.cpp
+    docks/GuidedTour.hpp
+    docks/LanguageDialog.cpp
+    docks/LanguageDialog.hpp
     docks/LiveToolsDock.cpp
     docks/LiveToolsDock.hpp
     docks/PresentationCatalogData.cpp
@@ -27,8 +31,6 @@ target_sources(
     docks/ServiceDock.cpp
     docks/ServiceDock.hpp
     docks/SongsDock.hpp
-    docks/WelcomeGuide.cpp
-    docks/WelcomeGuide.hpp
     docks/WorshipTranslator.cpp
     docks/WorshipTranslator.hpp
     docks/WorshipVersion.hpp

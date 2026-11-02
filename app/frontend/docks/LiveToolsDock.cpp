@@ -132,6 +132,7 @@ LiveToolsDock::LiveToolsDock(const QString &objectName, const QString &title, QW
 	idian::Utils::addClass(nextText, "text-muted");
 
 	goLiveButton = new QPushButton(tr("Pasar a pantalla  ➜"), root);
+	goLiveButton->setObjectName(QStringLiteral("liveGo"));
 	idian::Utils::addClass(goLiveButton, "button-primary");
 	goLiveButton->setMinimumHeight(44);
 	goLiveButton->setToolTip(tr("Lo que esta EN ESPERA pasa a la pantalla de la congregacion"));
@@ -144,6 +145,7 @@ LiveToolsDock::LiveToolsDock(const QString &objectName, const QString &title, QW
 	nowRow->addWidget(nextButton, 1);
 	nowRow->addWidget(hideButton);
 	projectorButton = new QPushButton(tr("Pantalla del proyector..."), root);
+	projectorButton->setObjectName(QStringLiteral("liveProjector"));
 	projectorButton->setToolTip(tr("Muestra la salida a pantalla completa en el proyector o TV"));
 
 	layout->addWidget(programLabel);
@@ -236,6 +238,7 @@ LiveToolsDock::LiveToolsDock(const QString &objectName, const QString &title, QW
 	/* --- Phone remote ------------------------------------------------- */
 	layout->addWidget(heading(tr("Control desde el celular"), root));
 	remoteButton = new QPushButton(tr("Activar control desde el celular"), root);
+	remoteButton->setObjectName(QStringLiteral("livePhone"));
 	remoteButton->setCheckable(true);
 	remoteInfo = new QLabel(root);
 	remoteInfo->setWordWrap(true);

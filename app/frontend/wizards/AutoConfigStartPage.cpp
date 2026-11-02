@@ -14,12 +14,18 @@ AutoConfigStartPage::AutoConfigStartPage(QWidget *parent) : QWizardPage(parent),
 	setTitle(QTStr("Basic.AutoConfig.StartPage"));
 	setSubTitle(QTStr("Basic.AutoConfig.StartPage.SubTitle"));
 
+	/* Many churches only project in the room: same light settings as
+	 * recording, without streaming. */
+	QRadioButton *projectOnly = new QRadioButton(QTStr("Basic.AutoConfig.StartPage.ProjectOnly"), this);
+	reinterpret_cast<QBoxLayout *>(layout())->insertWidget(2, projectOnly);
+	connect(projectOnly, &QPushButton::clicked, this, &AutoConfigStartPage::on_prioritizeRecording_clicked);
+
 	OBSBasic *main = OBSBasic::Get();
 	if (main->VCamEnabled()) {
 		QRadioButton *prioritizeVCam =
 			new QRadioButton(QTStr("Basic.AutoConfig.StartPage.PrioritizeVirtualCam"), this);
 		QBoxLayout *box = reinterpret_cast<QBoxLayout *>(layout());
-		box->insertWidget(2, prioritizeVCam);
+		box->insertWidget(3, prioritizeVCam);
 
 		connect(prioritizeVCam, &QPushButton::clicked, this, &AutoConfigStartPage::PrioritizeVCam);
 	}

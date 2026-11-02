@@ -72,5 +72,4 @@ private:
 	void save(const QString &path);
 	bool load(const QString &path);
 	static QString autosavePath();
-	void createExample();
 };

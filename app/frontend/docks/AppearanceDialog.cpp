@@ -28,6 +28,8 @@ struct Base {
 };
 
 const Base Bases[] = {
+	{"tinta", "Negro tinta", false,
+	 {"#6E6862", "#4E4944", "#3A3632", "#2D2A27", "#22201E", "#1A1817", "#131211", "#0C0B0A"}, "#A39D95"},
 	{"ciruela", "Ciruela", false,
 	 {"#6E5A78", "#58465F", "#46374E", "#382B3F", "#2C2132", "#221A27", "#1A131E", "#110C14"}, "#B4A5BC"},
 	{"mate", "Negro mate", false,
@@ -50,7 +52,7 @@ const Base *findBase(const QString &id, bool light)
 		if (base.light == light && id == QLatin1String(base.id))
 			return &base;
 	}
-	/* First of each mode is the default: ciruela or blanco. */
+	/* First of each mode is the default: tinta or blanco. */
 	for (const Base &base : Bases) {
 		if (base.light == light)
 			return &base;
@@ -65,15 +67,16 @@ struct Swatch {
 
 /* Saturated enough for buttons, readable with white text on top. */
 const Swatch Swatches[] = {
-	{"Brasa", "#E2582B"},  {"Indigo", "#5E66E0"}, {"Esmeralda", "#24966C"}, {"Azul", "#2C78DB"},
-	{"Violeta", "#8752DE"}, {"Rosa", "#D63E73"},   {"Dorado", "#C08A1E"},    {"Turquesa", "#17919F"},
+	{"Hueso", "#E6DED0"},  {"Vainilla", "#EADBB8"}, {"Brasa", "#E2582B"},   {"Dorado", "#C08A1E"},
+	{"Esmeralda", "#24966C"}, {"Turquesa", "#17919F"}, {"Azul", "#2C78DB"}, {"Indigo", "#5E66E0"},
+	{"Violeta", "#8752DE"}, {"Rosa", "#D63E73"},
 };
 } // namespace
 
 QColor AppearanceDialog::savedAccent()
 {
 	const QColor saved(WorshipOutput::ConfigString(ConfigAccent));
-	return saved.isValid() ? saved : QColor(0xE2, 0x58, 0x2B);
+	return saved.isValid() ? saved : QColor(0xE6, 0xDE, 0xD0);
 }
 
 bool AppearanceDialog::savedLight()
@@ -142,16 +145,18 @@ AppearanceDialog::AppearanceDialog(QWidget *parent)
 		button->setMinimumHeight(40);
 		button->setProperty("swatch", color);
 		/* The swatch shows its own color whatever the current theme is. */
-		button->setStyleSheet(QStringLiteral("QPushButton{background:%1;color:white;border-radius:8px;"
+		const bool lightSwatch = color.lightnessF() > 0.7;
+		button->setStyleSheet(QStringLiteral("QPushButton{background:%1;color:%2;border-radius:8px;"
 						     "border:2px solid transparent;font-weight:600;}"
-						     "QPushButton[selected=\"true\"]{border:2px solid white;}")
-					      .arg(color.name()));
+						     "QPushButton[selected=\"true\"]{border:2px solid %3;}")
+					      .arg(color.name(), lightSwatch ? QStringLiteral("#1B1915") : QStringLiteral("white"),
+						   lightSwatch ? QStringLiteral("#8A8276") : QStringLiteral("white")));
 		connect(button, &QPushButton::clicked, this, [this, color]() {
 			accent = color;
 			apply();
 		});
 		swatches << button;
-		grid->addWidget(button, i / 4, i % 4);
+		grid->addWidget(button, i / 5, i % 5);
 	}
 	auto *otherButton = new QPushButton(tr("Otro color..."), this);
 

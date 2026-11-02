@@ -1135,9 +1135,21 @@ bool OBSApp::SetWorshipAppearance(const QColor &accent, bool light, const QMap<Q
 		QString::fromStdString(userConfigLocation.u8string() + "/" OBS_APP_CONFIG_DIR "/themes");
 	QDir().mkpath(userDir);
 
-	/* Five shades of the accent, from light to dark, like the built-in ones. */
-	const QColor shades[] = {accent.lighter(150), accent.lighter(120), accent, accent.darker(125),
-				 accent.darker(160)};
+	/* Selections and tabs carry white text, so a light accent (bone, vanilla)
+	 * gives them a deep tone of itself; primary buttons keep the accent and
+	 * get dark text. Saturated accents work as before. */
+	const bool lightAccent = accent.lightnessF() > 0.7;
+	const QColor tone = lightAccent ? accent.darker(255) : accent;
+	const QColor shades[] = {tone.lighter(150), tone.lighter(120), tone, tone.darker(125), tone.darker(160)};
+	QColor button1 = lightAccent ? accent.lighter(105) : accent.lighter(120);
+	QColor button2 = accent;
+	QColor onButton = lightAccent ? QColor(0x1B, 0x19, 0x15) : QColor(Qt::white);
+	if (light && lightAccent) {
+		/* Bone on a white window would vanish: ink buttons with bone text. */
+		button1 = QColor(0x2B, 0x28, 0x25);
+		button2 = QColor(0x1B, 0x19, 0x15);
+		onButton = accent;
+	}
 
 	/* A full copy of WorshipStudio Noche or Dia with another accent: both
 	 * extend the base theme directly, which is what variants allow. */
@@ -1159,6 +1171,12 @@ bool OBSApp::SetWorshipAppearance(const QColor &accent, bool light, const QMap<Q
 		const QRegularExpression shade(QStringLiteral("--ws_ember%1:[^;]*;").arg(i + 1));
 		body.replace(shade, QStringLiteral("--ws_ember%1: %2;").arg(i + 1).arg(shades[i].name()));
 	}
+	const QPair<QString, QColor> buttons[] = {{QStringLiteral("ws_button1"), button1},
+						 {QStringLiteral("ws_button2"), button2},
+						 {QStringLiteral("ws_on_button"), onButton}};
+	for (const auto &button : buttons)
+		body.replace(QRegularExpression(QStringLiteral("--%1:[^;]*;").arg(button.first)),
+			     QStringLiteral("--%1: %2;").arg(button.first, button.second.name()));
 
 	for (auto it = base.cbegin(); it != base.cend(); ++it) {
 		const QRegularExpression variable(QStringLiteral("--%1:[^;]*;").arg(QRegularExpression::escape(it.key())));

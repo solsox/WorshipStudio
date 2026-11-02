@@ -85,5 +85,4 @@ private:
 	void updateControls();
 	void updateLiveLabel();
 	void publishLive();
-	void createExampleSong();
 };

@@ -50,11 +50,15 @@
     --scrollbar_border: var(--grey7);
 
     /* WorshipStudio accent and rounded shapes */
-    --ws_ember1: #F57A4A;
-    --ws_ember2: #E2582B;
-    --ws_ember3: #C2441C;
-    --ws_ember4: #943314;
-    --ws_ember5: #6E250F;
+    --ws_ember1: #8A8276;
+    --ws_ember2: #6E675D;
+    --ws_ember3: #5A544B;
+    --ws_ember4: #46413A;
+    --ws_ember5: #34302B;
+
+    --ws_button1: #2B2825;
+    --ws_button2: #1B1915;
+    --ws_on_button: #F1EBE0;
 
     --primary: var(--ws_ember3);
     --primary_light: var(--ws_ember2);
@@ -477,20 +481,21 @@ QDockWidget::float-button:hover {
 }
 
 .button-primary {
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 var(--ws_ember2), stop: 1 var(--ws_ember3));
-    border: 1px solid var(--ws_ember3);
-    color: #FFFFFF;
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 var(--ws_button1), stop: 1 var(--ws_button2));
+    border: 1px solid var(--ws_button2);
+    color: var(--ws_on_button);
     font-weight: 600;
 }
 
 .button-primary:hover,
 .button-primary:focus {
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 var(--ws_ember1), stop: 1 var(--ws_ember2));
-    border: 1px solid var(--ws_ember2);
+    background: var(--ws_button1);
+    border: 1px solid var(--ws_button1);
+    color: var(--ws_on_button);
 }
 
 QPushButton:checked {
-    border: 1px solid var(--ws_ember2);
+    border: 1px solid var(--ws_ember1);
 }
 
 QLineEdit:focus,
@@ -498,5 +503,5 @@ QPlainTextEdit:focus,
 QTextEdit:focus,
 QSpinBox:focus,
 QComboBox:focus {
-    border: 1px solid var(--ws_ember2);
+    border: 1px solid var(--ws_ember1);
 }

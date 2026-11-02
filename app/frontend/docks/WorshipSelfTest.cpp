@@ -12,7 +12,7 @@
 #include "SongLibrary.hpp"
 #include "WorshipLive.hpp"
 #include "WorshipRemote.hpp"
-#include "WelcomeGuide.hpp"
+#include "GuidedTour.hpp"
 #include "WorshipTranslator.hpp"
 #include <OBSApp.hpp>
 #include <utility/platform.hpp>
@@ -781,7 +781,7 @@ struct SelfTest {
 		for (const char *code : {"en-US", "ko-KR"}) {
 			const QString locale = QString::fromLatin1(code);
 			auto translator = std::make_shared<WorshipTranslator *>(nullptr);
-			auto guide = std::make_shared<QPointer<WelcomeGuide>>();
+			auto tour = std::make_shared<QPointer<GuidedTour>>();
 			add(100, [=]() {
 				std::string dir;
 				GetDataFilePath("worship/idiomas", dir);
@@ -800,15 +800,14 @@ struct SelfTest {
 					check(page.contains("\"" + expected + "\"") && !page.contains("/*T*/"),
 					      QStringLiteral("%1: pagina del celular traducida (%2)").arg(locale, QString::fromUtf8(expected)));
 				}
-				*guide = new WelcomeGuide(liveTools, hymnal->window());
-				(*guide)->resize(760, 660);
-				(*guide)->show();
+				*tour = GuidedTour::start(qobject_cast<QMainWindow *>(hymnal->window()));
+				(*tour)->goTo(1);
 			});
-			add(600, [=]() {
-				if (*guide) {
-					(*guide)->grab().save(outDir.absoluteFilePath(QStringLiteral("idioma-guia-%1.png").arg(locale)));
-					(*guide)->close();
-					(*guide)->deleteLater();
+			add(700, [=]() {
+				if (*tour) {
+					hymnal->window()->grab().save(
+						outDir.absoluteFilePath(QStringLiteral("idioma-recorrido-%1.png").arg(locale)));
+					(*tour)->goTo((*tour)->stepCount());
 				}
 				qApp->removeTranslator(*translator);
 				delete *translator;
@@ -816,32 +815,51 @@ struct SelfTest {
 		}
 	}
 
+	/* The interactive tour: every step points at something visible, and
+	 * doing the step for real moves it on. */
 	void addGuideSteps()
 	{
-		auto guide = std::make_shared<QPointer<WelcomeGuide>>();
+		auto tour = std::make_shared<QPointer<GuidedTour>>();
+		auto steps = std::make_shared<int>(0);
 		add(300, [=]() {
-			*guide = new WelcomeGuide(liveTools, hymnal->window());
-			(*guide)->resize(760, 660);
-			(*guide)->show();
+			log(QStringLiteral("--- Recorrido de inicio ---"));
+			*tour = GuidedTour::start(qobject_cast<QMainWindow *>(hymnal->window()));
+			*steps = *tour ? (*tour)->stepCount() : 0;
+			check(*steps >= 12, QStringLiteral("recorrido: %1 pasos").arg(*steps));
 		});
-		for (int page = 0; page < 6; ++page) {
+		for (int step = 0; step < 13; ++step) {
 			add(500, [=]() {
-				if (!*guide)
-					return;
-				auto *pages = (*guide)->findChild<QStackedWidget *>();
-				if (pages)
-					pages->setCurrentIndex(page);
+				if (*tour && step < *steps)
+					(*tour)->goTo(step);
 			});
-			add(400, [=]() {
-				if (!*guide)
+			add(500, [=]() {
+				if (!*tour || step >= *steps)
 					return;
-				const QString path = outDir.absoluteFilePath(QStringLiteral("guia-paso%1.png").arg(page + 1));
-				check((*guide)->grab().save(path), QStringLiteral("guia paso %1").arg(page + 1));
+				check((*tour)->targetVisible(), QStringLiteral("recorrido paso %1: señala algo visible").arg(step));
+				const QString path = outDir.absoluteFilePath(QStringLiteral("recorrido-paso%1.png").arg(step, 2, 10, QLatin1Char('0')));
+				check(hymnal->window()->grab().save(path), QStringLiteral("captura paso %1").arg(step));
+				(*tour)->bubbleWidget()->grab().save(
+					outDir.absoluteFilePath(QStringLiteral("recorrido-globo%1.png").arg(step, 2, 10, QLatin1Char('0'))));
 			});
 		}
-		add(200, [=]() {
-			if (*guide)
-				(*guide)->reject();
+		/* Creating a scene during step 1 finishes it by itself. */
+		add(300, [=]() {
+			if (*tour)
+				(*tour)->goTo(1);
+		});
+		add(400, [=]() {
+			obs_scene_t *scene = obs_scene_create("Escena del recorrido");
+			obs_scene_release(scene);
+		});
+		add(2200, [=]() {
+			check(*tour && (*tour)->currentStep() == 2,
+			      QStringLiteral("recorrido: al crear una escena pasa solo al paso 2 (esta en %1)")
+				      .arg(*tour ? (*tour)->currentStep() : -1));
+			OBSSourceAutoRelease created = obs_get_source_by_name("Escena del recorrido");
+			if (created)
+				obs_source_remove(created);
+			if (*tour)
+				(*tour)->goTo((*tour)->stepCount());
 		});
 	}
 
