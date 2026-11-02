@@ -652,7 +652,9 @@ static int run_program(fstream &logFile, int argc, char *argv[])
 
 		int permissionsDialogLastShown =
 			config_get_int(App()->GetAppConfig(), "General", "MacOSPermissionsDialogLastShown");
-		if (permissionsDialogLastShown < MACOS_PERMISSIONS_DIALOG_VERSION) {
+		/* The automatic self-test runs unattended: no modal permissions review. */
+		if (permissionsDialogLastShown < MACOS_PERMISSIONS_DIALOG_VERSION &&
+		    qEnvironmentVariableIsEmpty("WORSHIPSTUDIO_SELFTEST")) {
 			OBSPermissions check(nullptr, screen_permission, video_permission, audio_permission,
 					     input_monitoring_permission);
 			check.exec();

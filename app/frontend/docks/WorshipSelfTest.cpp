@@ -343,6 +343,19 @@ struct SelfTest {
 			bible->setBackgroundFile(items.first().path);
 		});
 		addBibleStep(QStringLiteral("Sal 23:1"), 0, QStringLiteral("fondo-foto-salmo23"));
+		/* Showcase shots for the website, on the bundled photo backgrounds. */
+		const QList<QPair<QString, QString>> showcase = {{QStringLiteral("rayos-de-luz"), QStringLiteral("Juan 3:16")},
+								  {QStringLiteral("amanecer"), QStringLiteral("Isaias 40:31")},
+								  {QStringLiteral("noche-estrellada"), QStringLiteral("Salmos 19:1")},
+								  {QStringLiteral("aurora"), QStringLiteral("Lamentaciones 3:22-23")}};
+		for (const auto &shot : showcase) {
+			add(100, [this, shot]() {
+				for (const BackgroundLibrary::Item &item : BackgroundLibrary::Items(false))
+					if (item.bundled && QFileInfo(item.path).completeBaseName() == shot.first)
+						bible->setBackgroundFile(item.path);
+			});
+			addBibleStep(shot.second, 0, QStringLiteral("web-%1").arg(shot.first));
+		}
 		add(100, [this, added]() {
 			QFile::remove(*added);
 			bible->setStyle(QString(), 0);
