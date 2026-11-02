@@ -1428,16 +1428,10 @@ retryScene:
 
 	/* ---------------------- */
 
-	bool fixedScaling = obs_data_get_bool(data, "scaling_enabled");
-	int scalingLevel = (int)obs_data_get_int(data, "scaling_level");
-	float scrollOffX = (float)obs_data_get_double(data, "scaling_off_x");
-	float scrollOffY = (float)obs_data_get_double(data, "scaling_off_y");
-
-	if (fixedScaling) {
-		ui->preview->SetScalingLevel(scalingLevel);
-		ui->preview->SetScrollingOffset(scrollOffX, scrollOffY);
-	}
-	ui->preview->SetFixedScaling(fixedScaling);
+	/* WorshipStudio always opens with the preview fitted to its area: a zoom
+	 * saved in a collection (for example one imported from OBS) made the
+	 * ON HOLD screen spill out of its box. Zoom still works during a session. */
+	ui->preview->SetFixedScaling(false);
 
 	emit ui->preview->DisplayResized();
 
