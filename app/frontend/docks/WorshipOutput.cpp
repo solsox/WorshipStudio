@@ -116,6 +116,43 @@ void ShowScene(obs_scene_t *scene)
 		obs_frontend_set_current_scene(source);
 }
 
+QImage RenderSource(obs_source_t *source, uint32_t width, uint32_t height)
+{
+	QImage image;
+	if (!source || !width || !height)
+		return image;
+
+	obs_enter_graphics();
+	gs_texrender_t *texrender = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
+	gs_stagesurf_t *stagesurf = gs_stagesurface_create(width, height, GS_RGBA);
+	if (texrender && stagesurf && gs_texrender_begin(texrender, width, height)) {
+		vec4 clear;
+		vec4_zero(&clear);
+		gs_clear(GS_CLEAR_COLOR, &clear, 0.0f, 0);
+		/* Canvas coordinates, scaled down to the requested size. */
+		gs_ortho(0.0f, (float)CanvasWidth(), 0.0f, (float)CanvasHeight(), -100.0f, 100.0f);
+		gs_blend_state_push();
+		gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
+		obs_source_inc_showing(source);
+		obs_source_video_render(source);
+		obs_source_dec_showing(source);
+		gs_blend_state_pop();
+		gs_texrender_end(texrender);
+
+		gs_stage_texture(stagesurf, gs_texrender_get_texture(texrender));
+		uint8_t *data = nullptr;
+		uint32_t linesize = 0;
+		if (gs_stagesurface_map(stagesurf, &data, &linesize)) {
+			image = QImage(data, width, height, linesize, QImage::Format_RGBA8888).copy();
+			gs_stagesurface_unmap(stagesurf);
+		}
+	}
+	gs_stagesurface_destroy(stagesurf);
+	gs_texrender_destroy(texrender);
+	obs_leave_graphics();
+	return image;
+}
+
 uint32_t CanvasWidth()
 {
 	obs_video_info ovi;

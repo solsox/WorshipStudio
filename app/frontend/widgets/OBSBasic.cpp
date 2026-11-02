@@ -1341,6 +1341,8 @@ void OBSBasic::OBSInit()
 	connect(&live, &WorshipLive::bibleRequested, bibleDock,
 		[bibleDock](const QString &reference) { bibleDock->projectQuery(reference, bibleDock->layoutIndex()); });
 	connect(&live, &WorshipLive::songRequested, songsDock, &SongsDock::projectSongById);
+	connect(&live, &WorshipLive::countdownRequested, liveToolsDock,
+		[liveToolsDock](int minutes) { liveToolsDock->startCountdown(minutes, QString()); });
 
 	auto *modes = new WorshipModes(this, ui->viewMenu, ui->statusbar, liveToolsDock,
 				       {serviceDock, songsDock, hymnalDock, bibleDock, presentationDock},

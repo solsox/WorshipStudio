@@ -2,6 +2,7 @@
 
 #include <obs.hpp>
 
+#include <QImage>
 #include <QString>
 
 #include <string>
@@ -35,6 +36,10 @@ std::string Named(const char *baseName, const QString &slot);
 
 /* Shows the scene: in Studio Mode it goes to preview, otherwise to program. */
 void ShowScene(obs_scene_t *scene);
+
+/* Picture of a source (usually a scene) at the given size, like OBS
+ * screenshots. Must run on the UI thread. */
+QImage RenderSource(obs_source_t *source, uint32_t width, uint32_t height);
 
 uint32_t CanvasWidth();
 uint32_t CanvasHeight();

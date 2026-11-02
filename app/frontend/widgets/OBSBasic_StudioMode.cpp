@@ -28,6 +28,22 @@
 
 #include <QToolTip>
 
+namespace {
+/* WorshipStudio scenes have internal names ("WS Biblia B"); show "Biblia". */
+QString FriendlySceneName(obs_source_t *scene)
+{
+	QString name = QT_UTF8(obs_source_get_name(scene));
+	if (name.startsWith(QStringLiteral("WS "))) {
+		name = name.mid(3);
+		if (name.endsWith(QStringLiteral(" B")))
+			name.chop(2);
+		if (name == QStringLiteral("Presentacion"))
+			name = QStringLiteral("Presentación");
+	}
+	return name;
+}
+} // namespace
+
 void OBSBasic::CreateProgramDisplay()
 {
 	program = new OBSQTDisplay();
@@ -356,9 +372,9 @@ void OBSBasic::UpdatePreviewProgramIndicators()
 	}
 
 	QString preview =
-		QTStr("StudioMode.PreviewSceneName").arg(QT_UTF8(obs_source_get_name(GetCurrentSceneSource())));
+		QTStr("StudioMode.PreviewSceneName").arg(FriendlySceneName(GetCurrentSceneSource()));
 
-	QString program = QTStr("StudioMode.ProgramSceneName").arg(QT_UTF8(obs_source_get_name(GetProgramSource())));
+	QString program = QTStr("StudioMode.ProgramSceneName").arg(FriendlySceneName(GetProgramSource()));
 
 	if (ui->previewLabel->text() != preview) {
 		ui->previewLabel->setText(preview);

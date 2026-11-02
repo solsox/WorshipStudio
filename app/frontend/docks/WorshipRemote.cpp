@@ -19,6 +19,9 @@
 #include "WorshipLive.hpp"
 #include "WorshipOutput.hpp"
 #include "SongLibrary.hpp"
+#include "AppearanceDialog.hpp"
+
+#include <QBuffer>
 
 #include <obs-frontend-api.h>
 
@@ -77,6 +80,7 @@ input{width:100%;font:600 20px/1 inherit;padding:14px;border-radius:12px;border:
 .tabs{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(14,15,20,.96);border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom));backdrop-filter:blur(12px)}
 .tabs a{text-align:center;color:var(--m);text-decoration:none;font-size:12px;font-weight:600;padding:6px 0;border-radius:10px}
 .tabs a.sel{color:#fff;background:var(--s2)}.tabs a i{display:block;font-style:normal;font-size:20px;line-height:1.2}
+.thumbs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.thumbs figure{margin:0}.thumbs img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;background:#000;display:block;border:2px solid var(--line)}.thumbs .p img{border-color:var(--red)}.thumbs .w img{border-color:var(--ok)}.thumbs figcaption{font-size:11px;font-weight:700;margin-top:4px;color:var(--m)}.swipe{touch-action:pan-y}.hintsw{font-size:12px;color:var(--m);margin-top:6px}
 section[data-tab]{display:none}section[data-tab].show{display:block}
 #login{display:none}.err{color:var(--red);font-size:14px;min-height:1.2em}
 </style></head><body>
@@ -87,10 +91,9 @@ section[data-tab]{display:none}section[data-tab].show{display:block}
 <button class="primary" style="width:100%" onclick="savePin()">Entrar</button></div>
 <main id="app">
 <section data-tab="vivo" class="show">
-<div class="card"><div class="onair"><span class="dot" style="background:var(--red)"></span><b>EN PANTALLA</b>&nbsp;<span id="prog"></span></div>
-<div class="onair" id="waitRow"><span class="dot" style="background:var(--ok)"></span><b>EN ESPERA</b>&nbsp;<span id="prev"></span></div></div>
+<div class="thumbs"><figure class="w" id="waitRow"><img id="imgW" alt=""><figcaption>EN ESPERA · <span id="prev"></span></figcaption></figure><figure class="p"><img id="imgP" alt=""><figcaption>EN PANTALLA · <span id="prog"></span></figcaption></figure></div>
 <button class="go" id="goBtn" onclick="act('aire')">Pasar a pantalla ➜</button>
-<div class="card"><div class="k" id="source">Contenido</div><div id="title">Nada en pantalla</div><div id="section"></div><div id="current"></div></div>
+<div class="card swipe" id="cardNow"><div class="k" id="source">Contenido</div><div id="title">Nada en pantalla</div><div id="section"></div><div id="current"></div><div class="hintsw">Deslizá ← → para cambiar de diapositiva</div></div>
 <div class="nav"><button onclick="act('anterior')">◀ Anterior</button><button class="primary" onclick="act('siguiente')">Siguiente ▶</button></div>
 <button id="hide" style="width:100%" onclick="act('ocultar')">Ocultar pantalla</button>
 <div class="card" style="margin-top:12px"><div class="k">Sigue</div><div id="next">—</div></div>
@@ -107,6 +110,7 @@ section[data-tab]{display:none}section[data-tab].show{display:block}
 </section>
 <section data-tab="mas">
 <div class="card"><div class="k">Transmisión y grabación</div><div class="row2"><button id="stream" onclick="confirmAct('transmision','¿Iniciar o detener la transmisión?')">Transmitir</button><button id="record" onclick="confirmAct('grabacion','¿Iniciar o detener la grabación?')">Grabar</button></div></div>
+<div class="card"><div class="k">Cuenta regresiva</div><div class="row2" style="grid-template-columns:repeat(3,1fr)"><button onclick="act('cuenta',{min:3})">3 min</button><button onclick="act('cuenta',{min:5})">5 min</button><button onclick="act('cuenta',{min:10})">10 min</button></div></div>
 <div class="card"><div class="k">Mensaje al escenario</div><input id="msg" placeholder="Ej. 5 minutos"><div class="row2"><button class="primary" onclick="act('mensaje',{texto:val('msg')})">Enviar</button><button onclick="document.getElementById('msg').value='';act('mensaje',{texto:''})">Borrar</button></div></div>
 </section>
 </main>
@@ -121,7 +125,14 @@ function showLogin(msg){$('login').style.display='block';$('app').style.display=
 function savePin(){pin=$('pin').value.trim();localStorage.setItem('wsPin',pin);$('login').style.display='none';$('app').style.display='block';poll();}
 async function call(path,opts){const r=await fetch(path+(path.includes('?')?'&':'?')+'pin='+encodeURIComponent(pin),opts);if(r.status===401){showLogin('Código incorrecto');throw 0;}return r.json();}
 function friendly(n){if(!n)return 'nada';if(n.startsWith('WS ')){n=n.slice(3);if(n.endsWith(' B'))n=n.slice(0,-2);}return n;}
-function render(s){$('prog').textContent=friendly(s.program);$('waitRow').style.display=s.studio?'flex':'none';$('goBtn').style.display=s.studio?'block':'none';$('prev').textContent=friendly(s.preview);
+let studio=false;
+function thumbs(){if(document.hidden||!pin||!$('imgP').offsetParent)return;const t=Date.now();$('imgP').src='/api/vista?cual=pantalla&t='+t+'&pin='+encodeURIComponent(pin);if(studio)$('imgW').src='/api/vista?cual=espera&t='+t+'&pin='+encodeURIComponent(pin);}
+setInterval(thumbs,1500);
+let x0=null;$('cardNow').addEventListener('touchstart',e=>{x0=e.touches[0].clientX},{passive:true});
+$('cardNow').addEventListener('touchend',e=>{if(x0===null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;if(Math.abs(dx)>50)act(dx<0?'siguiente':'anterior');});
+async function wake(){try{if('wakeLock' in navigator)await navigator.wakeLock.request('screen');}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake();});wake();
+function render(s){if(s.accent)document.documentElement.style.setProperty('--a',s.accent);if(studio!==!!s.studio){studio=!!s.studio;thumbs();}$('prog').textContent=friendly(s.program);$('waitRow').style.display=s.studio?'block':'none';$('waitRow').parentNode.style.gridTemplateColumns=s.studio?'1fr 1fr':'1fr';$('goBtn').style.display=s.studio?'block':'none';$('prev').textContent=friendly(s.preview);
 $('source').textContent=s.source||'Contenido';$('title').textContent=s.title||'Nada en pantalla';
 $('section').textContent=(s.section||'')+(s.count?'  ·  '+(s.index+1)+'/'+s.count:'');$('current').textContent=s.current||'';
 $('next').textContent=s.next||'—';$('hide').classList.toggle('on',!!s.hidden);$('hide').textContent=s.hidden?'Mostrar pantalla':'Ocultar pantalla';
@@ -342,10 +353,31 @@ QByteArray WorshipRemote::respond(const QByteArray &method, const QString &targe
 			live.requestSong(query.queryItemValue(QStringLiteral("id")));
 		else if (action == QStringLiteral("mensaje"))
 			live.setStageMessage(query.queryItemValue(QStringLiteral("texto"), QUrl::FullyDecoded).left(140));
+		else if (action == QStringLiteral("cuenta"))
+			live.requestCountdown(qBound(1, query.queryItemValue(QStringLiteral("min")).toInt(), 240));
 		else if (action == QStringLiteral("transmision"))
 			obs_frontend_streaming_active() ? obs_frontend_streaming_stop() : obs_frontend_streaming_start();
 		else if (action == QStringLiteral("grabacion"))
 			obs_frontend_recording_active() ? obs_frontend_recording_stop() : obs_frontend_recording_start();
+	}
+	if (path == QStringLiteral("/api/vista")) {
+		/* Small live picture of the screen or the preview for the phone. */
+		const bool preview = query.queryItemValue(QStringLiteral("cual")) == QStringLiteral("espera");
+		OBSSourceAutoRelease scene = preview ? (obs_frontend_preview_program_mode_active()
+								? obs_frontend_get_current_preview_scene()
+								: nullptr)
+						     : obs_frontend_get_current_scene();
+		QImage image = WorshipOutput::RenderSource(scene, 480, 270);
+		if (image.isNull()) {
+			image = QImage(480, 270, QImage::Format_RGB32);
+			image.fill(Qt::black);
+		}
+		QByteArray jpeg;
+		QBuffer buffer(&jpeg);
+		buffer.open(QIODevice::WriteOnly);
+		image.convertToFormat(QImage::Format_RGB32).save(&buffer, "JPG", 70);
+		*contentType = "image/jpeg";
+		return jpeg;
 	}
 	if (path == QStringLiteral("/api/cantos")) {
 		QJsonArray songs;
@@ -416,6 +448,7 @@ QByteArray WorshipRemote::stateJson() const
 	OBSSourceAutoRelease program = programSource();
 	OBSSourceAutoRelease preview = studio ? obs_frontend_get_current_preview_scene() : nullptr;
 	object.insert(QStringLiteral("studio"), studio);
+	object.insert(QStringLiteral("accent"), AppearanceDialog::savedAccent().name());
 	object.insert(QStringLiteral("program"), program ? QT_UTF8(obs_source_get_name(program)) : QString());
 	object.insert(QStringLiteral("preview"), preview ? QT_UTF8(obs_source_get_name(preview)) : QString());
 	object.insert(QStringLiteral("streaming"), obs_frontend_streaming_active());
