@@ -31,6 +31,7 @@
 #include <QFileSystemWatcher>
 #include <QMetaEnum>
 #include <QRandomGenerator>
+#include <QRegularExpression>
 #include <QSet>
 #include <QTimer>
 
@@ -1127,37 +1128,60 @@ bool OBSApp::InitTheme()
 
 bool OBSApp::SetWorshipAppearance(const QColor &accent, bool light)
 {
-	char userDir[512];
-	if (!accent.isValid() || !GetAppConfigPath(userDir, sizeof(userDir), OBS_APP_CONFIG_DIR "/themes"))
+	if (!accent.isValid())
 		return false;
-	QDir().mkpath(QString::fromUtf8(userDir));
+	/* Same folder FindThemes() reads user themes from. */
+	const QString userDir =
+		QString::fromStdString(userConfigLocation.u8string() + "/" OBS_APP_CONFIG_DIR "/themes");
+	QDir().mkpath(userDir);
 
 	/* Five shades of the accent, from light to dark, like the built-in ones. */
 	const QColor shades[] = {accent.lighter(150), accent.lighter(120), accent, accent.darker(125),
 				 accent.darker(160)};
-	QString vars;
-	for (int i = 0; i < 5; ++i)
-		vars += QStringLiteral("    --ws_ember%1: %2;\n").arg(i + 1).arg(shades[i].name());
 
-	const QString theme =
-		QStringLiteral("@OBSThemeMeta {\n"
-			       "    name: 'WorshipStudio Personalizado';\n"
-			       "    id: 'com.worshipstudio.Personal';\n"
-			       "    extends: '%1';\n"
-			       "    author: 'WorshipStudio';\n"
-			       "    dark: '%2';\n"
-			       "}\n\n"
-			       "@OBSThemeVars {\n%3}\n")
-			.arg(light ? QStringLiteral("com.worshipstudio.Dia") : QStringLiteral("com.worshipstudio.Noche"),
-			     light ? QStringLiteral("false") : QStringLiteral("true"), vars);
+	/* A full copy of WorshipStudio Noche or Dia with another accent: both
+	 * extend the base theme directly, which is what variants allow. */
+	std::string bundled;
+	if (!GetDataFilePath(light ? "themes/WorshipStudio_Dia.ovt" : "themes/WorshipStudio_Noche.ovt", bundled))
+		return false;
+	QFile source(QString::fromStdString(bundled));
+	if (!source.open(QIODevice::ReadOnly))
+		return false;
+	QString body = QString::fromUtf8(source.readAll());
+	const qsizetype metaEnd = body.indexOf(QLatin1Char('}'), body.indexOf(QStringLiteral("@OBSThemeMeta")));
+	if (metaEnd < 0)
+		return false;
+	body = body.mid(metaEnd + 1);
 
-	QFile file(QDir(QString::fromUtf8(userDir)).absoluteFilePath(QStringLiteral("WorshipStudio_Personal.ovt")));
+	/* Only the first variables block of a file is read, so the accent
+	 * replaces the shades defined in it. */
+	for (int i = 0; i < 5; ++i) {
+		const QRegularExpression shade(QStringLiteral("--ws_ember%1:[^;]*;").arg(i + 1));
+		body.replace(shade, QStringLiteral("--ws_ember%1: %2;").arg(i + 1).arg(shades[i].name()));
+	}
+
+	const QString theme = QStringLiteral("@OBSThemeMeta {\n"
+					     "    name: 'WorshipStudio Personalizado';\n"
+					     "    id: 'com.worshipstudio.Personal';\n"
+					     "    extends: 'com.obsproject.Yami';\n"
+					     "    author: 'WorshipStudio';\n"
+					     "    dark: '%1';\n"
+					     "}\n%2")
+				      .arg(light ? QStringLiteral("false") : QStringLiteral("true"), body);
+
+	QFile file(QDir(userDir).absoluteFilePath(QStringLiteral("WorshipStudio_Personal.ovt")));
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
 		return false;
 	file.write(theme.toUtf8());
 	file.close();
 
-	/* The theme list is read at startup; read it again to pick this up. */
+	/* The theme list keeps what it read at startup (parent, dark/light). Drop
+	 * the old entry so the new file is read; otherwise switching between
+	 * light and dark mixes both and breaks the interface until a restart. */
+	const QString id = QStringLiteral("com.worshipstudio.Personal");
+	if (currentTheme && currentTheme->id == id)
+		currentTheme = nullptr;
+	themes.remove(id);
 	FindThemes();
 	if (!SetTheme(QStringLiteral("com.worshipstudio.Personal")))
 		return false;

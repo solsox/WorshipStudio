@@ -10,6 +10,7 @@
 #include "WorshipLive.hpp"
 #include "WorshipRemote.hpp"
 #include "WelcomeGuide.hpp"
+#include <OBSApp.hpp>
 #include <QStackedWidget>
 #include <obs-frontend-api.h>
 #include <QJsonDocument>
@@ -561,6 +562,46 @@ struct SelfTest {
 		});
 	}
 
+	/* Changing colors and light/dark mode must work without restarting. */
+	void addAppearanceSteps()
+	{
+		struct Look {
+			const char *color;
+			bool light;
+			const char *name;
+		};
+		const Look looks[] = {{"#2C78DB", true, "claro-azul"},
+				      {"#24966C", false, "oscuro-esmeralda"},
+				      {"#D63E73", true, "claro-rosa"},
+				      {"#E2582B", false, "oscuro-brasa"}};
+		auto previous = std::make_shared<QString>();
+		add(200, [=]() {
+			log(QStringLiteral("--- Apariencia ---"));
+			if (OBSTheme *theme = App()->GetTheme())
+				*previous = theme->id;
+		});
+		for (const Look &look : looks) {
+			const QColor color(QString::fromLatin1(look.color));
+			const bool light = look.light;
+			const QString name = QString::fromLatin1(look.name);
+			add(300, [=]() {
+				check(App()->SetWorshipAppearance(color, light), QStringLiteral("aplicar %1").arg(name));
+				check(App()->IsThemeDark() == !light, QStringLiteral("modo %1 aplicado").arg(light ? "claro" : "oscuro"));
+				log(QStringLiteral("resaltado de la paleta: %1 (pedido %2)")
+					    .arg(qApp->palette().color(QPalette::Highlight).name(), color.name()));
+			});
+			add(900, [=]() {
+				QWidget *window = hymnal->window();
+				const QString path = outDir.absoluteFilePath(QStringLiteral("apariencia-%1.png").arg(name));
+				check(window && window->grab().save(path), QStringLiteral("captura %1").arg(name));
+			});
+		}
+		add(300, [=]() {
+			if (!previous->isEmpty())
+				App()->SetTheme(*previous);
+		});
+	}
+
 	void addGuideSteps()
 	{
 		auto guide = std::make_shared<QPointer<WelcomeGuide>>();
@@ -829,6 +870,8 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Songs
 		test->addStudioSteps();
 	if (wanted("guia"))
 		test->addGuideSteps();
+	if (wanted("apariencia"))
+		test->addAppearanceSteps();
 	if (wanted("envivo"))
 		test->addLiveSteps();
 	if (wanted("importar"))
