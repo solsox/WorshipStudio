@@ -37,15 +37,15 @@
     --border_radius_small: 6px;
     --border_radius_large: 12px;
 
-    --input_bg: var(--grey5);
-    --input_bg_hover: var(--grey4);
-    --input_bg_focus: var(--grey6);
+    --input_bg: var(--grey7);
+    --input_bg_hover: var(--grey8);
+    --input_bg_focus: var(--grey8);
     --input_border: var(--grey4);
     --input_border_hover: var(--grey2);
     --input_border_focus: var(--primary_light);
 
-    --button_bg: var(--grey4);
-    --button_bg_hover: var(--grey3);
+    --button_bg: var(--grey5);
+    --button_bg_hover: var(--grey4);
     --button_bg_down: var(--grey6);
     --button_border: var(--grey4);
     --button_border_hover: var(--grey2);
@@ -56,4 +56,60 @@
     --scrollbar_handle: var(--grey3);
     --scrollbar_bg: var(--grey6);
     --scrollbar_border: var(--grey6);
+}
+
+/* ---------------------------------------------------------------------- */
+/* WorshipStudio look: quiet panel headers, ember primary buttons, defined
+ * inputs. Shared by the light and dark themes (and the personalized one). */
+
+QDockWidget {
+    font-weight: 600;
+    titlebar-close-icon: url(theme:WorshipStudio/panel-close-noche.svg);
+    titlebar-normal-icon: url(theme:WorshipStudio/panel-float-noche.svg);
+}
+
+QDockWidget::title {
+    background: transparent;
+    padding: 9px 12px 7px 12px;
+    border-bottom: 1px solid var(--grey5);
+    border-radius: 0px;
+}
+
+QDockWidget::close-button,
+QDockWidget::float-button {
+    padding: 3px;
+    icon-size: 14px;
+    min-width: 20px;
+    min-height: 20px;
+    border-radius: 6px;
+}
+
+QDockWidget::close-button:hover,
+QDockWidget::float-button:hover {
+    background: var(--grey5);
+}
+
+.button-primary {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 var(--ws_ember2), stop: 1 var(--ws_ember3));
+    border: 1px solid var(--ws_ember3);
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+.button-primary:hover,
+.button-primary:focus {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 var(--ws_ember1), stop: 1 var(--ws_ember2));
+    border: 1px solid var(--ws_ember2);
+}
+
+QPushButton:checked {
+    border: 1px solid var(--ws_ember2);
+}
+
+QLineEdit:focus,
+QPlainTextEdit:focus,
+QTextEdit:focus,
+QSpinBox:focus,
+QComboBox:focus {
+    border: 1px solid var(--ws_ember2);
 }

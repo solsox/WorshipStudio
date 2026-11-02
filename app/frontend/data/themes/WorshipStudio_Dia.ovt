@@ -444,3 +444,59 @@ SourceSelectButton QPushButton:checked:focus,
 SourceSelectButton QPushButton:focus {
     border-color: var(--black3);
 }
+
+/* ---------------------------------------------------------------------- */
+/* WorshipStudio look: quiet panel headers, ember primary buttons, defined
+ * inputs. Shared by the light and dark themes (and the personalized one). */
+
+QDockWidget {
+    font-weight: 600;
+    titlebar-close-icon: url(theme:WorshipStudio/panel-close-dia.svg);
+    titlebar-normal-icon: url(theme:WorshipStudio/panel-float-dia.svg);
+}
+
+QDockWidget::title {
+    background: transparent;
+    padding: 9px 12px 7px 12px;
+    border-bottom: 1px solid var(--grey6);
+    border-radius: 0px;
+}
+
+QDockWidget::close-button,
+QDockWidget::float-button {
+    padding: 3px;
+    icon-size: 14px;
+    min-width: 20px;
+    min-height: 20px;
+    border-radius: 6px;
+}
+
+QDockWidget::close-button:hover,
+QDockWidget::float-button:hover {
+    background: var(--grey6);
+}
+
+.button-primary {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 var(--ws_ember2), stop: 1 var(--ws_ember3));
+    border: 1px solid var(--ws_ember3);
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+.button-primary:hover,
+.button-primary:focus {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 var(--ws_ember1), stop: 1 var(--ws_ember2));
+    border: 1px solid var(--ws_ember2);
+}
+
+QPushButton:checked {
+    border: 1px solid var(--ws_ember2);
+}
+
+QLineEdit:focus,
+QPlainTextEdit:focus,
+QTextEdit:focus,
+QSpinBox:focus,
+QComboBox:focus {
+    border: 1px solid var(--ws_ember2);
+}

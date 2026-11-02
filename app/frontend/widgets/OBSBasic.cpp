@@ -1368,6 +1368,12 @@ void OBSBasic::OBSInit()
 					 [this]() { on_resetDocks_triggered(true); });
 	QTimer::singleShot(0, layout, &WorshipLayout::restore);
 
+	/* A personalized theme is a copy of the bundled one: rebuild it so
+	 * updates to WorshipStudio's look reach people who customized it. */
+	if (OBSTheme *theme = App()->GetTheme(); theme && theme->id == QStringLiteral("com.worshipstudio.Personal"))
+		App()->SetWorshipAppearance(AppearanceDialog::savedAccent(), AppearanceDialog::savedLight(),
+					    AppearanceDialog::baseVariables(AppearanceDialog::savedBase()));
+
 	auto *appearanceAction = new QAction(QCoreApplication::translate("WorshipStudio", "Personalizar apariencia..."), this);
 	ui->viewMenu->insertAction(ui->viewMenu->actions().value(0), appearanceAction);
 	connect(appearanceAction, &QAction::triggered, this, [this]() {
