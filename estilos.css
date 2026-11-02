@@ -5,6 +5,13 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "DM Serif Display";
+  src: url("fuentes/DMSerifDisplay-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
 /* Brand colors come from the logo: ember light inside a plum arch. */
 :root {
   --bg: #FBF8F4;
@@ -66,6 +73,13 @@ kbd { font: 600 .82em/1 ui-monospace, Menlo, Consolas, monospace; background: va
 .nav__in { display: flex; align-items: center; gap: 28px; height: 70px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font: 700 20px/1 var(--display); letter-spacing: -.03em; color: var(--ink); }
 .brand img { border-radius: 9px; }
+/* Wordmark: "Worship" in an elegant serif italic, "Studio" in the UI font. */
+.wordmark { font: 700 20px/1 var(--text); letter-spacing: -.03em; }
+.wordmark em { font: italic 400 23px/1 "DM Serif Display", Georgia, serif; letter-spacing: 0; margin-right: 1px; }
+.nav__donate { display: inline-flex; align-items: center; gap: 6px; color: var(--ember-dark) !important; font-weight: 650 !important; }
+.nav__donate svg, .btn svg { width: 16px; height: 16px; fill: currentColor; }
+.nav__donate:hover svg { transform: scale(1.15); }
+.nav__donate svg { transition: transform .2s; }
 .nav__links { display: flex; gap: 28px; margin-left: auto; }
 .nav__links a { text-decoration: none; color: var(--ink-2); font-size: 15px; font-weight: 500; }
 .nav__links a:hover { color: var(--ink); }
@@ -252,7 +266,13 @@ mark::after { content: ""; position: absolute; left: -2%; right: -2%; bottom: .0
   .steps { grid-template-columns: 1fr; }
 }
 @media (max-width: 680px) {
-  .nav__links { display: none; }
+  .nav__in { gap: 10px; }
+  .nav__links { gap: 0; }
+  .nav__links a:not(.nav__donate) { display: none; }
+  .nav__donate span, .hide-sm { display: none; }
+  .nav__donate svg { width: 22px; height: 22px; }
+  .wordmark { font-size: 18px; }
+  .wordmark em { font-size: 21px; }
   .nav__in .btn { margin-left: auto; }
   .stage__photo { aspect-ratio: 4 / 3.4; }
   .stage__app { width: 92%; bottom: -10%; }
