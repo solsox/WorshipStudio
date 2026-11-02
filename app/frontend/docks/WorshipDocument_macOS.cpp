@@ -1,8 +1,8 @@
 #include "WorshipDocument.hpp"
-#include <QCoreApplication>
 
 #include <CoreGraphics/CoreGraphics.h>
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QFileInfo>
 #include <QPainter>

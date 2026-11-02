@@ -1,7 +1,6 @@
 /* WinRT headers go first: Qt defines macros (signals, slots, emit) that
  * must not leak into them. */
 #include <winrt/Windows.Foundation.h>
-#include <QCoreApplication>
 #include <winrt/Windows.Data.Pdf.h>
 #include <winrt/Windows.Storage.h>
 #include <winrt/Windows.Storage.Streams.h>
@@ -11,6 +10,7 @@
 
 #include "WorshipDocument.hpp"
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>

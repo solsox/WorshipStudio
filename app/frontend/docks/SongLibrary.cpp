@@ -1,7 +1,7 @@
 #include "SongLibrary.hpp"
-#include <QCoreApplication>
 #include "PresentationCatalogData.hpp"
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
