@@ -16,6 +16,8 @@
 ******************************************************************************/
 
 #include "BibleDock.hpp"
+#include "BackgroundLibrary.hpp"
+#include "BibleCatalog.hpp"
 #include "WorshipLive.hpp"
 #include "WorshipOutput.hpp"
 #include "WorshipRender.hpp"
@@ -114,6 +116,9 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 	auto *versionRow = new QHBoxLayout();
 	versionRow->addWidget(new QLabel(tr("Version:"), root));
 	versionRow->addWidget(versionCombo, 1);
+	auto *catalogButton = new QPushButton(tr("Más Biblias..."), root);
+	catalogButton->setToolTip(tr("Descargar gratis más de mil traducciones en cientos de idiomas"));
+	versionRow->addWidget(catalogButton);
 	versionRow->addWidget(importButton);
 
 	searchEdit = new QLineEdit(root);
@@ -155,6 +160,7 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 
 	backgroundCombo = new QComboBox(root);
 	backgroundCombo->setToolTip(tr("Fondo para pantalla completa"));
+	backgroundCombo->setIconSize(QSize(48, 27));
 	rebuildBackgroundCombo();
 
 	auto *fontRow = new QHBoxLayout();
@@ -194,6 +200,7 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 	connect(resultsList, &QListWidget::itemActivated, this, &BibleDock::onProjectClicked);
 	WorshipLive::instance().registerTarget(QStringLiteral("Biblia"), this);
 	connect(importButton, &QPushButton::clicked, this, &BibleDock::onImportVersionClicked);
+	connect(catalogButton, &QPushButton::clicked, this, &BibleDock::openCatalog);
 	connect(versionCombo, &QComboBox::currentIndexChanged, this, &BibleDock::onVersionChanged);
 	connect(backgroundCombo, &QComboBox::activated, this, &BibleDock::onBackgroundActivated);
 	connect(layoutCombo, &QComboBox::currentIndexChanged, this, [this](int index) {
@@ -293,6 +300,29 @@ void BibleDock::onVersionChanged(int index)
 	styleChanged();
 }
 
+void BibleDock::openCatalog()
+{
+	auto *dialog = new BibleCatalogDialog(userBibleDir(), this);
+	dialog->setAttribute(Qt::WA_DeleteOnClose);
+	connect(dialog, &BibleCatalogDialog::installed, this, &BibleDock::installVersion);
+	dialog->open();
+}
+
+void BibleDock::installVersion(const QString &path)
+{
+	rebuildVersionCombo(path);
+}
+
+void BibleDock::setBackgroundFile(const QString &path)
+{
+	const auto kind = BackgroundLibrary::IsVideo(path) ? WorshipRender::BackgroundKind::Video
+							   : WorshipRender::BackgroundKind::Image;
+	WorshipOutput::SetConfigString(ConfigBgKind, QString::number((int)kind));
+	WorshipOutput::SetConfigString(ConfigBgPath, path);
+	rebuildBackgroundCombo();
+	styleChanged();
+}
+
 void BibleDock::onImportVersionClicked()
 {
 	const QString file = QFileDialog::getOpenFileName(this, tr("Importar version de la Biblia"), QDir::homePath(),
@@ -325,18 +355,27 @@ void BibleDock::rebuildBackgroundCombo()
 		backgroundCombo->addItem(presets.at(i), QStringLiteral("preset:%1").arg(i));
 	backgroundCombo->insertSeparator(backgroundCombo->count());
 
+	/* Mis fondos, shared with the songs. */
 	const WorshipRender::Background bg = currentBackground();
-	const QString colorLabel = bg.kind == WorshipRender::BackgroundKind::Color ? tr("Color: %1").arg(bg.color)
-										  : tr("Color solido...");
-	const QString imageLabel = bg.kind == WorshipRender::BackgroundKind::Image
-					   ? tr("Imagen: %1").arg(QFileInfo(bg.path).fileName())
-					   : tr("Imagen...");
-	const QString videoLabel = bg.kind == WorshipRender::BackgroundKind::Video
-					   ? tr("Video: %1").arg(QFileInfo(bg.path).fileName())
-					   : tr("Video en bucle...");
-	backgroundCombo->addItem(colorLabel, QStringLiteral("color"));
-	backgroundCombo->addItem(imageLabel, QStringLiteral("image"));
-	backgroundCombo->addItem(videoLabel, QStringLiteral("video"));
+	const bool usesFile =
+		bg.kind == WorshipRender::BackgroundKind::Image || bg.kind == WorshipRender::BackgroundKind::Video;
+	const QVector<BackgroundLibrary::Item> library = BackgroundLibrary::Items(true);
+	bool fileListed = false;
+	for (const BackgroundLibrary::Item &item : library) {
+		backgroundCombo->addItem(BackgroundLibrary::Thumbnail(item.path),
+					 item.video ? tr("%1 (video)").arg(item.name) : item.name,
+					 QStringLiteral("file:") + item.path);
+		fileListed = fileListed || (usesFile && item.path == bg.path);
+	}
+	if (usesFile && !fileListed)
+		backgroundCombo->addItem(BackgroundLibrary::Thumbnail(bg.path), QFileInfo(bg.path).completeBaseName(),
+					 QStringLiteral("file:") + bg.path);
+	backgroundCombo->insertSeparator(backgroundCombo->count());
+
+	backgroundCombo->addItem(bg.kind == WorshipRender::BackgroundKind::Color ? tr("Color: %1").arg(bg.color)
+										 : tr("Color solido..."),
+				 QStringLiteral("color"));
+	backgroundCombo->addItem(tr("Agregar imágenes o videos..."), QStringLiteral("add"));
 
 	switch (bg.kind) {
 	case WorshipRender::BackgroundKind::Preset:
@@ -346,10 +385,8 @@ void BibleDock::rebuildBackgroundCombo()
 		backgroundCombo->setCurrentIndex(backgroundCombo->findData(QStringLiteral("color")));
 		break;
 	case WorshipRender::BackgroundKind::Image:
-		backgroundCombo->setCurrentIndex(backgroundCombo->findData(QStringLiteral("image")));
-		break;
 	case WorshipRender::BackgroundKind::Video:
-		backgroundCombo->setCurrentIndex(backgroundCombo->findData(QStringLiteral("video")));
+		backgroundCombo->setCurrentIndex(backgroundCombo->findData(QStringLiteral("file:") + bg.path));
 		break;
 	}
 }
@@ -384,14 +421,14 @@ void BibleDock::onBackgroundActivated(int index)
 			WorshipOutput::SetConfigString(ConfigBgColor, color.name());
 		}
 	} else {
-		const bool video = data == QStringLiteral("video");
-		const QString file = QFileDialog::getOpenFileName(
-			this, video ? tr("Video de fondo (se repite en bucle)") : tr("Imagen de fondo"),
-			previous.path.isEmpty() ? QDir::homePath() : QFileInfo(previous.path).absolutePath(),
-			video ? tr("Videos (*.mp4 *.mov *.m4v *.mkv *.webm)")
-			      : tr("Imagenes (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp *.heic)"));
+		QString file;
+		if (data.startsWith(QStringLiteral("file:")))
+			file = data.mid(5);
+		else
+			file = BackgroundLibrary::AddWithDialog(this, true).value(0);
 		if (!file.isEmpty()) {
-			const auto kind = video ? WorshipRender::BackgroundKind::Video : WorshipRender::BackgroundKind::Image;
+			const auto kind = BackgroundLibrary::IsVideo(file) ? WorshipRender::BackgroundKind::Video
+									   : WorshipRender::BackgroundKind::Image;
 			WorshipOutput::SetConfigString(ConfigBgKind, QString::number((int)kind));
 			WorshipOutput::SetConfigString(ConfigBgPath, file);
 		}
@@ -490,8 +527,11 @@ bool BibleDock::loadBible(const QString &path, QString *error)
 			book.aliases << book.key.mid(4);
 		else if (b >= 39 && b <= 42)
 			book.aliases << QStringLiteral("san ") + book.key;
-		if (b < 66)
+		if (b < 66) {
 			book.aliases << QString::fromLatin1(BookAbbreviations[b]).split(QLatin1Char(' '));
+			/* "Juan 3:16" and "John 3:16" work in a Bible of any language. */
+			book.aliases << BibleCatalog::SpanishBookName(b) << BibleCatalog::EnglishBookName(b);
+		}
 		for (QString &alias : book.aliases)
 			alias = normalizeBookQuery(alias);
 

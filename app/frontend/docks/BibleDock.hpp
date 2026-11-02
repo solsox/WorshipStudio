@@ -45,6 +45,11 @@ public:
 	int layoutIndex() const;
 	bool selectVersion(const QString &abbrev);
 	QStringList versionAbbrevs() const;
+	/* Adds a Bible saved in the user folder and switches to it. */
+	void installVersion(const QString &path);
+	/* Image or video from Mis fondos for full screen verses. */
+	void setBackgroundFile(const QString &path);
+	static QString userBibleDir();
 	void setStyle(const QString &fontFamily, int preset);
 	obs_scene_t *outputScene() const { return scene; }
 	QString lastRenderedImage() const { return lastRenderPath; }
@@ -65,6 +70,7 @@ private slots:
 	void onClearClicked();
 	void onVersionChanged(int index);
 	void onImportVersionClicked();
+	void openCatalog();
 	void onBackgroundActivated(int index);
 
 private:
@@ -92,7 +98,6 @@ private:
 	bool live = false;
 	bool searching = false;
 
-	static QString userBibleDir();
 	void rebuildVersionCombo(const QString &selectFile);
 	void rebuildBackgroundCombo();
 	WorshipRender::Background currentBackground() const;

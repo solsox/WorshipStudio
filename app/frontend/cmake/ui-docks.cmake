@@ -5,6 +5,10 @@ target_sources(
     docks/OBSDock.hpp
     docks/AppearanceDialog.cpp
     docks/AppearanceDialog.hpp
+    docks/BackgroundLibrary.cpp
+    docks/BackgroundLibrary.hpp
+    docks/BibleCatalog.cpp
+    docks/BibleCatalog.hpp
     docks/BibleDock.cpp
     docks/BibleDock.hpp
     docks/LiveToolsDock.cpp
@@ -25,6 +29,7 @@ target_sources(
     docks/SongsDock.hpp
     docks/WelcomeGuide.cpp
     docks/WelcomeGuide.hpp
+    docks/WorshipVersion.hpp
     docks/WorshipOutput.cpp
     docks/WorshipDocument.cpp
     docks/WorshipDocument.hpp

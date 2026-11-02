@@ -8,7 +8,14 @@
     var card = document.getElementById("dl-" + os);
     if (card) card.classList.add("is-detected");
     var cta = document.getElementById("cta-principal");
-    if (cta) cta.textContent = "Descargar gratis para " + names[os];
+    if (cta) {
+      cta.textContent = "Descargar gratis para " + names[os];
+      /* One click downloads; the install steps stay below. */
+      if (card) cta.href = card.href;
+      cta.addEventListener("click", function () {
+        setTimeout(function () { location.hash = "descargar"; }, 400);
+      });
+    }
   }
 
   /* Accessible tabs (arrow keys move between them). */

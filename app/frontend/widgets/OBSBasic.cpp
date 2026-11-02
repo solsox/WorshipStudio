@@ -30,6 +30,11 @@
 #ifdef YOUTUBE_ENABLED
 #include <docks/YouTubeAppDock.hpp>
 #endif
+#include <docks/BackgroundLibrary.hpp>
+#include <docks/WorshipVersion.hpp>
+#include <QDesktopServices>
+#include <QSysInfo>
+#include <QUrlQuery>
 #include <docks/BibleDock.hpp>
 #include <dialogs/NameDialog.hpp>
 #include <dialogs/OBSAbout.hpp>
@@ -1265,6 +1270,9 @@ void OBSBasic::OBSInit()
 	std::string fontsDir;
 	if (GetDataFilePath("worship/fuentes", fontsDir))
 		WorshipRender::RegisterBundledFonts(QT_UTF8(fontsDir.c_str()));
+	std::string backgroundsDir;
+	if (GetDataFilePath("worship/fondos", backgroundsDir))
+		BackgroundLibrary::SetBundledDir(QT_UTF8(backgroundsDir.c_str()));
 
 	auto *hymnalDock = new PresentationCatalogDock("hymnalDock", QStringLiteral("Himnario"), this);
 	AddDockWidget(hymnalDock, Qt::RightDockWidgetArea);
@@ -1362,6 +1370,21 @@ void OBSBasic::OBSInit()
 		auto *guide = new WelcomeGuide(liveToolsDock, this);
 		guide->setAttribute(Qt::WA_DeleteOnClose);
 		guide->open();
+	});
+	/* Comments and bug reports by email: no account or extra service needed. */
+	auto *feedbackAction = new QAction(QStringLiteral("Enviar comentarios o reportar un error..."), this);
+	ui->menuBasic_MainMenu_Help->insertAction(ui->menuBasic_MainMenu_Help->actions().value(1), feedbackAction);
+	connect(feedbackAction, &QAction::triggered, this, []() {
+		const QString body = QStringLiteral("Contanos qué pasó o qué te gustaría (si es un error, los pasos para "
+						    "que vuelva a pasar):\n\n\n---\nWorshipStudio %1\n%2 (%3)\n")
+					     .arg(QStringLiteral(WORSHIPSTUDIO_VERSION_TEXT), QSysInfo::prettyProductName(),
+						  QSysInfo::currentCpuArchitecture());
+		QUrlQuery query;
+		query.addQueryItem(QStringLiteral("subject"), QStringLiteral("Comentario sobre WorshipStudio"));
+		query.addQueryItem(QStringLiteral("body"), body);
+		QUrl url(QStringLiteral("mailto:contact.worshipstudio@gmail.com"));
+		url.setQuery(query);
+		QDesktopServices::openUrl(url);
 	});
 	if (qEnvironmentVariableIsEmpty("WORSHIPSTUDIO_SELFTEST"))
 		QTimer::singleShot(1500, this, [this, liveToolsDock]() { WelcomeGuide::showOnFirstRun(liveToolsDock, this); });

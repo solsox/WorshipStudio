@@ -23,3 +23,6 @@ DerivedData/
 .idea/
 *.xcuserstate
 xcuserdata/
+
+# Estrategia, investigación de competidores y planes de lanzamiento: solo local.
+/privado/

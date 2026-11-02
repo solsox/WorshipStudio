@@ -2,6 +2,7 @@
 
 #include <widgets/OBSBasic.hpp>
 #include <utility/RemoteTextThread.hpp>
+#include <docks/WorshipVersion.hpp>
 
 #include <qt-wrappers.hpp>
 
@@ -27,7 +28,7 @@ OBSAbout::OBSAbout(QWidget *parent) : QDialog(parent), ui(new Ui::OBSAbout)
 		bitness = " (64 bit)";
 	}
 
-	ui->version->setText(QStringLiteral("WorshipStudio 0.6.1") + bitness);
+	ui->version->setText(QStringLiteral("WorshipStudio " WORSHIPSTUDIO_VERSION_TEXT) + bitness);
 
 	ui->contribute->setText(QTStr("About.Contribute"));
 

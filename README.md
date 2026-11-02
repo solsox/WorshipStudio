@@ -13,7 +13,7 @@ Funciona en **macOS, Windows y Linux**. Licencia **GPL-2.0** (fork de [OBS Studi
 - Modos Cantado, Instrumental y Solo letra, con avance automático sincronizado con el audio.
 - Acepta la carpeta del programa Himnario Adventista o carpetas simples `NNN - Titulo/` con imágenes y MP3.
 
-**Cantos y coros** (como en Holyrics)
+**Cantos y coros**
 - Biblioteca de cantos propios con buscador por título o letra.
 - Editor: pegás la letra, cada párrafo es una diapositiva, `[Coro]` nombra secciones, vista previa exacta.
 - Fondo por canto o por diapositiva (degradados, color, imagen, video en bucle), tercio inferior sobre la cámara.
@@ -54,7 +54,7 @@ app/              Código de la aplicación (fork de OBS Studio)
   frontend/docks/ Paneles de WorshipStudio (Himnario, Cantos, Biblia, Presentaciones, Orden, En vivo)
   frontend/data/worship/  Biblias y tipografías libres incluidas
   tools/worship/  Herramientas (conversión de Biblias)
-docs/             Documentación: requerimientos, arquitectura, investigación, estrategia, cómo compilar
+docs/             Documentación: requerimientos, arquitectura, roadmap, cómo compilar
 sitio/            Página web pública (GitHub Pages)
 .github/          Compilación automática para macOS, Windows y Linux
 contenido-local/  (no se sube) himnarios y material con derechos de autor de cada iglesia
@@ -81,7 +81,6 @@ Reina-Valera 1960) no se distribuyen: cada iglesia los carga desde sus propias c
 
 - [Requerimientos funcionales](docs/requerimientos/requerimientos-funcionales.md)
 - [Requerimientos no funcionales](docs/requerimientos/requerimientos-no-funcionales.md)
-- [Funcionalidades sugeridas (investigación)](docs/investigacion/funcionalidades-sugeridas.md)
 - [Arquitectura](docs/arquitectura/arquitectura.md)
 - [Roadmap](docs/producto/roadmap.md)
 

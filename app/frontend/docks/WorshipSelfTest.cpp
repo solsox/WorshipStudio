@@ -1,5 +1,7 @@
 #include "WorshipSelfTest.hpp"
 
+#include "BackgroundLibrary.hpp"
+#include "BibleCatalog.hpp"
 #include "BibleDock.hpp"
 #include "PresentationCatalogDock.hpp"
 #include "PresentationDock.hpp"
@@ -13,6 +15,8 @@
 #include <OBSApp.hpp>
 #include <QStackedWidget>
 #include <obs-frontend-api.h>
+#include <QJsonArray>
+#include <QListWidget>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include "WorshipOutput.hpp"
@@ -278,6 +282,136 @@ struct SelfTest {
 		});
 	}
 
+	/* Mis fondos: bundled photos, adding files once, using them on screen. */
+	void addBackgroundLibrarySteps()
+	{
+		auto added = std::make_shared<QString>();
+		add(100, [this, added]() {
+			log(QStringLiteral("--- Mis fondos ---"));
+			const QVector<BackgroundLibrary::Item> items = BackgroundLibrary::Items(true);
+			const int bundled = (int)std::count_if(items.begin(), items.end(),
+							       [](const BackgroundLibrary::Item &i) { return i.bundled; });
+			check(bundled >= 9, QStringLiteral("fondos: %1 fondos incluidos").arg(bundled));
+			if (items.isEmpty())
+				return;
+			const QString copy = outDir.absoluteFilePath(QStringLiteral("fondo de prueba.jpg"));
+			QFile::remove(copy);
+			QFile::copy(items.last().path, copy);
+			const QStringList first = BackgroundLibrary::Add({copy});
+			const QStringList second = BackgroundLibrary::Add({copy});
+			*added = first.value(0);
+			check(first.size() == 1 && first == second && added->startsWith(BackgroundLibrary::UserDir()),
+			      QStringLiteral("fondos: agregado una sola vez en %1").arg(*added));
+			const QVector<BackgroundLibrary::Item> after = BackgroundLibrary::Items(true);
+			check(std::any_of(after.begin(), after.end(),
+					  [&](const BackgroundLibrary::Item &i) { return i.path == *added && !i.bundled; }),
+			      QStringLiteral("fondos: aparece en Mis fondos"));
+			check(!BackgroundLibrary::Thumbnail(*added).isNull(), QStringLiteral("fondos: miniatura"));
+			bible->setBackgroundFile(items.first().path);
+		});
+		addBibleStep(QStringLiteral("Sal 23:1"), 0, QStringLiteral("fondo-foto-salmo23"));
+		add(100, [this, added]() {
+			QFile::remove(*added);
+			bible->setStyle(QString(), 0);
+		});
+	}
+
+	/* Free Bible catalog: conversion of the API format and installation. */
+	void addBibleCatalogSteps()
+	{
+		add(100, [this]() {
+			log(QStringLiteral("--- Catalogo de Biblias ---"));
+			auto verse = [](int number, const QString &text) {
+				return QJsonObject{{QStringLiteral("type"), QStringLiteral("verse")},
+						   {QStringLiteral("number"), number},
+						   {QStringLiteral("text"), text}};
+			};
+			auto chapter = [](const QJsonArray &content) {
+				return QJsonObject{{QStringLiteral("chapter"), QJsonObject{{QStringLiteral("content"), content}}}};
+			};
+			const QJsonArray john3 = {QJsonObject{{QStringLiteral("type"), QStringLiteral("heading")}},
+						  verse(1, QStringLiteral("Uno")), verse(3, QStringLiteral("Tres")),
+						  verse(3, QStringLiteral("sigue")),
+						  QJsonObject{{QStringLiteral("type"), QStringLiteral("line_break")}}};
+			const QJsonObject complete{
+				{QStringLiteral("books"),
+				 QJsonArray{QJsonObject{{QStringLiteral("id"), QStringLiteral("JHN")},
+							{QStringLiteral("shortName"), QStringLiteral("Jean")},
+							{QStringLiteral("chapters"), QJsonArray{chapter({}), chapter({}), chapter(john3)}}},
+					    QJsonObject{{QStringLiteral("id"), QStringLiteral("TOB")},
+							{QStringLiteral("chapters"), QJsonArray{chapter({verse(1, QStringLiteral("x"))})}}}}}};
+			const QJsonObject info{{QStringLiteral("id"), QStringLiteral("fra_test")},
+					       {QStringLiteral("name"), QStringLiteral("Bible de prueba")},
+					       {QStringLiteral("shortName"), QStringLiteral("BDP")},
+					       {QStringLiteral("language"), QStringLiteral("fra")},
+					       {QStringLiteral("license"), QJsonObject{{QStringLiteral("publicDomain"), true}}}};
+			QString error;
+			int verses = 0;
+			const QByteArray data = BibleCatalog::Convert(complete, info, &error, &verses);
+			check(data.startsWith("{\"name\":\"Bible de prueba\",\"abbrev\":\"BDP\","),
+			      QStringLiteral("catalogo: nombre y sigla al inicio del archivo"));
+			const QJsonObject root = QJsonDocument::fromJson(data).object();
+			const QJsonArray books = root.value(QStringLiteral("books")).toArray();
+			const QJsonArray c3 = books.at(42).toObject().value(QStringLiteral("chapters")).toArray().at(2).toArray();
+			check(books.size() == 66 && books.at(42).toObject().value(QStringLiteral("name")).toString() ==
+							    QStringLiteral("Jean"),
+			      QStringLiteral("catalogo: 66 libros en orden, Juan en la posicion 43"));
+			check(verses == 2 && c3.size() == 3 && c3.at(1).toString().isEmpty() &&
+				      c3.at(2).toString() == QStringLiteral("Tres sigue"),
+			      QStringLiteral("catalogo: versiculos por numero, sin titulos ni apocrifos (%1)").arg(verses));
+			check(root.value(QStringLiteral("license")).toString().startsWith(QStringLiteral("Dominio")),
+			      QStringLiteral("catalogo: licencia guardada"));
+		});
+
+		/* The catalog window with the live list (needs internet). */
+		auto dialog = std::make_shared<QPointer<BibleCatalogDialog>>();
+		add(100, [this, dialog]() {
+			*dialog = new BibleCatalogDialog(BibleDock::userBibleDir(), bible);
+			(*dialog)->show();
+		});
+		add(6000, [this, dialog]() {
+			if (!*dialog)
+				return;
+			auto *list = (*dialog)->findChild<QListWidget *>();
+			check(list && list->count() > 0,
+			      QStringLiteral("catalogo: lista en linea con %1 traducciones en espanol").arg(list ? list->count() : 0));
+			(*dialog)->grab().save(outDir.absoluteFilePath(QStringLiteral("catalogo-ventana.png")));
+			(*dialog)->close();
+			(*dialog)->deleteLater();
+		});
+
+		/* A real translation downloaded from the catalog (complete.simple.json). */
+		const QString apiFile = qEnvironmentVariable("WORSHIPSTUDIO_SELFTEST_BIBLE_API");
+		if (apiFile.isEmpty())
+			return;
+		auto installed = std::make_shared<QString>();
+		add(300, [this, apiFile, installed]() {
+			QFile file(apiFile);
+			check(file.open(QIODevice::ReadOnly), QStringLiteral("catalogo: archivo %1").arg(apiFile));
+			const QJsonObject complete = QJsonDocument::fromJson(file.readAll()).object();
+			QJsonObject info = complete.value(QStringLiteral("translation")).toObject();
+			info.insert(QStringLiteral("shortName"), QStringLiteral("PRUEBA"));
+			QString error;
+			int verses = 0;
+			const QByteArray data = BibleCatalog::Convert(complete, info, &error, &verses);
+			check(verses > 30000, QStringLiteral("catalogo: %1 versiculos convertidos %2").arg(verses).arg(error));
+			*installed = QDir(BibleDock::userBibleDir()).absoluteFilePath(BibleCatalog::FileName(QStringLiteral("prueba")));
+			QFile out(*installed);
+			check(out.open(QIODevice::WriteOnly) && out.write(data) == data.size(), QStringLiteral("catalogo: guardada"));
+			out.close();
+			bible->installVersion(*installed);
+			check(bible->versionAbbrevs().contains(QStringLiteral("PRUEBA")),
+			      QStringLiteral("catalogo: aparece en Version"));
+		});
+		addBibleStep(QStringLiteral("Juan 3:16"), 0, QStringLiteral("catalogo-juan3-16"));
+		addBibleStep(QStringLiteral("Sal 23:1-3"), 0, QStringLiteral("catalogo-salmo23"));
+		add(200, [this, installed]() {
+			QFile::remove(*installed);
+			bible->installVersion(QString());
+			bible->selectVersion(QStringLiteral("RV1909"));
+		});
+	}
+
 	void addAllBibleSteps()
 	{
 		addBibleStep(QStringLiteral("Juan 3:16"), 0, QStringLiteral("biblia-juan3-16"));
@@ -293,10 +427,14 @@ struct SelfTest {
 			add(200, [this, abbrev]() {
 				check(bible->selectVersion(abbrev), QStringLiteral("version %1 seleccionada").arg(abbrev));
 			});
-			addBibleStep(abbrev == QStringLiteral("KJV") ? QStringLiteral("John 3:16") : QStringLiteral("Juan 3:16"),
-					   0, QStringLiteral("version-%1").arg(abbrev.toLower()));
+			/* Spanish names work in every language. */
+			addBibleStep(QStringLiteral("Juan 3:16"), 0, QStringLiteral("version-%1").arg(abbrev.toLower()));
 		}
+		add(200, [this]() { bible->selectVersion(QStringLiteral("KJV")); });
+		addBibleStep(QStringLiteral("John 3:16"), 0, QStringLiteral("version-kjv-ingles"));
 		add(200, [this]() { bible->selectVersion(QStringLiteral("RV1909")); });
+		addBibleCatalogSteps();
+		addBackgroundLibrarySteps();
 
 		/* Fonts and backgrounds. */
 		const QStringList fonts = WorshipRender::RecommendedFonts();

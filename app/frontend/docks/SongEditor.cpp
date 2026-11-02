@@ -36,13 +36,15 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
+#include "BackgroundLibrary.hpp"
+
 #include "moc_SongEditor.cpp"
 
 namespace {
 const QSize EditorThumb(192, 108);
 
-enum ItemRole { KindRole = Qt::UserRole, PresetRole };
-enum ItemKind { InheritItem, PresetItem, ColorItem, ImageItem, VideoItem, CustomItem };
+enum ItemRole { KindRole = Qt::UserRole, PresetRole, PathRole };
+enum ItemKind { InheritItem, PresetItem, ColorItem, AddItem, CustomItem, LibraryItem };
 } // namespace
 
 /* ------------------------------------------------------------------------ */
@@ -53,6 +55,7 @@ BackgroundPicker::BackgroundPicker(bool allowVideo_, bool allowInherit_, QWidget
 	  allowInherit(allowInherit_)
 {
 	setToolTip(tr("Fondo de la pantalla"));
+	setIconSize(QSize(48, 27));
 	rebuild();
 	connect(this, &QComboBox::activated, this, &BackgroundPicker::onActivated);
 }
@@ -75,7 +78,21 @@ void BackgroundPicker::rebuild()
 		setItemData(count() - 1, i, PresetRole);
 	}
 
-	if (hasCustom) {
+	/* Mis fondos: bundled photos and everything the church added. */
+	const QVector<BackgroundLibrary::Item> library = BackgroundLibrary::Items(allowVideo);
+	if (!library.isEmpty())
+		insertSeparator(count());
+	bool customInLibrary = false;
+	for (const BackgroundLibrary::Item &item : library) {
+		addItem(BackgroundLibrary::Thumbnail(item.path), item.video ? tr("%1 (video)").arg(item.name) : item.name,
+			LibraryItem);
+		setItemData(count() - 1, item.path, PathRole);
+		if (hasCustom && custom.path == item.path)
+			customInLibrary = true;
+	}
+	insertSeparator(count());
+
+	if (hasCustom && !customInLibrary) {
 		QString label;
 		switch (custom.kind) {
 		case WorshipRender::BackgroundKind::Color:
@@ -95,9 +112,7 @@ void BackgroundPicker::rebuild()
 	}
 
 	addItem(tr("Color..."), ColorItem);
-	addItem(tr("Imagen..."), ImageItem);
-	if (allowVideo)
-		addItem(tr("Video en bucle..."), VideoItem);
+	addItem(allowVideo ? tr("Agregar imágenes o videos...") : tr("Agregar imágenes..."), AddItem);
 }
 
 WorshipRender::Background BackgroundPicker::background(bool *inherit) const
@@ -112,6 +127,10 @@ WorshipRender::Background BackgroundPicker::background(bool *inherit) const
 		result.preset = currentData(PresetRole).toInt();
 	} else if (kind == CustomItem) {
 		result = custom;
+	} else if (kind == LibraryItem) {
+		result.path = currentData(PathRole).toString();
+		result.kind = BackgroundLibrary::IsVideo(result.path) ? WorshipRender::BackgroundKind::Video
+								      : WorshipRender::BackgroundKind::Image;
 	}
 	return result;
 }
@@ -133,7 +152,8 @@ void BackgroundPicker::setBackground(const WorshipRender::Background &background
 
 	for (int i = 0; i < count(); ++i) {
 		const int kind = itemData(i, KindRole).toInt();
-		if ((hasCustom && kind == CustomItem) ||
+		if ((hasCustom && (kind == CustomItem || (kind == LibraryItem && itemData(i, PathRole).toString() ==
+										      custom.path))) ||
 		    (!hasCustom && kind == PresetItem && itemData(i, PresetRole).toInt() == background.preset)) {
 			setCurrentIndex(i);
 			lastIndex = i;
@@ -155,18 +175,16 @@ void BackgroundPicker::onActivated(int index)
 		}
 		chosen.kind = WorshipRender::BackgroundKind::Color;
 		chosen.color = color.name();
-	} else if (kind == ImageItem || kind == VideoItem) {
-		const bool video = kind == VideoItem;
-		const QString path = QFileDialog::getOpenFileName(
-			this, video ? tr("Video de fondo (se repite en bucle)") : tr("Imagen de fondo"), QString(),
-			video ? tr("Videos (*.mp4 *.mov *.m4v *.mkv *.webm)")
-			      : tr("Imagenes (*.png *.jpg *.jpeg *.webp *.bmp *.gif)"));
-		if (path.isEmpty()) {
+	} else if (kind == AddItem) {
+		/* Added files stay in Mis fondos for every song and the Bible. */
+		const QStringList added = BackgroundLibrary::AddWithDialog(this, allowVideo);
+		if (added.isEmpty()) {
 			setCurrentIndex(lastIndex);
 			return;
 		}
-		chosen.kind = video ? WorshipRender::BackgroundKind::Video : WorshipRender::BackgroundKind::Image;
-		chosen.path = path;
+		chosen.path = added.first();
+		chosen.kind = BackgroundLibrary::IsVideo(chosen.path) ? WorshipRender::BackgroundKind::Video
+								      : WorshipRender::BackgroundKind::Image;
 	} else {
 		lastIndex = index;
 		emit backgroundChanged();

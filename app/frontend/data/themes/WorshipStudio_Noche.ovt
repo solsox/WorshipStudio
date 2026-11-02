@@ -6,17 +6,17 @@
     dark: 'true';
 }
 
-/* Calm, low-glare dark theme for the booth during a service: ink-blue
- * neutrals, one ember accent (same as the logo), rounded shapes and quiet borders. */
+/* Calm, low-glare dark theme for the booth during a service: deep plum
+ * neutrals (same as the website), one ember accent (same as the logo), rounded shapes and quiet borders. */
 @OBSThemeVars {
-    --grey1: #5C6178;
-    --grey2: #4A4F63;
-    --grey3: #3A3F51;
-    --grey4: #2E3241;
-    --grey5: #252836;
-    --grey6: #1D2029;
-    --grey7: #16181F;
-    --grey8: #0E0F14;
+    --grey1: #6E5A78;
+    --grey2: #58465F;
+    --grey3: #46374E;
+    --grey4: #382B3F;
+    --grey5: #2C2132;
+    --grey6: #221A27;
+    --grey7: #1A131E;
+    --grey8: #110C14;
 
     --ws_ember1: #FFB394;
     --ws_ember2: #F57A4A;
@@ -30,7 +30,7 @@
     --primary_dark: var(--ws_ember4);
     --primary_darker: var(--ws_ember5);
 
-    --text_muted: #9AA0B4;
+    --text_muted: #B4A5BC;
 
     --border_color: var(--grey4);
     --border_radius: 8px;
