@@ -56,3 +56,15 @@
     items.forEach(function (el) { el.classList.add("reveal"); io.observe(el); });
   }
 })();
+
+/* Phone / tablet switch */
+(function () {
+  var buttons = document.querySelectorAll(".switch [data-device]");
+  [].forEach.call(buttons, function (button) {
+    button.addEventListener("click", function () {
+      var device = button.dataset.device;
+      [].forEach.call(buttons, function (b) { b.setAttribute("aria-selected", b === button ? "true" : "false"); });
+      [].forEach.call(document.querySelectorAll(".devices .device"), function (d) { d.classList.toggle("is-on", d.dataset.device === device); });
+    });
+  });
+})();

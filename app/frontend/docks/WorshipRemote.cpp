@@ -142,7 +142,7 @@ input{width:100%;font:600 20px/1 inherit;padding:14px;border-radius:12px;border:
 .tabs a.sel{color:#fff;background:var(--s2)}.tabs a i{display:block;font-style:normal;font-size:20px;line-height:1.2}
 .thumbs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.thumbs figure{margin:0}.thumbs img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;background:#000;display:block;border:2px solid var(--line)}.thumbs .p img{border-color:var(--red)}.thumbs .w img{border-color:var(--ok)}.thumbs figcaption{font-size:11px;font-weight:700;margin-top:4px;color:var(--m)}.swipe{touch-action:pan-y}.hintsw{font-size:12px;color:var(--m);margin-top:6px}
 section[data-tab]{display:none}section[data-tab].show{display:block}
-#login{display:none}.err{color:var(--red);font-size:14px;min-height:1.2em}
+@media(min-width:720px){body{max-width:1180px;margin:0 auto;padding-left:24px;padding-right:24px}main{display:block}section[data-tab].show{display:grid;gap:14px;align-items:start}section[data-tab="vivo"].show{grid-template-columns:1.3fr 1fr}section[data-tab="vivo"] .thumbs{grid-column:2;grid-row:1;margin:0}section[data-tab="vivo"] .thumbs img{border-radius:14px}.colA{grid-column:1;grid-row:1/span 2}.colB{grid-column:2;grid-row:2}.colB .card{margin:0 0 12px}section[data-tab="escenas"].show,section[data-tab="mas"].show{grid-template-columns:1fr 1fr}section[data-tab="contenido"].show{grid-template-columns:repeat(3,1fr)}section .card{margin:0}#current{font-size:26px}.tabs{left:50%;right:auto;transform:translateX(-50%);width:min(560px,92vw);bottom:12px;border:1px solid var(--line);border-radius:18px}}#login{display:none}.err{color:var(--red);font-size:14px;min-height:1.2em}
 </style></head><body>
 <header><div class="brand">WorshipStudio</div><div class="live" id="status"><b></b>Conectado</div></header>
 <div id="login" class="card"><div class="k">Código de acceso</div>
@@ -152,12 +152,12 @@ section[data-tab]{display:none}section[data-tab].show{display:block}
 <main id="app">
 <section data-tab="vivo" class="show">
 <div class="thumbs"><figure class="w" id="waitRow"><img id="imgW" alt=""><figcaption>EN ESPERA · <span id="prev"></span></figcaption></figure><figure class="p"><img id="imgP" alt=""><figcaption>EN PANTALLA · <span id="prog"></span></figcaption></figure></div>
-<button class="go" id="goBtn" onclick="act('aire')">Pasar a pantalla ➜</button>
+<div class="colA"><button class="go" id="goBtn" onclick="act('aire')">Pasar a pantalla ➜</button>
 <div class="card swipe" id="cardNow"><div class="k" id="source">Contenido</div><div id="title">Nada en pantalla</div><div id="section"></div><div id="current"></div><div class="hintsw">Deslizá ← → para cambiar de diapositiva</div></div>
 <div class="nav"><button onclick="act('anterior')">◀ Anterior</button><button class="primary" onclick="act('siguiente')">Siguiente ▶</button></div>
-<button id="hide" style="width:100%" onclick="act('ocultar')">Ocultar pantalla</button>
+<button id="hide" style="width:100%" onclick="act('ocultar')">Ocultar pantalla</button></div><div class="colB">
 <div class="card" style="margin-top:12px"><div class="k">Sigue</div><div id="next">—</div></div>
-<div class="card" id="svc" style="display:none"><div class="k">Orden del culto</div><ol class="list" id="items"></ol></div>
+<div class="card" id="svc" style="display:none"><div class="k">Orden del culto</div><ol class="list" id="items"></ol></div></div>
 </section>
 <section data-tab="escenas">
 <div class="card"><div class="k">Escenas</div><ul class="list" id="scenes"></ul></div>

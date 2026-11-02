@@ -11,8 +11,8 @@
   <meta property="og:type" content="website">
   <meta name="theme-color" content="#16110F">
   <link rel="icon" href="logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="estilos.css">
-  <link rel="stylesheet" href="demo.css">
+  <link rel="stylesheet" href="estilos.css?v=8">
+  <link rel="stylesheet" href="demo.css?v=8">
 </head>
 <body>
   <a class="skip" href="#contenido">Saltar al contenido</a>
@@ -22,6 +22,7 @@
       <a class="brand" href="#" aria-label="WorshipStudio, inicio"><img src="logo.svg" alt="" width="36" height="36"><span class="wordmark"><em>Worship</em>Studio</span></a>
       <nav class="nav__links" aria-label="Secciones">
         <a href="#funciones">Funciones</a>
+        <a href="#control">Control remoto</a>
         <a href="#para-quien">Para quién</a>
         <a href="#comparar">Comparar</a>
         <a href="#preguntas">Preguntas</a>
@@ -217,6 +218,23 @@
       </div>
     </section>
 
+    <!-- Remote control on phone and tablet -->
+    <section class="section remote" id="control">
+      <div class="wrap center">
+        <p class="eyebrow">Control remoto</p>
+        <h2>Manejalo desde el celular o la tablet.</h2>
+        <p class="sub">Escaneás un código y cualquier dispositivo de la red de tu iglesia se vuelve el control: pasar diapositivas, cambiar escenas, mostrar un pasaje o transmitir. Sin instalar nada.</p>
+        <div class="switch" role="tablist" aria-label="Dispositivo">
+          <button type="button" role="tab" aria-selected="true" data-device="celular">Celular</button>
+          <button type="button" role="tab" aria-selected="false" data-device="tablet">Tablet</button>
+        </div>
+      </div>
+      <div class="wrap devices">
+        <div class="device device--phone is-on" data-device="celular"><div class="device__screen"><img src="img/control-celular.jpg" alt="Control desde el celular: en espera, en pantalla, pasar a pantalla y siguiente" loading="lazy" width="780" height="1688"></div></div>
+        <div class="device device--tablet" data-device="tablet"><div class="device__screen"><img src="img/control-tablet.jpg" alt="Control desde la tablet: controles a la izquierda, pantallas y orden del culto a la derecha" loading="lazy" width="1800" height="1251"></div></div>
+      </div>
+    </section>
+
     <!-- Who it's for, with real photos -->
     <section class="section" id="para-quien">
       <div class="wrap center">
@@ -371,11 +389,12 @@
     <div class="wrap footer__in">
       <a class="brand" href="#"><img src="logo.svg" alt="" width="28" height="28"><span class="wordmark"><em>Worship</em>Studio</span></a>
       <p>Software libre y gratuito. Hecho con cariño para las comunidades que cantan juntas.</p>
+      <p class="footer__base">Basado en <a href="https://obsproject.com" rel="noopener">OBS Studio</a> (GPL-2.0).</p>
       <nav aria-label="Pie"><a href="mailto:contact.worshipstudio@gmail.com">Contacto</a><a href="licencias.html">Licencias</a><a href="https://github.com/solsox/WorshipStudio" rel="noopener">Código</a><a href="https://github.com/solsox/WorshipStudio/releases" rel="noopener">Versiones</a></nav>
     </div>
   </footer>
 
-  <script src="app.js" defer></script>
-  <script src="demo.js" defer></script>
+  <script src="app.js?v=8" defer></script>
+  <script src="demo.js?v=8" defer></script>
 </body>
 </html>
