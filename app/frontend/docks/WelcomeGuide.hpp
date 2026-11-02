@@ -9,7 +9,7 @@ class QLabel;
 class QPushButton;
 class QStackedWidget;
 
-/* First run guide: what each part of the window does, in five short steps,
+/* First run guide: what each part of the window does, in six short steps,
  * each with a diagram of the window that highlights the part it explains. */
 class WelcomeGuide : public QDialog {
 	Q_OBJECT

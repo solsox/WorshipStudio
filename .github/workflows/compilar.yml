@@ -39,15 +39,21 @@ jobs:
         run: |
           mkdir -p ../dist
           ditto -c -k --keepParent build_macos/frontend/RelWithDebInfo/WorshipStudio.app ../dist/WorshipStudio-macOS-arm64.zip
+          # Disk image: drag WorshipStudio onto Applications
+          mkdir -p dmg && ditto build_macos/frontend/RelWithDebInfo/WorshipStudio.app dmg/WorshipStudio.app
+          ln -s /Applications dmg/Aplicaciones
+          hdiutil create -volname WorshipStudio -srcfolder dmg -ov -format UDZO ../dist/WorshipStudio-macOS-arm64.dmg
       - uses: actions/upload-artifact@v4
         with:
           name: WorshipStudio-macOS-arm64
-          path: dist/WorshipStudio-macOS-arm64.zip
+          path: |
+            dist/WorshipStudio-macOS-arm64.zip
+            dist/WorshipStudio-macOS-arm64.dmg
       - name: Adjuntar a la version
         if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" ../dist/WorshipStudio-macOS-arm64.zip --clobber
+        run: gh release upload "${{ github.event.release.tag_name }}" ../dist/WorshipStudio-macOS-arm64.zip ../dist/WorshipStudio-macOS-arm64.dmg --clobber
 
   windows:
     name: Windows x64
@@ -71,15 +77,27 @@ jobs:
           New-Item -ItemType Directory -Force ../dist | Out-Null
           "Abri bin\64bit\WorshipStudio.exe para empezar." | Out-File build_x64/WorshipStudio/LEEME.txt -Encoding utf8
           Compress-Archive -Path build_x64/WorshipStudio -DestinationPath ../dist/WorshipStudio-Windows-x64.zip -Force
+      - name: Instalador
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup --no-progress -y | Out-Null }
+          $version = (Select-String -Path frontend/docks/WorshipVersion.hpp -Pattern '"([0-9.]+)"').Matches[0].Groups[1].Value
+          $source = (Resolve-Path build_x64/WorshipStudio).Path
+          $output = (Resolve-Path ../dist).Path
+          & $iscc "/DAppVersion=$version" "/DSourceDir=$source" "/DOutputDir=$output" ../instalador/windows/WorshipStudio.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         with:
           name: WorshipStudio-Windows-x64
-          path: dist/WorshipStudio-Windows-x64.zip
+          path: |
+            dist/WorshipStudio-Windows-x64.zip
+            dist/WorshipStudio-Windows-x64-Instalador.exe
       - name: Adjuntar a la version
         if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" ../dist/WorshipStudio-Windows-x64.zip --clobber
+        run: gh release upload "${{ github.event.release.tag_name }}" ../dist/WorshipStudio-Windows-x64.zip ../dist/WorshipStudio-Windows-x64-Instalador.exe --clobber
 
   linux:
     name: Linux (Ubuntu 24.04)

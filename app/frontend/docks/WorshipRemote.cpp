@@ -28,7 +28,9 @@
 #include <qrcodegen.hpp>
 #include <qt-wrappers.hpp>
 
+#include <QCoreApplication>
 #include <QHostAddress>
+#include <QLocale>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -45,6 +47,64 @@
 namespace {
 constexpr const char *ConfigPin = "RemotePin";
 constexpr qsizetype MaxRequest = 16 * 1024;
+
+/* Texts of the phone page, translated to the interface language when the
+ * page is served (the page itself is written in Spanish). */
+const char *const PhoneTexts[] = {
+	QT_TRANSLATE_NOOP("WorshipStudio", "Conectado"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Sin conexión"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Código de acceso"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Lo ves en el panel En vivo de WorshipStudio."),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Entrar"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Código incorrecto"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "EN ESPERA ·"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "EN PANTALLA ·"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "EN ESPERA"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "EN PANTALLA"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Pasar a pantalla ➜"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Contenido"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Nada en pantalla"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Deslizá ← → para cambiar de diapositiva"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "◀ Anterior"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Siguiente ▶"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Ocultar pantalla"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Mostrar pantalla"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Sigue"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Orden del culto"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Escenas"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Fuentes en pantalla"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Tocá para mostrar u ocultar. 🔇 silencia el audio."),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Himno"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Himnario"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Número, ej. 100"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Mostrar himno"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Biblia"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Ej. Juan 3:16 o Sal 23"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Mostrar pasaje"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Cantos"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Presentaciones"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Buscar canto"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Transmisión y grabación"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Transmitir"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Grabar"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Detener transmisión"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Detener grabación"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "¿Iniciar o detener la transmisión?"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "¿Iniciar o detener la grabación?"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Cuenta regresiva"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Mensaje al escenario"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Ej. 5 minutos"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Enviar"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Borrar"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "En vivo"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Más"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "No hay escenas propias todavía"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Visible"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Oculta"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Sin fuentes"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "No hay cantos"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "nada"),
+};
 
 /* The phone page: no external files, works offline on the church network. */
 const char *const RemotePage = R"HTML(<!doctype html>
@@ -86,7 +146,7 @@ section[data-tab]{display:none}section[data-tab].show{display:block}
 </style></head><body>
 <header><div class="brand">WorshipStudio</div><div class="live" id="status"><b></b>Conectado</div></header>
 <div id="login" class="card"><div class="k">Código de acceso</div>
-<p style="margin:0;color:var(--m)">Está en el panel <b>En vivo</b> de WorshipStudio.</p>
+<p style="margin:0;color:var(--m)">Lo ves en el panel En vivo de WorshipStudio.</p>
 <input id="pin" inputmode="numeric" maxlength="4" autocomplete="one-time-code"><div class="err" id="err"></div>
 <button class="primary" style="width:100%" onclick="savePin()">Entrar</button></div>
 <main id="app">
@@ -116,6 +176,8 @@ section[data-tab]{display:none}section[data-tab].show{display:block}
 </main>
 <nav class="tabs"><a href="#" data-go="vivo" class="sel"><i>▶︎</i>En vivo</a><a href="#" data-go="escenas"><i>▦</i>Escenas</a><a href="#" data-go="contenido"><i>♪</i>Contenido</a><a href="#" data-go="mas"><i>•••</i>Más</a></nav>
 <script>
+const T=/*T*/{},t=s=>T[s]||s;
+(function(){const w=document.createTreeWalker(document.body,4);let n;while(n=w.nextNode()){const k=n.nodeValue.trim();if(T[k])n.nodeValue=n.nodeValue.replace(k,T[k]);}document.querySelectorAll("[placeholder]").forEach(e=>e.placeholder=t(e.placeholder));})();
 let pin=localStorage.getItem('wsPin')||new URLSearchParams(location.search).get('pin')||'';
 if(new URLSearchParams(location.search).get('pin')){localStorage.setItem('wsPin',pin);history.replaceState(null,'','/');}
 let songs=[];const $=id=>document.getElementById(id);const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -123,8 +185,8 @@ const val=id=>$(id).value.trim();
 document.querySelectorAll('.tabs a').forEach(a=>a.onclick=e=>{e.preventDefault();document.querySelectorAll('.tabs a').forEach(x=>x.classList.toggle('sel',x===a));document.querySelectorAll('section[data-tab]').forEach(s=>s.classList.toggle('show',s.dataset.tab===a.dataset.go));if(a.dataset.go==='contenido'&&!songs.length)loadSongs();});
 function showLogin(msg){$('login').style.display='block';$('app').style.display='none';$('err').textContent=msg||'';}
 function savePin(){pin=$('pin').value.trim();localStorage.setItem('wsPin',pin);$('login').style.display='none';$('app').style.display='block';poll();}
-async function call(path,opts){const r=await fetch(path+(path.includes('?')?'&':'?')+'pin='+encodeURIComponent(pin),opts);if(r.status===401){showLogin('Código incorrecto');throw 0;}return r.json();}
-function friendly(n){if(!n)return 'nada';if(n.startsWith('WS ')){n=n.slice(3);if(n.endsWith(' B'))n=n.slice(0,-2);}return n;}
+async function call(path,opts){const r=await fetch(path+(path.includes('?')?'&':'?')+'pin='+encodeURIComponent(pin),opts);if(r.status===401){showLogin(t('Código incorrecto'));throw 0;}return r.json();}
+function friendly(n){if(!n)return t('nada');if(n.startsWith('WS ')){n=n.slice(3);if(n.endsWith(' B'))n=n.slice(0,-2);}return n;}
 let studio=false;
 function thumbs(){if(document.hidden||!pin||!$('imgP').offsetParent)return;const t=Date.now();$('imgP').src='/api/vista?cual=pantalla&t='+t+'&pin='+encodeURIComponent(pin);if(studio)$('imgW').src='/api/vista?cual=espera&t='+t+'&pin='+encodeURIComponent(pin);}
 setInterval(thumbs,1500);
@@ -133,21 +195,21 @@ $('cardNow').addEventListener('touchend',e=>{if(x0===null)return;const dx=e.chan
 async function wake(){try{if('wakeLock' in navigator)await navigator.wakeLock.request('screen');}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake();});wake();
 function render(s){if(s.accent)document.documentElement.style.setProperty('--a',s.accent);if(studio!==!!s.studio){studio=!!s.studio;thumbs();}$('prog').textContent=friendly(s.program);$('waitRow').style.display=s.studio?'block':'none';$('waitRow').parentNode.style.gridTemplateColumns=s.studio?'1fr 1fr':'1fr';$('goBtn').style.display=s.studio?'block':'none';$('prev').textContent=friendly(s.preview);
-$('source').textContent=s.source||'Contenido';$('title').textContent=s.title||'Nada en pantalla';
+$('source').textContent=t(s.source||'Contenido');$('title').textContent=s.title||t('Nada en pantalla');
 $('section').textContent=(s.section||'')+(s.count?'  ·  '+(s.index+1)+'/'+s.count:'');$('current').textContent=s.current||'';
-$('next').textContent=s.next||'—';$('hide').classList.toggle('on',!!s.hidden);$('hide').textContent=s.hidden?'Mostrar pantalla':'Ocultar pantalla';
+$('next').textContent=s.next||'—';$('hide').classList.toggle('on',!!s.hidden);$('hide').textContent=t(s.hidden?'Mostrar pantalla':'Ocultar pantalla');
 const it=s.service||[];$('svc').style.display=it.length?'block':'none';
 $('items').innerHTML=it.map((t,i)=>'<li class="'+(i===s.serviceIndex?'cur':'')+'" onclick="act(\'item\',{n:'+i+'})"><span class="n">'+(i+1)+'</span><span class="grow">'+esc(t)+'</span></li>').join('');
-$('scenes').innerHTML=(s.scenes||[]).map(n=>'<li class="'+(n===s.program?'cur':'')+'" onclick="act(\'escena\',{nombre:'+JSON.stringify(n).replace(/"/g,'&quot;')+'})"><span class="grow">'+esc(n)+'</span>'+(n===s.program?'<span class="tag p">EN PANTALLA</span>':n===s.preview?'<span class="tag w">EN ESPERA</span>':'')+'</li>').join('')||'<li>No hay escenas propias todavía</li>';
-$('sources').innerHTML=(s.sources||[]).map(f=>{const n=JSON.stringify(f.nombre).replace(/"/g,'&quot;');return '<li><span class="grow">'+esc(friendly(f.nombre))+'</span>'+(f.audio?'<button class="pill'+(f.silencio?' off':'')+'" onclick="act(\'silencio\',{nombre:'+n+'})">'+(f.silencio?'🔇':'🔊')+'</button>':'')+'<button class="pill'+(f.visible?'':' off')+'" onclick="act(\'fuente\',{nombre:'+n+'})">'+(f.visible?'Visible':'Oculta')+'</button></li>';}).join('')||'<li>Sin fuentes</li>';
-$('stream').classList.toggle('rec',!!s.streaming);$('stream').textContent=s.streaming?'Detener transmisión':'Transmitir';
-$('record').classList.toggle('rec',!!s.recording);$('record').textContent=s.recording?'Detener grabación':'Grabar';
-$('status').innerHTML='<b></b>Conectado';}
+$('scenes').innerHTML=(s.scenes||[]).map(n=>'<li class="'+(n===s.program?'cur':'')+'" onclick="act(\'escena\',{nombre:'+JSON.stringify(n).replace(/"/g,'&quot;')+'})"><span class="grow">'+esc(n)+'</span>'+(n===s.program?'<span class="tag p">'+t('EN PANTALLA')+'</span>':n===s.preview?'<span class="tag w">'+t('EN ESPERA')+'</span>':'')+'</li>').join('')||'<li>'+t('No hay escenas propias todavía')+'</li>';
+$('sources').innerHTML=(s.sources||[]).map(f=>{const n=JSON.stringify(f.nombre).replace(/"/g,'&quot;');return '<li><span class="grow">'+esc(friendly(f.nombre))+'</span>'+(f.audio?'<button class="pill'+(f.silencio?' off':'')+'" onclick="act(\'silencio\',{nombre:'+n+'})">'+(f.silencio?'🔇':'🔊')+'</button>':'')+'<button class="pill'+(f.visible?'':' off')+'" onclick="act(\'fuente\',{nombre:'+n+'})">'+t(f.visible?'Visible':'Oculta')+'</button></li>';}).join('')||'<li>'+t('Sin fuentes')+'</li>';
+$('stream').classList.toggle('rec',!!s.streaming);$('stream').textContent=t(s.streaming?'Detener transmisión':'Transmitir');
+$('record').classList.toggle('rec',!!s.recording);$('record').textContent=t(s.recording?'Detener grabación':'Grabar');
+$('status').innerHTML='<b></b>'+t('Conectado');}
 async function act(a,params){if(navigator.vibrate)navigator.vibrate(12);const q=Object.entries(params||{}).map(([k,v])=>'&'+k+'='+encodeURIComponent(v)).join('');try{render(await call('/api/accion?a='+a+q,{method:'POST'}));}catch(e){}}
-function confirmAct(a,text){if(confirm(text))act(a);}
+function confirmAct(a,text){if(confirm(t(text)))act(a);}
 async function loadSongs(){try{songs=await call('/api/cantos');drawSongs();}catch(e){}}
-function drawSongs(){const f=val('songFilter').toLowerCase();$('songs').innerHTML=songs.filter(s=>s.titulo.toLowerCase().includes(f)).map(s=>'<li onclick="act(\'canto\',{id:\''+s.id+'\'})"><span class="grow">'+esc(s.titulo)+'</span><span class="n">▶︎</span></li>').join('')||'<li>No hay cantos</li>';}
-async function poll(){try{render(await call('/api/estado'));}catch(e){if(e!==0)$('status').innerHTML='<b style="background:var(--red)"></b>Sin conexión';}}
+function drawSongs(){const f=val('songFilter').toLowerCase();$('songs').innerHTML=songs.filter(s=>s.titulo.toLowerCase().includes(f)).map(s=>'<li onclick="act(\'canto\',{id:\''+s.id+'\'})"><span class="grow">'+esc(s.titulo)+'</span><span class="n">▶︎</span></li>').join('')||'<li>'+t('No hay cantos')+'</li>';}
+async function poll(){try{render(await call('/api/estado'));}catch(e){if(e!==0)$('status').innerHTML='<b style="background:var(--red)"></b>'+t('Sin conexión');}}
 if(!pin)showLogin();else poll();setInterval(()=>{if(pin)poll();},1000);
 </script></body></html>)HTML";
 
@@ -311,7 +373,16 @@ QByteArray WorshipRemote::respond(const QByteArray &method, const QString &targe
 
 	if (path == QStringLiteral("/") || path == QStringLiteral("/index.html")) {
 		*contentType = "text/html; charset=utf-8";
-		return QByteArray(RemotePage);
+		QJsonObject texts;
+		for (const char *text : PhoneTexts) {
+			const QString translated = QCoreApplication::translate("WorshipStudio", text);
+			if (translated != QString::fromUtf8(text))
+				texts.insert(QString::fromUtf8(text), translated);
+		}
+		QByteArray page(RemotePage);
+		page.replace("/*T*/{}", QJsonDocument(texts).toJson(QJsonDocument::Compact));
+		page.replace("<html lang=\"es\">", "<html lang=\"" + QLocale().name().section(QLatin1Char('_'), 0, 0).toUtf8() + "\">");
+		return page;
 	}
 
 	*contentType = "application/json; charset=utf-8";

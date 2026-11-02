@@ -13,7 +13,7 @@ OUT = os.path.join(ROOT, 'data', 'worship', 'idiomas')
 SOURCES = glob.glob(os.path.join(ROOT, 'docks', '*.cpp')) + glob.glob(os.path.join(ROOT, 'widgets', 'OBSBasic*.cpp'))
 SKIP = {'WorshipSelfTest.cpp'}
 
-CALL = re.compile(r'(?:\btr|QCoreApplication::translate\(\s*"WorshipStudio"\s*,|QDialog::tr|QFileDialog::tr)\(?\s*((?:"(?:[^"\\]|\\.)*"\s*)+)')
+CALL = re.compile(r'(?:\btr|(?:QCoreApplication::translate|QT_TRANSLATE_NOOP)\(\s*"WorshipStudio"\s*,|QDialog::tr|QFileDialog::tr)\(?\s*((?:"(?:[^"\\]|\\.)*"\s*)+)')
 LIT = re.compile(r'"((?:[^"\\]|\\.)*)"')
 
 # Texts that reach tr() through a table (colors, backgrounds), kept after the

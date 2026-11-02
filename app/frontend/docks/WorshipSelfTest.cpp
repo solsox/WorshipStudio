@@ -792,6 +792,14 @@ struct SelfTest {
 				check(QCoreApplication::translate("BibleDock", "Más Biblias...") != QStringLiteral("Más Biblias..."),
 				      QStringLiteral("%1: Más Biblias... -> %2")
 					      .arg(locale, QCoreApplication::translate("BibleDock", "Más Biblias...")));
+				/* The phone page carries the same language. */
+				if (WorshipRemote *remote = liveTools->remote()) {
+					const QByteArray page = remote->handleForTest("GET", QStringLiteral("/"));
+					const QByteArray expected =
+						QCoreApplication::translate("WorshipStudio", "Pasar a pantalla ➜").toUtf8();
+					check(page.contains("\"" + expected + "\"") && !page.contains("/*T*/"),
+					      QStringLiteral("%1: pagina del celular traducida (%2)").arg(locale, QString::fromUtf8(expected)));
+				}
 				*guide = new WelcomeGuide(liveTools, hymnal->window());
 				(*guide)->resize(760, 660);
 				(*guide)->show();
@@ -816,7 +824,7 @@ struct SelfTest {
 			(*guide)->resize(760, 660);
 			(*guide)->show();
 		});
-		for (int page = 0; page < 5; ++page) {
+		for (int page = 0; page < 6; ++page) {
 			add(500, [=]() {
 				if (!*guide)
 					return;

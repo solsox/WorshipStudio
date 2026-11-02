@@ -1,5 +1,6 @@
 #include "WelcomeGuide.hpp"
 #include "LiveToolsDock.hpp"
+#include "AppearanceDialog.hpp"
 #include "WorshipOutput.hpp"
 #include "WorshipTranslator.hpp"
 
@@ -30,7 +31,7 @@ extern bool restart;
 namespace {
 constexpr const char *ConfigGuide = "GuideShown";
 
-enum Region { Everything, Screens, Content, LiveControl, Projector };
+enum Region { Everything, Screens, Content, LiveControl, Projector, Menu };
 
 /* A small drawing of the WorshipStudio window with one part highlighted. */
 class WindowDiagram : public QWidget {
@@ -46,7 +47,7 @@ protected:
 	{
 		QPainter p(this);
 		p.setRenderHint(QPainter::Antialiasing);
-		const QColor frame(0x1D, 0x20, 0x29), panel(0x2E, 0x32, 0x41), text(0xC9, 0xCD, 0xD8);
+		const QColor frame(0x1A, 0x13, 0x1E), panel(0x2C, 0x21, 0x32), text(0xCD, 0xC2, 0xD3);
 		const QColor ember(0xE2, 0x58, 0x2B), preview(0x30, 0xA4, 0x6C), program(0xE5, 0x48, 0x4D);
 
 		const QRectF win = QRectF(rect()).adjusted(6, 6, -6, -6);
@@ -57,12 +58,13 @@ protected:
 		const qreal W = win.width(), H = win.height();
 		/* Same arrangement as the real window: scenes on the left, the two
 		 * screens in the middle, controls below, content column on the right. */
-		const QRectF scenes(win.left() + W * 0.02, win.top() + H * 0.05, W * 0.14, H * 0.91);
-		const QRectF center(win.left() + W * 0.18, win.top() + H * 0.05, W * 0.50, H * 0.60);
+		const QRectF menu(win.left() + W * 0.02, win.top() + H * 0.02, W * 0.96, H * 0.07);
+		const QRectF scenes(win.left() + W * 0.02, win.top() + H * 0.12, W * 0.14, H * 0.84);
+		const QRectF center(win.left() + W * 0.18, win.top() + H * 0.12, W * 0.50, H * 0.53);
 		const QRectF left(center.left(), center.top(), center.width() * 0.49, center.height());
 		const QRectF right(center.left() + center.width() * 0.51, center.top(), center.width() * 0.49, center.height());
 		const QRectF bottom(win.left() + W * 0.18, win.top() + H * 0.69, W * 0.50, H * 0.27);
-		const QRectF column(win.left() + W * 0.70, win.top() + H * 0.05, W * 0.28, H * 0.53);
+		const QRectF column(win.left() + W * 0.70, win.top() + H * 0.12, W * 0.28, H * 0.46);
 		const QRectF live(win.left() + W * 0.70, win.top() + H * 0.61, W * 0.28, H * 0.35);
 
 		auto box = [&](const QRectF &r, const QColor &fill, const QString &label, const QColor &labelColor,
@@ -78,6 +80,7 @@ protected:
 			p.drawText(r.adjusted(4, 4, -4, -4), Qt::AlignCenter | Qt::TextWordWrap, label);
 		};
 
+		box(menu, panel, tr("Ver → Personalizar apariencia"), text, 0.7);
 		box(scenes, panel, tr("Escenas y fuentes"), text, 0.85);
 		box(left, QColor(0x0E, 0x1F, 0x17), tr("EN ESPERA\nvista previa"), preview);
 		box(right, QColor(0x24, 0x10, 0x12), tr("EN PANTALLA\nlo que ve la gente"), program);
@@ -97,6 +100,9 @@ protected:
 		case LiveControl:
 		case Projector:
 			focus = live;
+			break;
+		case Menu:
+			focus = menu;
 			break;
 		default:
 			break;
@@ -191,6 +197,27 @@ WelcomeGuide::WelcomeGuide(LiveToolsDock *liveTools_, QWidget *parent) : QDialog
 		   "espera a la congregación. <b>Siguiente</b>, <b>Anterior</b> y <b>Ocultar</b> sirven para "
 		   "cualquier contenido.<br>También funcionan las flechas y el presentador inalámbrico."));
 
+	/* Personalizing: where the menu is depends on the system. */
+	auto *customizeButton = new QPushButton(tr("Personalizar ahora..."), this);
+	customizeButton->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+#ifdef __APPLE__
+	const QString menuPlace = tr("En la barra de menú de arriba de la pantalla:");
+#else
+	const QString menuPlace = tr("En el menú de la ventana:");
+#endif
+	addPage(Menu, tr("Hacelo tuyo"),
+		tr("Elegí modo oscuro o claro, el fondo (ciruela, negro, blanco, vainilla...) y tu color principal.") +
+			QStringLiteral("<br>") + menuPlace + QStringLiteral(" <b>") + tr("Ver → Personalizar apariencia") +
+			QStringLiteral("</b><br><br>") +
+			tr("Tus fotos y videos se agregan desde <b>Fondo</b> en Cantos o Biblia, y <b>Más Biblias</b> descarga "
+			   "otras versiones gratis."),
+		customizeButton);
+	connect(customizeButton, &QPushButton::clicked, this, [this]() {
+		auto *dialog = new AppearanceDialog(this);
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		dialog->open();
+	});
+
 	auto *projectorBox = new QWidget(this);
 	auto *projectorLayout = new QVBoxLayout(projectorBox);
 	projectorLayout->setContentsMargins(0, 0, 0, 0);
@@ -200,9 +227,9 @@ WelcomeGuide::WelcomeGuide(LiveToolsDock *liveTools_, QWidget *parent) : QDialog
 	projectorLayout->addWidget(projectorButton);
 	projectorLayout->addWidget(studioCheck);
 	addPage(Projector, tr("Conectá el proyector"),
-		tr("Elegí la pantalla donde se proyecta: ahí se mostrará a pantalla completa lo que está EN "
-		   "PANTALLA. Podés cambiarla después con el botón <b>Pantalla del proyector</b>.<br>En "
-		   "<b>Ver → Personalizar apariencia</b> elegís modo claro u oscuro y tu color."),
+		tr("Elegí la pantalla donde se proyecta: ahí se verá a pantalla completa lo que está EN PANTALLA. "
+		   "Podés cambiarla después con <b>Pantalla del proyector</b>.<br>Para manejarlo desde el celular, "
+		   "tocá <b>Activar control desde el celular</b> en En vivo y escaneá el código."),
 		projectorBox);
 
 	auto *buttons = new QHBoxLayout();
