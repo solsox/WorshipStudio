@@ -223,12 +223,14 @@ PresentationDock::PresentationDock(const QString &objectName, const QString &tit
 	});
 	connect(bookCheck, &QCheckBox::toggled, this, [this](bool checked) {
 		WorshipOutput::SetConfigString(ConfigBook, checked ? QStringLiteral("1") : QStringLiteral("0"));
-		/* Keep showing the same page after the slides change. */
-		const int page = live && liveSlide >= 0 ? slides.at(liveSlide).page : -1;
 		rebuildSlides();
-		if (page >= 0) {
+		/* The presentation on screen follows, keeping the same page. */
+		if (selectedIsLive() && liveSlide >= 0) {
+			const int page = liveSlides.at(liveSlide).page;
+			liveSlides = slides;
+			liveBook = checked;
 			int slide = 0;
-			while (slide < slides.size() && slides.at(slide).page < page)
+			while (slide < liveSlides.size() && liveSlides.at(slide).page < page)
 				++slide;
 			liveSlide = -1;
 			showSlide(slide);
@@ -384,9 +386,6 @@ bool PresentationDock::isConverting() const
 
 void PresentationDock::setDeck(const Deck &newDeck)
 {
-	if (live)
-		stopLive();
-
 	deck = newDeck;
 	rebuildSlides();
 	rebuildDecksList();
@@ -445,7 +444,7 @@ void PresentationDock::rebuildThumbnails()
 		slidesList->addItem(item);
 	}
 
-	if (live && liveSlide >= 0)
+	if (selectedIsLive() && liveSlide >= 0)
 		slidesList->setCurrentRow(liveSlide);
 
 	nextThumbnail = 0;
@@ -457,7 +456,7 @@ void PresentationDock::onThumbnailTick()
 {
 	/* A few per tick keeps the dock responsive with long books. */
 	for (int n = 0; n < ThumbnailsPerTick && nextThumbnail < slides.size(); ++n, ++nextThumbnail) {
-		const QImage image = renderSlide(nextThumbnail, ThumbnailSize * 2);
+		const QImage image = renderSlide(deck, slides, nextThumbnail, ThumbnailSize * 2, bookCheck->isChecked());
 		if (QListWidgetItem *item = slidesList->item(nextThumbnail); item && !image.isNull())
 			item->setIcon(QIcon(QPixmap::fromImage(
 				image.scaled(ThumbnailSize, Qt::KeepAspectRatio, Qt::SmoothTransformation))));
@@ -466,22 +465,22 @@ void PresentationDock::onThumbnailTick()
 		thumbnailTimer->stop();
 }
 
-QImage PresentationDock::renderSlide(int index, const QSize &canvas) const
+QImage PresentationDock::renderSlide(const Deck &source, const QVector<Slide> &list, int index, const QSize &canvas,
+				     bool book) const
 {
-	if (index < 0 || index >= slides.size())
+	if (index < 0 || index >= list.size())
 		return {};
 
-	const Slide &slide = slides.at(index);
-	const bool book = bookCheck->isChecked();
+	const Slide &slide = list.at(index);
 
 	/* Book pages are cropped and split, so they are rendered bigger. */
 	const QSize box = book ? QSize(canvas.width() * 3 / 2, canvas.height() * slide.parts * 3 / 2) : canvas;
 
 	QImage page;
-	if (!deck.pdfPath.isEmpty()) {
-		page = WorshipDocument::RenderPdfPage(deck.pdfPath, slide.page, box);
+	if (!source.pdfPath.isEmpty()) {
+		page = WorshipDocument::RenderPdfPage(source.pdfPath, slide.page, box);
 	} else {
-		QImageReader reader(deck.images.at(slide.page));
+		QImageReader reader(source.images.at(slide.page));
 		reader.setAutoTransform(true);
 		const QSize size = reader.size();
 		if (size.isValid() && (size.width() > box.width() * 2 || size.height() > box.height() * 2))
@@ -504,9 +503,9 @@ QImage PresentationDock::renderSlide(int index, const QSize &canvas) const
 
 QString PresentationDock::renderedSlide(int index) const
 {
-	const Slide &slide = slides.at(index);
+	const Slide &slide = liveSlides.at(index);
 	const QSize canvas(WorshipOutput::CanvasWidth(), WorshipOutput::CanvasHeight());
-	const QString file = deck.pdfPath.isEmpty() ? deck.images.at(slide.page) : deck.pdfPath;
+	const QString file = liveDeck.pdfPath.isEmpty() ? liveDeck.images.at(slide.page) : liveDeck.pdfPath;
 
 	const QByteArray key = QStringLiteral("%1|%2|%3|%4/%5|%6|%7x%8")
 				       .arg(QFileInfo(file).absoluteFilePath())
@@ -514,7 +513,7 @@ QString PresentationDock::renderedSlide(int index) const
 				       .arg(slide.page)
 				       .arg(slide.part)
 				       .arg(slide.parts)
-				       .arg(bookCheck->isChecked())
+				       .arg(liveBook)
 				       .arg(canvas.width())
 				       .arg(canvas.height())
 				       .toUtf8();
@@ -523,7 +522,7 @@ QString PresentationDock::renderedSlide(int index) const
 		QDir(WorshipRender::CacheDir(QStringLiteral("presentations/pages"))).absoluteFilePath(hash + ".png");
 
 	if (!QFileInfo::exists(page)) {
-		const QImage image = renderSlide(index, canvas);
+		const QImage image = renderSlide(liveDeck, liveSlides, index, canvas, liveBook);
 		if (image.isNull() || !image.save(page, "PNG"))
 			return {};
 	}
@@ -566,6 +565,9 @@ bool PresentationDock::project()
 	}
 
 	const int start = qMax(0, slidesList->currentRow());
+	liveDeck = deck;
+	liveSlides = slides;
+	liveBook = bookCheck->isChecked();
 	live = true;
 	liveSlide = -1;
 	hidden = false;
@@ -579,20 +581,22 @@ bool PresentationDock::project()
 
 void PresentationDock::showSlide(int slide)
 {
-	if (slides.isEmpty())
-		return;
 	if (!live) {
-		/* Clicking a thumbnail before projecting starts from there. */
+		/* Choosing a slide of a presentation that is not on screen starts it there. */
+		if (slides.isEmpty())
+			return;
 		selectSlideRow(qBound(0, slide, (int)slides.size() - 1));
 		project();
 		return;
 	}
+	if (liveSlides.isEmpty())
+		return;
 
-	slide = qBound(0, slide, (int)slides.size() - 1);
+	slide = qBound(0, slide, (int)liveSlides.size() - 1);
 	if (slide != liveSlide) {
 		const QString path = renderedSlide(slide);
 		if (path.isEmpty()) {
-			setStatus(tr("No se pudo dibujar la pagina %1.").arg(slides.at(slide).page + 1), true);
+			setStatus(tr("No se pudo dibujar la pagina %1.").arg(liveSlides.at(slide).page + 1), true);
 			return;
 		}
 		OBSDataAutoRelease settings = obs_data_create();
@@ -601,16 +605,17 @@ void PresentationDock::showSlide(int slide)
 		liveSlide = slide;
 
 		/* Prepare the next slide ahead of time so it changes instantly. */
-		if (slide + 1 < slides.size()) {
-			const QString key = deck.key;
+		if (slide + 1 < liveSlides.size()) {
+			const QString key = liveDeck.key;
 			QTimer::singleShot(0, this, [this, key, slide]() {
-				if (live && key == deck.key && slide + 1 < slides.size())
+				if (live && key == liveDeck.key && slide + 1 < liveSlides.size())
 					renderedSlide(slide + 1);
 			});
 		}
 	}
 
-	selectSlideRow(slide);
+	if (selectedIsLive())
+		selectSlideRow(slide);
 	updateControls();
 	updateLiveLabel();
 	publishLive();
@@ -620,11 +625,11 @@ void PresentationDock::publishLive()
 {
 	LiveState state;
 	state.source = QStringLiteral("Presentaciones");
-	state.title = deck.title;
-	const Slide &current = slides.at(liveSlide);
+	state.title = liveDeck.title;
+	const Slide &current = liveSlides.at(liveSlide);
 	state.section = tr("Pagina %1").arg(current.page + 1);
 	state.index = liveSlide;
-	state.count = (int)slides.size();
+	state.count = (int)liveSlides.size();
 	state.hidden = hidden;
 	WorshipLive::instance().publish(state);
 }
@@ -668,8 +673,15 @@ void PresentationDock::stopLive()
 
 void PresentationDock::onSlideClicked(QListWidgetItem *item)
 {
-	if (item)
-		showSlide(item->data(Qt::UserRole).toInt());
+	if (!item)
+		return;
+	/* A slide of another presentation starts that one from there. */
+	if (!selectedIsLive()) {
+		selectSlideRow(item->data(Qt::UserRole).toInt());
+		project();
+		return;
+	}
+	showSlide(item->data(Qt::UserRole).toInt());
 }
 
 void PresentationDock::selectSlideRow(int slide)
@@ -689,7 +701,7 @@ bool PresentationDock::eventFilter(QObject *watched, QEvent *event)
 		case Qt::Key_Down:
 		case Qt::Key_PageDown:
 		case Qt::Key_Space:
-			if (!live)
+			if (!selectedIsLive())
 				project();
 			else
 				nextSlide();
@@ -701,14 +713,16 @@ bool PresentationDock::eventFilter(QObject *watched, QEvent *event)
 			previousSlide();
 			return true;
 		case Qt::Key_Home:
-			showSlide(0);
+			if (selectedIsLive())
+				showSlide(0);
 			return true;
 		case Qt::Key_End:
-			showSlide((int)slides.size() - 1);
+			if (selectedIsLive())
+				showSlide((int)liveSlides.size() - 1);
 			return true;
 		case Qt::Key_Return:
 		case Qt::Key_Enter:
-			showSlide(slidesList->currentRow());
+			onSlideClicked(slidesList->currentItem());
 			return true;
 		case Qt::Key_B:
 		case Qt::Key_Period:
@@ -750,9 +764,10 @@ void PresentationDock::updateLiveLabel()
 		liveLabel->setText(tr("Sin proyeccion activa"));
 		return;
 	}
-	const Slide &slide = slides.at(liveSlide);
-	QString text = tr("En vivo: %1  |  Diapositiva %2/%3").arg(deck.title).arg(liveSlide + 1).arg(slides.size());
-	if (slide.parts > 1 || slides.size() != deck.pageCount)
+	const Slide &slide = liveSlides.at(liveSlide);
+	QString text =
+		tr("En vivo: %1  |  Diapositiva %2/%3").arg(liveDeck.title).arg(liveSlide + 1).arg(liveSlides.size());
+	if (slide.parts > 1 || liveSlides.size() != liveDeck.pageCount)
 		text += tr("  (pagina %1)").arg(slide.page + 1);
 	if (hidden)
 		text += tr("  |  OCULTA");

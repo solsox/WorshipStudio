@@ -742,6 +742,32 @@ struct SelfTest {
 		});
 	}
 
+	/* Opening another file while one is on screen must not stop it. */
+	void addDeckSwitchSteps(const QString &first, const QString &second)
+	{
+		add(300, [=]() {
+			log(QStringLiteral("--- Cambiar de presentacion con otra en vivo ---"));
+			presentations->setBookMode(false);
+			presentations->openFiles({first});
+		});
+		waitFor(180000, [=]() { return !presentations->isConverting(); });
+		add(300, [=]() { check(presentations->project(), QStringLiteral("primera presentacion en vivo")); });
+		add(600, [=]() { presentations->nextSlide(); });
+		add(600, [=]() {
+			check(presentations->currentSlide() == 1, QStringLiteral("primera: diapositiva 2"));
+			presentations->openFiles({second});
+		});
+		waitFor(180000, [=]() { return !presentations->isConverting(); });
+		add(600, [=]() {
+			check(presentations->currentSlide() == 1, QStringLiteral("al elegir otra, la que esta en vivo sigue"));
+			WorshipLive::instance().next();
+		});
+		add(800, [=]() {
+			check(presentations->currentSlide() == 2,
+			      QStringLiteral("Siguiente avanza la que esta en pantalla (diapositiva %1)").arg(presentations->currentSlide() + 1));
+		});
+	}
+
 	void runNext(int index)
 	{
 		if (index >= steps.size()) {
@@ -808,6 +834,8 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Songs
 							      .split(QLatin1Char(';'), Qt::SkipEmptyParts);
 		for (int i = 0; i < presentationFiles.size(); ++i)
 			test->addPresentationSteps(presentationFiles.at(i), i + 1);
+		if (presentationFiles.size() >= 2)
+			test->addDeckSwitchSteps(presentationFiles.at(0), presentationFiles.at(1));
 	}
 	/* The checks expect content to go straight to the screen. */
 	const bool studioWas = obs_frontend_preview_program_mode_active();

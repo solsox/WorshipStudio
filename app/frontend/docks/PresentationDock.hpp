@@ -38,7 +38,7 @@ public:
 	void goToSlide(int slide) { showSlide(slide); }
 	void setBookMode(bool enabled);
 	int currentSlide() const { return liveSlide; }
-	int slideCount() const { return (int)slides.size(); }
+	int slideCount() const { return live ? (int)liveSlides.size() : (int)slides.size(); }
 	QString deckError() const { return lastError; }
 	obs_scene_t *outputScene() const { return scene; }
 
@@ -86,8 +86,14 @@ private:
 	QTimer *thumbnailTimer = nullptr;
 	WorshipDocument::Converter *converter = nullptr;
 
+	/* `deck`/`slides`: the presentation selected in the list (thumbnails).
+	 * `liveDeck`/`liveSlides`: the one on screen. Choosing another file does
+	 * not touch what the congregation sees until it is started. */
 	Deck deck;
 	QVector<Slide> slides;
+	Deck liveDeck;
+	QVector<Slide> liveSlides;
+	bool liveBook = false;
 	int nextThumbnail = 0;
 	int liveSlide = -1;
 	bool live = false;
@@ -102,8 +108,10 @@ private:
 	void setDeck(const Deck &newDeck);
 	void rebuildSlides();
 	void rebuildThumbnails();
-	QImage renderSlide(int index, const QSize &canvas) const;
+	QImage renderSlide(const Deck &source, const QVector<Slide> &list, int index, const QSize &canvas,
+			   bool book) const;
 	QString renderedSlide(int index) const;
+	bool selectedIsLive() const { return live && deck.key == liveDeck.key; }
 	bool prepareOutput();
 	std::string slideItemName() const;
 	void showSlide(int slide);
