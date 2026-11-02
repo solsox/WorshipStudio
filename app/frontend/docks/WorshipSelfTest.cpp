@@ -13,6 +13,7 @@
 #include "WorshipLive.hpp"
 #include "WorshipRemote.hpp"
 #include "GuidedTour.hpp"
+#include "MigrationDialog.hpp"
 #include "WorshipTranslator.hpp"
 #include <OBSApp.hpp>
 #include <utility/platform.hpp>
@@ -651,6 +652,47 @@ struct SelfTest {
 
 	void addImportSteps()
 	{
+		/* Formats from other programs: ProPresenter 6, Zefania and OSIS. */
+		add(100, [this]() {
+			log(QStringLiteral("--- Importar de otros programas ---"));
+			const QString rtf = QStringLiteral("{\\rtf1\\ansi{\\fonttbl\\f0 Arial;}\\f0 Santo, santo, santo\\par Se\\'f1or omnipotente}");
+			const QByteArray pro6 = QStringLiteral("<?xml version=\"1.0\"?><RVPresentationDocument CCLISongTitle=\"Santo\" CCLIAuthor=\"Heber\">"
+				"<groups><RVSlideGrouping name=\"Estrofa 1\"><slides><RVDisplaySlide><displayElements><RVTextElement>"
+				"<NSString rvXMLIvarName=\"RTFData\">%1</NSString></RVTextElement></displayElements></RVDisplaySlide>"
+				"</slides></RVSlideGrouping></groups></RVPresentationDocument>").arg(QString::fromLatin1(rtf.toLatin1().toBase64())).toUtf8();
+			const QString path = outDir.absoluteFilePath(QStringLiteral("canto.pro6"));
+			QFile file(path);
+			file.open(QIODevice::WriteOnly);
+			file.write(pro6);
+			file.close();
+			Song song;
+			QString error;
+			check(SongLibrary::importFile(path, &song, &error) && song.title == QStringLiteral("Santo") &&
+				      song.slides.size() == 1 && song.slides.front().label == QStringLiteral("Estrofa 1") &&
+				      song.slides.front().text == QStringLiteral("Santo, santo, santo\nSeñor omnipotente"),
+			      QStringLiteral("ProPresenter 6: %1 / %2").arg(song.title, song.slides.empty() ? error : song.slides.front().text));
+
+			const QByteArray zefania = "<?xml version=\"1.0\"?><XMLBIBLE biblename=\"Prueba Zefania\"><BIBLEBOOK bnumber=\"43\" bname=\"Juan\">"
+				"<CHAPTER cnumber=\"3\"><VERS vnumber=\"16\">Porque de tal manera amó Dios al mundo</VERS></CHAPTER></BIBLEBOOK></XMLBIBLE>";
+			int verses = 0;
+			QJsonObject bible = QJsonDocument::fromJson(BibleCatalog::ImportOpenFormat(zefania, QStringLiteral("z"), &error, &verses)).object();
+			QJsonArray john = bible.value(QStringLiteral("books")).toArray().at(42).toObject().value(QStringLiteral("chapters")).toArray();
+			check(verses == 1 && bible.value(QStringLiteral("name")).toString() == QStringLiteral("Prueba Zefania") &&
+				      john.at(2).toArray().at(15).toString().startsWith(QStringLiteral("Porque")),
+			      QStringLiteral("Zefania: Juan 3:16 en su lugar"));
+
+			const QByteArray osis = "<?xml version=\"1.0\"?><osis><osisText osisIDWork=\"PRB\" xml:lang=\"es\"><div type=\"book\" osisID=\"Ps\">"
+				"<chapter osisID=\"Ps.23\"><verse osisID=\"Ps.23.1\">Jehová es mi pastor<note>nota</note>; nada me faltará.</verse>"
+				"<verse sID=\"Ps.23.2\"/>En lugares de delicados pastos<verse eID=\"Ps.23.2\"/></chapter></div></osisText></osis>";
+			bible = QJsonDocument::fromJson(BibleCatalog::ImportOpenFormat(osis, QStringLiteral("o"), &error, &verses)).object();
+			QJsonArray psalm = bible.value(QStringLiteral("books")).toArray().at(18).toObject().value(QStringLiteral("chapters")).toArray().at(22).toArray();
+			check(verses == 2 && psalm.at(0).toString() == QStringLiteral("Jehová es mi pastor; nada me faltará.") &&
+				      psalm.at(1).toString() == QStringLiteral("En lugares de delicados pastos"),
+			      QStringLiteral("OSIS: Salmos 23:1-2 sin notas (%1 | %2)").arg(psalm.at(0).toString(), psalm.at(1).toString()));
+			check(!MigrationDialog::detectedPrograms().isEmpty() || MigrationDialog::obsFolder().isEmpty(),
+			      QStringLiteral("migracion: programas detectados %1").arg(MigrationDialog::detectedPrograms().join(QStringLiteral(", "))));
+		});
+
 		add(200, [=]() {
 			log(QStringLiteral("--- Importar cantos ---"));
 			const QString openLyrics = outDir.absoluteFilePath(QStringLiteral("canto-openlyrics.xml"));

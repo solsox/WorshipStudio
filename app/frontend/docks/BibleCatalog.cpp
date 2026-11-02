@@ -257,7 +257,7 @@ bool readOsis(const QByteArray &data, OpenBible &bible)
 	};
 
 	QXmlStreamReader xml(data);
-	bool found = false, inVerse = false;
+	bool found = false, inVerse = false, milestone = false;
 	int book = -1, chapter = 0, verse = 0;
 	QString text;
 	int noteDepth = 0;
@@ -278,9 +278,11 @@ bool readOsis(const QByteArray &data, OpenBible &bible)
 					: attrs.value(QStringLiteral("osisID")).toString();
 				if (!attrs.value(QStringLiteral("eID")).isEmpty()) {
 					putVerse(bible, book, chapter, verse, text);
-					inVerse = false;
+					inVerse = milestone = false;
 					text.clear();
 				} else if (parse(start.section(QLatin1Char(' '), 0, 0), &book, &chapter, &verse)) {
+					/* <verse sID/> is empty: its text runs until <verse eID/>. */
+					milestone = attrs.hasAttribute(QStringLiteral("sID"));
 					inVerse = true;
 					text.clear();
 					found = true;
@@ -289,7 +291,7 @@ bool readOsis(const QByteArray &data, OpenBible &bible)
 		} else if (xml.isEndElement()) {
 			if (xml.name() == QStringLiteral("note")) {
 				--noteDepth;
-			} else if (xml.name() == QStringLiteral("verse") && inVerse) {
+			} else if (xml.name() == QStringLiteral("verse") && inVerse && !milestone) {
 				putVerse(bible, book, chapter, verse, text);
 				inVerse = false;
 				text.clear();

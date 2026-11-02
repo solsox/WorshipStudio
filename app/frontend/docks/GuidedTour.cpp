@@ -460,6 +460,20 @@ void GuidedTour::refresh()
 	if (!window || current < 0)
 		return;
 
+	/* The step can be done while the tour is hidden (naming a scene in its
+	 * dialog, for example): check it first. */
+	const Step &doneStep = steps[current];
+	if (!finishedStep && doneStep.done && doneStep.done()) {
+		finishedStep = true;
+		doneLabel->show();
+		bubble->adjustSize();
+		const int step_ = current;
+		QTimer::singleShot(1100, this, [this, step_]() {
+			if (current == step_)
+				goTo(current + 1);
+		});
+	}
+
 	const bool show_ = shouldShow();
 	setVisible(show_);
 	bubble->setVisible(show_);
@@ -493,16 +507,6 @@ void GuidedTour::refresh()
 	setMask(mask);
 	raise();
 
-	if (!finishedStep && step.done && step.done()) {
-		finishedStep = true;
-		doneLabel->show();
-		bubble->adjustSize();
-		const int step_ = current;
-		QTimer::singleShot(1100, this, [this, step_]() {
-			if (current == step_)
-				goTo(current + 1);
-		});
-	}
 	placeBubble();
 	update();
 }
