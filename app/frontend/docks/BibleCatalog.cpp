@@ -30,6 +30,7 @@
 #include <QJsonDocument>
 #include <QLabel>
 #include <QLineEdit>
+#include <QLocale>
 #include <QListWidget>
 #include <QMap>
 #include <QNetworkAccessManager>
@@ -40,6 +41,7 @@
 #include <QSaveFile>
 #include <QStandardPaths>
 #include <QVBoxLayout>
+#include <QXmlStreamReader>
 
 #include <algorithm>
 
@@ -169,6 +171,181 @@ QString BibleCatalog::LicenseText(const QJsonObject &translation)
 	if (license.value(QStringLiteral("derivatives")).toString() != QStringLiteral("allowed"))
 		parts << QDialog::tr("sin modificar el texto");
 	return parts.join(QStringLiteral(", "));
+}
+
+namespace {
+/* OSIS book ids in canon order. */
+const char *const OsisIds[66] = {
+	"Gen",  "Exod", "Lev",  "Num",  "Deut", "Josh", "Judg", "Ruth",   "1Sam",   "2Sam",  "1Kgs",  "2Kgs",
+	"1Chr", "2Chr", "Ezra", "Neh",  "Esth", "Job",  "Ps",   "Prov",   "Eccl",   "Song",  "Isa",   "Jer",
+	"Lam",  "Ezek", "Dan",  "Hos",  "Joel", "Amos", "Obad", "Jonah",  "Mic",    "Nah",   "Hab",   "Zeph",
+	"Hag",  "Zech", "Mal",  "Matt", "Mark", "Luke", "John", "Acts",   "Rom",    "1Cor",  "2Cor",  "Gal",
+	"Eph",  "Phil", "Col",  "1Thess", "2Thess", "1Tim", "2Tim", "Titus", "Phlm", "Heb", "Jas", "1Pet",
+	"2Pet", "1John", "2John", "3John", "Jude", "Rev",
+};
+
+struct OpenBible {
+	QString name;
+	QString abbrev;
+	QString language;
+	QStringList bookNames = QStringList(66, QString());
+	QVector<QVector<QStringList>> books = QVector<QVector<QStringList>>(66);
+};
+
+void putVerse(OpenBible &bible, int book, int chapter, int verse, const QString &text)
+{
+	if (book < 0 || book >= 66 || chapter < 1 || chapter > 200 || verse < 1 || verse > 200)
+		return;
+	auto &chapters = bible.books[book];
+	while (chapters.size() < chapter)
+		chapters.push_back({});
+	QStringList &verses = chapters[chapter - 1];
+	while (verses.size() < verse)
+		verses << QString();
+	const QString clean = text.simplified();
+	verses[verse - 1] = verses[verse - 1].isEmpty() ? clean : verses[verse - 1] + QLatin1Char(' ') + clean;
+}
+
+/* <XMLBIBLE biblename=...><BIBLEBOOK bnumber bname><CHAPTER cnumber><VERS vnumber> */
+bool readZefania(const QByteArray &data, OpenBible &bible)
+{
+	QXmlStreamReader xml(data);
+	int book = -1, chapter = 0;
+	bool found = false;
+	while (!xml.atEnd()) {
+		xml.readNext();
+		if (!xml.isStartElement())
+			continue;
+		const auto attrs = xml.attributes();
+		if (xml.name() == QStringLiteral("XMLBIBLE")) {
+			bible.name = attrs.value(QStringLiteral("biblename")).toString();
+		} else if (xml.name() == QStringLiteral("title") && bible.name.isEmpty()) {
+			bible.name = xml.readElementText().trimmed();
+		} else if (xml.name() == QStringLiteral("identifier") && bible.abbrev.isEmpty()) {
+			bible.abbrev = xml.readElementText().trimmed();
+		} else if (xml.name() == QStringLiteral("language") && bible.language.isEmpty()) {
+			bible.language = xml.readElementText().trimmed();
+		} else if (xml.name() == QStringLiteral("BIBLEBOOK")) {
+			book = attrs.value(QStringLiteral("bnumber")).toInt() - 1;
+			if (book >= 0 && book < 66)
+				bible.bookNames[book] = attrs.value(QStringLiteral("bname")).toString();
+		} else if (xml.name() == QStringLiteral("CHAPTER")) {
+			chapter = attrs.value(QStringLiteral("cnumber")).toInt();
+		} else if (xml.name() == QStringLiteral("VERS")) {
+			const int verse = attrs.value(QStringLiteral("vnumber")).toInt();
+			putVerse(bible, book, chapter, verse, xml.readElementText(QXmlStreamReader::IncludeChildElements));
+			found = true;
+		}
+	}
+	return found;
+}
+
+/* OSIS: <verse osisID="Gen.1.1">text</verse>, or milestones <verse sID="Gen.1.1"/>text<verse eID/>. */
+bool readOsis(const QByteArray &data, OpenBible &bible)
+{
+	QHash<QString, int> ids;
+	for (int i = 0; i < 66; ++i)
+		ids.insert(QString::fromLatin1(OsisIds[i]).toLower(), i);
+	auto parse = [&](const QString &osisId, int *book, int *chapter, int *verse) {
+		const QStringList parts = osisId.split(QLatin1Char('.'));
+		if (parts.size() < 3)
+			return false;
+		*book = ids.value(parts.at(0).toLower(), -1);
+		*chapter = parts.at(1).toInt();
+		*verse = parts.at(2).toInt();
+		return *book >= 0;
+	};
+
+	QXmlStreamReader xml(data);
+	bool found = false, inVerse = false;
+	int book = -1, chapter = 0, verse = 0;
+	QString text;
+	int noteDepth = 0;
+	while (!xml.atEnd()) {
+		xml.readNext();
+		if (xml.isStartElement()) {
+			const auto attrs = xml.attributes();
+			if (xml.name() == QStringLiteral("title") && bible.name.isEmpty() &&
+			    attrs.value(QStringLiteral("type")).isEmpty() && !inVerse) {
+				bible.name = xml.readElementText().trimmed();
+			} else if (xml.name() == QStringLiteral("osisText")) {
+				bible.abbrev = attrs.value(QStringLiteral("osisIDWork")).toString();
+				bible.language = attrs.value(QStringLiteral("xml:lang")).toString();
+			} else if (xml.name() == QStringLiteral("note")) {
+				++noteDepth;
+			} else if (xml.name() == QStringLiteral("verse")) {
+				const QString start = attrs.hasAttribute(QStringLiteral("sID")) ? attrs.value(QStringLiteral("sID")).toString()
+					: attrs.value(QStringLiteral("osisID")).toString();
+				if (!attrs.value(QStringLiteral("eID")).isEmpty()) {
+					putVerse(bible, book, chapter, verse, text);
+					inVerse = false;
+					text.clear();
+				} else if (parse(start.section(QLatin1Char(' '), 0, 0), &book, &chapter, &verse)) {
+					inVerse = true;
+					text.clear();
+					found = true;
+				}
+			}
+		} else if (xml.isEndElement()) {
+			if (xml.name() == QStringLiteral("note")) {
+				--noteDepth;
+			} else if (xml.name() == QStringLiteral("verse") && inVerse) {
+				putVerse(bible, book, chapter, verse, text);
+				inVerse = false;
+				text.clear();
+			}
+		} else if (xml.isCharacters() && inVerse && noteDepth == 0) {
+			text += xml.text();
+		}
+	}
+	return found;
+}
+} // namespace
+
+QByteArray BibleCatalog::ImportOpenFormat(const QByteArray &data, const QString &fallbackName, QString *error,
+					  int *verseCount)
+{
+	OpenBible bible;
+	const QByteArray head = data.left(4096);
+	bool ok = false;
+	if (head.contains("<XMLBIBLE") || head.contains("<xmlbible"))
+		ok = readZefania(data, bible);
+	else if (head.contains("<osis"))
+		ok = readOsis(data, bible);
+	if (!ok) {
+		if (error)
+			*error = QDialog::tr("No se reconoce la Biblia: se aceptan Zefania XML, OSIS XML y Biblias de WorshipStudio.");
+		return {};
+	}
+
+	int verses = 0;
+	QJsonArray books;
+	for (int b = 0; b < 66; ++b) {
+		QJsonArray chapters;
+		for (const QStringList &chapter : bible.books[b]) {
+			QJsonArray verseArray;
+			for (const QString &text : chapter) {
+				verseArray.append(text);
+				verses += text.isEmpty() ? 0 : 1;
+			}
+			chapters.append(verseArray);
+		}
+		const QString name = bible.bookNames[b].trimmed();
+		books.append(QJsonObject{{QStringLiteral("name"), name.isEmpty() ? QString::fromUtf8(SpanishNames[b]) : name},
+					 {QStringLiteral("chapters"), chapters}});
+	}
+	if (verseCount)
+		*verseCount = verses;
+
+	const QString name = bible.name.isEmpty() ? fallbackName : bible.name;
+	const QString abbrev = bible.abbrev.isEmpty() ? fallbackName.left(12) : bible.abbrev;
+	QJsonObject root{{QStringLiteral("language"), bible.language},
+			 {QStringLiteral("license"), QDialog::tr("Importada por la iglesia")},
+			 {QStringLiteral("books"), books}};
+	const QByteArray header = QJsonDocument(QJsonObject{{QStringLiteral("name"), name}}).toJson(QJsonDocument::Compact);
+	const QByteArray abbrevJson = QJsonDocument(QJsonObject{{QStringLiteral("abbrev"), abbrev}}).toJson(QJsonDocument::Compact);
+	const QByteArray body = QJsonDocument(root).toJson(QJsonDocument::Compact);
+	return header.chopped(1) + "," + abbrevJson.mid(1).chopped(1) + "," + body.mid(1);
 }
 
 QString BibleCatalog::FileName(const QString &translationId)
@@ -368,7 +545,32 @@ bool BibleCatalogDialog::setCatalog(const QByteArray &data)
 		QJsonDocument::fromJson(data).object().value(QStringLiteral("translations")).toArray();
 	if (parsed.isEmpty())
 		return false;
-	translations = parsed;
+	/* The interface language first, then the rest by language and name. */
+	static const QHash<QString, QString> iso3 = {{QStringLiteral("es"), QStringLiteral("spa")},
+						      {QStringLiteral("en"), QStringLiteral("eng")},
+						      {QStringLiteral("pt"), QStringLiteral("por")},
+						      {QStringLiteral("fr"), QStringLiteral("fra")},
+						      {QStringLiteral("de"), QStringLiteral("deu")},
+						      {QStringLiteral("it"), QStringLiteral("ita")},
+						      {QStringLiteral("ko"), QStringLiteral("kor")}};
+	const QString mine = iso3.value(QLocale().name().left(2), QStringLiteral("spa"));
+	QList<QJsonObject> sorted;
+	for (const QJsonValue &value : parsed)
+		sorted << value.toObject();
+	std::stable_sort(sorted.begin(), sorted.end(), [&](const QJsonObject &a, const QJsonObject &b) {
+		const bool aMine = a.value(QStringLiteral("language")).toString() == mine;
+		const bool bMine = b.value(QStringLiteral("language")).toString() == mine;
+		if (aMine != bMine)
+			return aMine;
+		const int byLanguage = QString::localeAwareCompare(languageLabel(a), languageLabel(b));
+		if (byLanguage != 0)
+			return byLanguage < 0;
+		return QString::localeAwareCompare(a.value(QStringLiteral("name")).toString(),
+						   b.value(QStringLiteral("name")).toString()) < 0;
+	});
+	translations = QJsonArray();
+	for (const QJsonObject &object : sorted)
+		translations.append(object);
 	fillLanguages();
 	refill();
 	return true;
@@ -409,7 +611,8 @@ void BibleCatalogDialog::fillLanguages()
 	for (const auto &entry : rest)
 		languageCombo->addItem(entry.first, entry.second);
 
-	const int index = languageCombo->findData(previous.isEmpty() ? QStringLiteral("spa") : previous);
+	/* All languages by default: the interface language is listed first. */
+	const int index = previous.isEmpty() ? 0 : languageCombo->findData(previous);
 	languageCombo->setCurrentIndex(qMax(0, index));
 }
 

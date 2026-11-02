@@ -17,6 +17,7 @@
 
 #include "GuidedTour.hpp"
 #include "AppearanceDialog.hpp"
+#include "MigrationDialog.hpp"
 #include "WorshipOutput.hpp"
 
 #include <obs-frontend-api.h>
@@ -213,10 +214,13 @@ void GuidedTour::buildSteps()
 		};
 	};
 
+	auto *migrate = new QPushButton(tr("¿Venís de otro programa? Traé todo"), extraSlot);
+	migrate->hide();
+	connect(migrate, &QPushButton::clicked, this, [w]() { MigrationDialog::openFor(w); });
 	steps.push_back({tr("Bienvenido a WorshipStudio"),
 			 tr("En un par de minutos te muestro cómo armar tu reunión. Hacé cada paso en la ventana "
 			    "real: lo que tenés que tocar queda iluminado. También podés avanzar con Siguiente."),
-			 {}, {}, {}});
+			 {}, {}, {}, migrate});
 
 	steps.push_back({tr("1. Creá una escena"),
 			 tr("Una escena es lo que se ve en pantalla: la cámara, un video, el púlpito... Tocá <b>+</b> "
@@ -328,6 +332,10 @@ void GuidedTour::showOnFirstRun(QMainWindow *window)
 		return;
 	}
 	WorshipOutput::SetConfigString(ConfigGuide, QStringLiteral("1"));
+	/* Coming from OBS, Holyrics, ProPresenter...: offer to bring everything
+	 * first; the tour waits behind it. */
+	if (!MigrationDialog::detectedPrograms().isEmpty())
+		MigrationDialog::openFor(window);
 	start(window);
 }
 

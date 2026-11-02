@@ -116,7 +116,7 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 	auto *versionRow = new QHBoxLayout();
 	versionRow->addWidget(new QLabel(tr("Version:"), root));
 	versionRow->addWidget(versionCombo, 1);
-	auto *catalogButton = new QPushButton(tr("Más Biblias..."), root);
+	auto *catalogButton = new QPushButton(tr("Más Biblias (1.500+)..."), root);
 	catalogButton->setToolTip(tr("Descargar gratis más de mil traducciones en cientos de idiomas"));
 	versionRow->addWidget(catalogButton);
 	versionRow->addWidget(importButton);
@@ -326,25 +326,57 @@ void BibleDock::setBackgroundFile(const QString &path)
 
 void BibleDock::onImportVersionClicked()
 {
-	const QString file = QFileDialog::getOpenFileName(this, tr("Importar version de la Biblia"), QDir::homePath(),
-							  tr("Biblia WorshipStudio (*.json)"));
+	const QString file = QFileDialog::getOpenFileName(
+		this, tr("Importar version de la Biblia"), QDir::homePath(),
+		tr("Biblias (*.json *.xml *.osis);;Zefania u OSIS (*.xml *.osis);;Biblia WorshipStudio (*.json)"));
 	if (file.isEmpty())
 		return;
+	importBibleFile(file);
+}
+
+bool BibleDock::importBibleFile(const QString &file)
+{
+	QFile input(file);
+	if (!input.open(QIODevice::ReadOnly)) {
+		statusLabel->setText(tr("No se encuentra el archivo: %1").arg(file));
+		return false;
+	}
+	const QByteArray data = input.readAll();
+	input.close();
 
 	QString error;
-	if (!loadBible(file, &error)) {
-		statusLabel->setText(error);
-		onVersionChanged(versionCombo->currentIndex());
-		return;
-	}
-
-	const QString target = QDir(userBibleDir()).absoluteFilePath(QFileInfo(file).fileName());
-	QFile::remove(target);
-	if (!QFile::copy(file, target)) {
-		statusLabel->setText(tr("No se pudo copiar la version importada."));
-		return;
+	QString target;
+	if (data.trimmed().startsWith('<')) {
+		/* Zefania or OSIS: converted to a WorshipStudio Bible. */
+		int verses = 0;
+		const QByteArray bible =
+			BibleCatalog::ImportOpenFormat(data, QFileInfo(file).completeBaseName(), &error, &verses);
+		if (bible.isEmpty()) {
+			statusLabel->setText(error);
+			return false;
+		}
+		target = QDir(userBibleDir()).absoluteFilePath(QStringLiteral("importada-%1.json")
+								  .arg(QFileInfo(file).completeBaseName()));
+		QFile out(target);
+		if (!out.open(QIODevice::WriteOnly) || out.write(bible) != bible.size()) {
+			statusLabel->setText(tr("No se pudo copiar la version importada."));
+			return false;
+		}
+	} else {
+		if (!loadBible(file, &error)) {
+			statusLabel->setText(error);
+			onVersionChanged(versionCombo->currentIndex());
+			return false;
+		}
+		target = QDir(userBibleDir()).absoluteFilePath(QFileInfo(file).fileName());
+		QFile::remove(target);
+		if (!QFile::copy(file, target)) {
+			statusLabel->setText(tr("No se pudo copiar la version importada."));
+			return false;
+		}
 	}
 	rebuildVersionCombo(target);
+	return true;
 }
 
 void BibleDock::rebuildBackgroundCombo()

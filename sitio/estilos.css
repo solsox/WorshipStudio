@@ -435,3 +435,29 @@ kbd { background: #1A1816; border-color: #2D2A27; color: var(--ink); }
 .device--phone::after { content: ""; position: absolute; top: 20px; left: 50%; width: 30%; height: 22px; transform: translateX(-50%); border-radius: 999px; background: #0A0908; }
 .device--tablet { width: min(860px, 92vw); padding: 18px; border-radius: 34px; }
 .device--tablet .device__screen { border-radius: 18px; }
+
+/* Biblioteca page */
+.lib__in { max-width: 1040px; }
+.lib section { margin-top: 64px; }
+.lib h2 { font-size: clamp(30px, 3.6vw, 44px); margin-bottom: 10px; }
+.lib__nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.lib__nav a { text-decoration: none !important; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); }
+.lib__nav a:hover { border-color: rgba(230, 222, 208, .4); color: var(--ink); }
+.lib__filters { display: grid; grid-template-columns: 1fr 260px; gap: 10px; margin: 18px 0 8px; }
+.lib__filters input, .lib__filters select { font: 500 15px var(--text); color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.lib__count { color: var(--muted); font-size: 14px; }
+.lib__list { list-style: none; padding: 0; margin: 8px 0; max-height: 520px; overflow: auto; border: 1px solid var(--line); border-radius: 16px; }
+.lib__list li { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.lib__list li span { color: var(--muted); font-size: 13px; }
+.lib__note { font-size: 13px; color: var(--muted); }
+.lib__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 18px; }
+.lib__grid figure { margin: 0; }
+.lib__grid img, .lib__grid video { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); display: block; background: #000; }
+.lib__grid figcaption { font-size: 13px; color: var(--ink-2); margin-top: 6px; }
+.lib__grid figcaption em { font-style: normal; font-size: 11px; color: #15120F; background: var(--bone); border-radius: 999px; padding: 2px 7px; margin-left: 4px; }
+.lib__cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 18px; }
+.lib__cards > div { border: 1px solid var(--line); border-radius: 16px; padding: 18px; background: linear-gradient(180deg, rgba(244, 241, 236, .04), rgba(244, 241, 236, .01)); }
+.lib__cards h3 { font-size: 18px; margin-bottom: 6px; }
+.lib__cards p { font-size: 15px; margin: 0; }
+@media (max-width: 640px) { .lib__filters { grid-template-columns: 1fr; } }
+.lib .sub { margin-left: 0; text-align: left; max-width: 62ch; }

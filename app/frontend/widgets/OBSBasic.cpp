@@ -52,6 +52,7 @@
 #include <docks/SongsDock.hpp>
 #include <docks/AppearanceDialog.hpp>
 #include <docks/GuidedTour.hpp>
+#include <docks/MigrationDialog.hpp>
 #include <docks/WorshipLive.hpp>
 #include <docks/WorshipLayout.hpp>
 #include <docks/WorshipRender.hpp>
@@ -1386,6 +1387,13 @@ void OBSBasic::OBSInit()
 		dialog->setAttribute(Qt::WA_DeleteOnClose);
 		dialog->open();
 	});
+
+	/* Bring scenes, songs, Bibles and the hymnal from other programs. */
+	auto *migrateAction =
+		new QAction(QCoreApplication::translate("WorshipStudio", "Traer desde otro programa..."), this);
+	ui->menu_File->insertAction(ui->menu_File->actions().value(0), migrateAction);
+	ui->menu_File->insertSeparator(ui->menu_File->actions().value(1));
+	connect(migrateAction, &QAction::triggered, this, [this]() { MigrationDialog::openFor(this); });
 
 	auto *guideAction = new QAction(QCoreApplication::translate("WorshipStudio", "Guía de inicio de WorshipStudio"), this);
 	ui->menuBasic_MainMenu_Help->insertAction(ui->menuBasic_MainMenu_Help->actions().value(0), guideAction);

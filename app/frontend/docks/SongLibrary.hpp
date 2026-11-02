@@ -55,6 +55,9 @@ QVector<SongSlide> parseText(const QString &text, const QVector<SongSlide> &prev
 /* Imports a .txt (one song, title from the first line or the file name) or
  * a WorshipStudio song .json. */
 bool importFile(const QString &path, Song *song, QString *error);
+/* Every song file under a folder (subfolders too); returns how many were imported. */
+int importFolder(const QString &folder, QStringList *errors = nullptr);
+QStringList importableSuffixes();
 
 /* What the screen shows for a slide (song style + slide overrides). */
 WorshipRender::LyricsSlide lyricsSlide(const Song &song, int index);

@@ -15,6 +15,8 @@ target_sources(
     docks/GuidedTour.hpp
     docks/LanguageDialog.cpp
     docks/LanguageDialog.hpp
+    docks/MigrationDialog.cpp
+    docks/MigrationDialog.hpp
     docks/LiveToolsDock.cpp
     docks/LiveToolsDock.hpp
     docks/PresentationCatalogData.cpp

@@ -47,6 +47,8 @@ public:
 	QStringList versionAbbrevs() const;
 	/* Adds a Bible saved in the user folder and switches to it. */
 	void installVersion(const QString &path);
+	/* Zefania, OSIS or WorshipStudio Bible file, added to the versions. */
+	bool importBibleFile(const QString &file);
 	/* Image or video from Mis fondos for full screen verses. */
 	void setBackgroundFile(const QString &path);
 	static QString userBibleDir();

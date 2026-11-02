@@ -13,7 +13,10 @@
 #include <QStandardPaths>
 #include <QStringDecoder>
 #include <QUuid>
+#include <QDirIterator>
 #include <QXmlStreamReader>
+
+#include <cctype>
 
 #include <algorithm>
 
@@ -399,7 +402,139 @@ bool parseChordPro(const QString &text, Song *song)
 	song->slides = parseText(out.join(QLatin1Char('\n')));
 	return !song->slides.isEmpty();
 }
+/* Plain text out of the RTF that ProPresenter stores for each text box. */
+QString rtfToText(const QByteArray &rtf)
+{
+	QString out;
+	int depth = 0, skipDepth = -1;
+	for (int i = 0; i < rtf.size(); ++i) {
+		const char c = rtf.at(i);
+		if (c == '{') {
+			++depth;
+			if (i + 2 < rtf.size() && rtf.at(i + 1) == '\\' && rtf.at(i + 2) == '*' && skipDepth < 0)
+				skipDepth = depth;
+			continue;
+		}
+		if (c == '}') {
+			if (depth == skipDepth)
+				skipDepth = -1;
+			--depth;
+			continue;
+		}
+		if (skipDepth >= 0)
+			continue;
+		if (c != '\\') {
+			if (c != '\r' && c != '\n')
+				out += QLatin1Char(c);
+			continue;
+		}
+		/* Control word, \'hh hex character or \uN unicode character. */
+		if (i + 1 >= rtf.size())
+			break;
+		const char next = rtf.at(i + 1);
+		if (next == '\'' && i + 3 < rtf.size()) {
+			const int code = rtf.mid(i + 2, 2).toInt(nullptr, 16);
+			out += QString::fromLatin1(QByteArray(1, char(code)));
+			i += 3;
+			continue;
+		}
+		if (next == '\\' || next == '{' || next == '}') {
+			out += QLatin1Char(next);
+			++i;
+			continue;
+		}
+		int j = i + 1;
+		while (j < rtf.size() && std::isalpha(static_cast<unsigned char>(rtf.at(j))))
+			++j;
+		const QByteArray word = rtf.mid(i + 1, j - i - 1);
+		int k = j;
+		if (k < rtf.size() && (rtf.at(k) == '-' || std::isdigit(static_cast<unsigned char>(rtf.at(k))))) {
+			++k;
+			while (k < rtf.size() && std::isdigit(static_cast<unsigned char>(rtf.at(k))))
+				++k;
+		}
+		const QByteArray param = rtf.mid(j, k - j);
+		if (word == "par" || word == "line")
+			out += QLatin1Char('\n');
+		else if (word == "u")
+			out += QChar(ushort(param.toInt()));
+		else if (word == "fonttbl" || word == "colortbl" || word == "stylesheet" || word == "info")
+			skipDepth = depth;
+		if (k < rtf.size() && rtf.at(k) == ' ')
+			++k;
+		/* \uN is followed by a fallback character. */
+		if (word == "u" && k < rtf.size() && rtf.at(k) == '?')
+			++k;
+		i = k - 1;
+	}
+	return out.trimmed();
+}
+
+/* ProPresenter 6 (.pro6): slides with base64 RTF text, grouped by section. */
+bool parseProPresenter(const QByteArray &data, Song *song)
+{
+	QXmlStreamReader xml(data);
+	QString group;
+	QStringList current;
+	auto flush = [&]() {
+		const QString text = current.join(QLatin1Char('\n')).trimmed();
+		if (!text.isEmpty())
+			song->slides.push_back({group, text, false, {}});
+		current.clear();
+	};
+	while (!xml.atEnd()) {
+		xml.readNext();
+		if (!xml.isStartElement())
+			continue;
+		const auto attrs = xml.attributes();
+		if (xml.name() == QStringLiteral("RVPresentationDocument")) {
+			song->title = attrs.value(QStringLiteral("CCLISongTitle")).toString();
+			song->author = attrs.value(QStringLiteral("CCLIAuthor")).toString();
+			song->copyright = attrs.value(QStringLiteral("CCLICopyrightYear")).toString();
+		} else if (xml.name() == QStringLiteral("RVSlideGrouping")) {
+			group = attrs.value(QStringLiteral("name")).toString();
+		} else if (xml.name() == QStringLiteral("RVDisplaySlide")) {
+			flush();
+		} else if (xml.name() == QStringLiteral("NSString") &&
+			   attrs.value(QStringLiteral("rvXMLIvarName")) == QStringLiteral("RTFData")) {
+			const QByteArray rtf = QByteArray::fromBase64(xml.readElementText().toLatin1());
+			const QString text = rtfToText(rtf);
+			if (!text.isEmpty())
+				current << text;
+		}
+	}
+	flush();
+	return !song->slides.isEmpty();
+}
 } // namespace
+
+QStringList importableSuffixes()
+{
+	return {QStringLiteral("txt"), QStringLiteral("json"), QStringLiteral("xml"), QStringLiteral("cho"),
+		QStringLiteral("chopro"), QStringLiteral("chordpro"), QStringLiteral("crd"), QStringLiteral("pro6"),
+		QStringLiteral("song")};
+}
+
+int importFolder(const QString &folder, QStringList *errors)
+{
+	int imported = 0;
+	QDirIterator it(folder, QDir::Files, QDirIterator::Subdirectories);
+	const QStringList suffixes = importableSuffixes();
+	while (it.hasNext()) {
+		const QString path = it.next();
+		const QString suffix = QFileInfo(path).suffix().toLower();
+		/* OpenLP and OpenSong songs often have no extension. */
+		if (!suffix.isEmpty() && !suffixes.contains(suffix))
+			continue;
+		Song song;
+		QString error;
+		if (importFile(path, &song, &error) && save(song, &error))
+			++imported;
+		else if (errors)
+			*errors << QStringLiteral("%1: %2").arg(QFileInfo(path).fileName(), error);
+	}
+	return imported;
+}
 
 bool importFile(const QString &path, Song *song, QString *error)
 {
@@ -425,13 +560,14 @@ bool importFile(const QString &path, Song *song, QString *error)
 
 	const QString suffix = QFileInfo(path).suffix().toLower();
 	const QByteArray head = data.left(512).trimmed();
-	if (head.startsWith("<?xml") || head.startsWith("<song")) {
+	if (head.startsWith("<?xml") || head.startsWith("<song") || head.startsWith("<RVPresentationDocument")) {
 		Song imported;
-		const bool ok = data.contains("openlyrics.info") ? parseOpenLyrics(data, &imported)
-								 : parseOpenSong(data, &imported);
+		const bool ok = data.contains("RVPresentationDocument") ? parseProPresenter(data, &imported)
+				: data.contains("openlyrics.info")      ? parseOpenLyrics(data, &imported)
+									: parseOpenSong(data, &imported);
 		if (!ok) {
 			if (error)
-				*error = QCoreApplication::translate("WorshipStudio", "Formato XML no reconocido (se aceptan OpenLyrics y OpenSong).");
+				*error = QCoreApplication::translate("WorshipStudio", "Formato XML no reconocido (se aceptan OpenLyrics, OpenSong y ProPresenter 6).");
 			return false;
 		}
 		if (imported.title.isEmpty())

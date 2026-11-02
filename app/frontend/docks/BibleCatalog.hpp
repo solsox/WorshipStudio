@@ -30,6 +30,11 @@ QString LicenseText(const QJsonObject &translation);
 QByteArray Convert(const QJsonObject &complete, const QJsonObject &translation, QString *error,
 		   int *verseCount = nullptr);
 
+/* Bibles the church already has in open formats: Zefania XML or OSIS XML.
+ * Returns a WorshipStudio Bible, empty (with `error`) when the file is not one. */
+QByteArray ImportOpenFormat(const QByteArray &data, const QString &fallbackName, QString *error,
+			    int *verseCount = nullptr);
+
 /* File name the converted translation is saved under. */
 QString FileName(const QString &translationId);
 } // namespace BibleCatalog

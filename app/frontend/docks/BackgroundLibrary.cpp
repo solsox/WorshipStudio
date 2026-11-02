@@ -163,7 +163,18 @@ QIcon BackgroundLibrary::Thumbnail(const QString &path)
 	pixmap.fill(QColor(0x22, 0x22, 0x2a));
 	QPainter painter(&pixmap);
 	painter.setRenderHint(QPainter::Antialiasing);
-	if (IsVideo(path)) {
+	/* Bundled videos have a still in "miniaturas"; others get a play mark. */
+	const QString still = QFileInfo(path).dir().absoluteFilePath(QStringLiteral("miniaturas/%1.jpg").arg(QFileInfo(path).completeBaseName()));
+	if (IsVideo(path) && QFileInfo::exists(still)) {
+		const QImage image = QImage(still).scaled(96, 54, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+		painter.drawImage(QPoint((96 - image.width()) / 2, (54 - image.height()) / 2), image);
+		QPainterPath play;
+		play.moveTo(80, 42);
+		play.lineTo(90, 47);
+		play.lineTo(80, 52);
+		play.closeSubpath();
+		painter.fillPath(play, QColor(255, 255, 255, 230));
+	} else if (IsVideo(path)) {
 		QPainterPath play;
 		play.moveTo(40, 15);
 		play.lineTo(62, 27);

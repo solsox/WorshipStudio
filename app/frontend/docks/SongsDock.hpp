@@ -35,6 +35,8 @@ public:
 	obs_scene_t *outputScene() const { return scene; }
 
 public slots:
+	/* Songs were added from outside the dock (migration, folder import). */
+	void reloadLibrary() { reload(); }
 	void nextSlide();
 	void previousSlide();
 	void toggleHidden();
