@@ -30,8 +30,8 @@ target_sources(
     docks/WorshipDocument.hpp
     docks/WorshipLive.cpp
     docks/WorshipLive.hpp
-    docks/WorshipModes.cpp
-    docks/WorshipModes.hpp
+    docks/WorshipLayout.cpp
+    docks/WorshipLayout.hpp
     docks/WorshipOutput.hpp
     docks/WorshipRemote.cpp
     docks/WorshipRemote.hpp

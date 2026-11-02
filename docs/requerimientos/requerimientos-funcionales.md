@@ -156,7 +156,7 @@ Limitaciones conocidas de RF-04.2:
 
 | ID | Requerimiento | Prioridad | Estado |
 |----|---------------|-----------|--------|
-| RF-13.1 | Modo Culto (solo contenido y vista previa) y Modo Técnico (todo OBS), con un botón. | P1 | Hecho |
+| RF-13.1 | Un solo diseño claro (los modos culto/técnico se retiraron: la diferencia no justificaba la confusión). | P1 | Hecho |
 | RF-13.2 | Guía de primera vez (5 pasos con diagramas, conecta el proyector y activa EN ESPERA). | P1 | Hecho |
 | RF-13.6 | Un solo Control en vivo (EN PANTALLA / EN ESPERA, Pasar a pantalla, Anterior, Siguiente, Ocultar, proyector) y atajos globales. | P1 | Hecho |
 | RF-13.7 | En Modo Estudio lo nuevo espera en la vista previa sin tocar la pantalla (escenas A/B por panel); el himno en espera no suena. | P1 | Hecho |

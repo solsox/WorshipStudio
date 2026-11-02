@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
 
 concurrency:
   group: compilar-${{ github.ref }}
@@ -38,6 +43,11 @@ jobs:
         with:
           name: WorshipStudio-macOS-arm64
           path: dist/WorshipStudio-macOS-arm64.zip
+      - name: Adjuntar a la version
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" ../dist/WorshipStudio-macOS-arm64.zip --clobber
 
   windows:
     name: Windows x64
@@ -54,11 +64,22 @@ jobs:
       - name: Compilar
         run: cmake --build --preset windows-x64 --config RelWithDebInfo --parallel
       - name: Instalar
-        run: cmake --install build_x64 --prefix build_x64/install --config RelWithDebInfo
+        run: cmake --install build_x64 --prefix build_x64/WorshipStudio --config RelWithDebInfo
+      - name: Empaquetar
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ../dist | Out-Null
+          "Abri bin\64bit\WorshipStudio.exe para empezar." | Out-File build_x64/WorshipStudio/LEEME.txt -Encoding utf8
+          Compress-Archive -Path build_x64/WorshipStudio -DestinationPath ../dist/WorshipStudio-Windows-x64.zip -Force
       - uses: actions/upload-artifact@v4
         with:
           name: WorshipStudio-Windows-x64
-          path: app/build_x64/install
+          path: dist/WorshipStudio-Windows-x64.zip
+      - name: Adjuntar a la version
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" ../dist/WorshipStudio-Windows-x64.zip --clobber
 
   linux:
     name: Linux (Ubuntu 24.04)
@@ -89,3 +110,25 @@ jobs:
         run: cmake --preset ubuntu -DENABLE_BROWSER=OFF -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF -DCMAKE_BUILD_TYPE=RelWithDebInfo
       - name: Compilar
         run: cmake --build build_ubuntu
+      - name: Empaquetar
+        run: |
+          cmake --install build_ubuntu --prefix "$PWD/WorshipStudio"
+          cat > WorshipStudio/worshipstudio.sh <<'SH'
+          #!/bin/sh
+          # Lanzador: usa las bibliotecas que vienen en esta carpeta.
+          HERE="$(cd "$(dirname "$0")" && pwd)"
+          export LD_LIBRARY_PATH="$HERE/lib:$HERE/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH"
+          exec "$HERE/bin/worshipstudio" "$@"
+          SH
+          chmod +x WorshipStudio/worshipstudio.sh
+          mkdir -p ../dist
+          tar -czf ../dist/WorshipStudio-Linux-x86_64.tar.gz WorshipStudio
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WorshipStudio-Linux-x86_64
+          path: dist/WorshipStudio-Linux-x86_64.tar.gz
+      - name: Adjuntar a la version
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" ../dist/WorshipStudio-Linux-x86_64.tar.gz --clobber

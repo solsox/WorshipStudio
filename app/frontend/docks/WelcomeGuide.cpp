@@ -68,10 +68,10 @@ protected:
 			p.drawText(r.adjusted(4, 4, -4, -4), Qt::AlignCenter | Qt::TextWordWrap, label);
 		};
 
-		box(scenes, panel, tr("Escenas"), text, 0.85);
+		box(scenes, panel, tr("Escenas y fuentes"), text, 0.85);
 		box(left, QColor(0x0E, 0x1F, 0x17), tr("EN ESPERA\nvista previa"), preview);
 		box(right, QColor(0x24, 0x10, 0x12), tr("EN PANTALLA\nlo que ve la gente"), program);
-		box(bottom, panel, tr("Controles: transmitir y grabar"), text, 0.85);
+		box(bottom, panel, tr("Audio · Transiciones · Transmitir y grabar"), text, 0.85);
 		box(column, panel, tr("Orden · Cantos\nHimnario · Biblia\nPresentaciones"), text, 0.85);
 		box(live, panel, tr("Control en vivo\nPasar a pantalla\n◀ ▶  Ocultar"), text, 0.85);
 
@@ -124,7 +124,7 @@ WelcomeGuide::WelcomeGuide(LiveToolsDock *liveTools_, QWidget *parent) : QDialog
 
 	addPage(Everything, tr("Todo lo que va en la pantalla, en un solo lugar"),
 		tr("WorshipStudio proyecta canciones, Biblia, himnarios y presentaciones, y si querés también "
-		   "transmite en vivo. Es OBS Studio por dentro: si ya lo conocés, todo sigue en su lugar."));
+		   "transmite y graba en vivo. Todo desde esta misma ventana."));
 	addPage(Screens, tr("Dos pantallas: lo que preparás y lo que ve la gente"),
 		tr("<b style='color:#30A46C'>EN ESPERA</b> (izquierda) es tu borrador: ahí aparece lo que elegís, "
 		   "y nadie lo ve todavía.<br><b style='color:#E5484D'>EN PANTALLA</b> (derecha) es exactamente lo "
@@ -148,8 +148,8 @@ WelcomeGuide::WelcomeGuide(LiveToolsDock *liveTools_, QWidget *parent) : QDialog
 	projectorLayout->addWidget(studioCheck);
 	addPage(Projector, tr("Conectá el proyector"),
 		tr("Elegí la pantalla donde se proyecta: ahí se mostrará a pantalla completa lo que está EN "
-		   "PANTALLA. Podés cambiarla después con el botón <b>Pantalla del proyector</b>.<br>Abajo a la "
-		   "izquierda alternás entre <b>Modo culto</b> (sencillo) y <b>Modo técnico</b> (todo OBS)."),
+		   "PANTALLA. Podés cambiarla después con el botón <b>Pantalla del proyector</b>.<br>En "
+		   "<b>Ver → Personalizar apariencia</b> elegís modo claro u oscuro y tu color."),
 		projectorBox);
 
 	auto *buttons = new QHBoxLayout();

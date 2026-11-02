@@ -27,22 +27,20 @@ OBSAbout::OBSAbout(QWidget *parent) : QDialog(parent), ui(new Ui::OBSAbout)
 		bitness = " (64 bit)";
 	}
 
-	QString ver = obs_get_version_string();
-
-	ui->version->setText(ver + bitness);
+	ui->version->setText(QStringLiteral("WorshipStudio 0.6.1") + bitness);
 
 	ui->contribute->setText(QTStr("About.Contribute"));
 
 	if (steam) {
 		delete ui->donate;
 	} else {
-		ui->donate->setText("&nbsp;&nbsp;<a href='https://obsproject.com/contribute'>" + QTStr("About.Donate") +
+		ui->donate->setText("&nbsp;&nbsp;<a href='https://github.com/sponsors/solsox'>" + QTStr("About.Donate") +
 				    "</a>");
 		ui->donate->setTextInteractionFlags(Qt::TextBrowserInteraction);
 		ui->donate->setOpenExternalLinks(true);
 	}
 
-	ui->getInvolved->setText("&nbsp;&nbsp;<a href='https://obsproject.com/developer-contributing'>" +
+	ui->getInvolved->setText("&nbsp;&nbsp;<a href='https://github.com/solsox/WorshipStudio'>" +
 				 QTStr("About.GetInvolved") + "</a>");
 	ui->getInvolved->setTextInteractionFlags(Qt::TextBrowserInteraction);
 	ui->getInvolved->setOpenExternalLinks(true);

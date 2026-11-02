@@ -432,7 +432,7 @@ void ServiceDock::addItem(ServiceItem::Kind kind)
 		bfree(names);
 		if (scenes.isEmpty())
 			return;
-		item.value = QInputDialog::getItem(this, tr("Escena"), tr("Escena de OBS"), scenes, 0, false, &ok);
+		item.value = QInputDialog::getItem(this, tr("Escena"), tr("Escena (cámara, video, pantalla...)"), scenes, 0, false, &ok);
 		if (!ok)
 			return;
 		item.title = item.value;

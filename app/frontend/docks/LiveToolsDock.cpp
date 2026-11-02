@@ -392,7 +392,7 @@ void LiveToolsDock::refreshOnAir()
 void LiveToolsDock::registerHotkeys()
 {
 	/* One set for everything on screen: songs, Bible, hymns, presentations.
-	 * They also work with presentation clickers and while OBS is in the
+	 * They also work with presentation clickers and while the app is in the
 	 * background (Settings > Hotkeys). */
 	nextHotkey = obs_hotkey_register_frontend("WorshipStudio.Next", "WorshipStudio: siguiente", hotkeyCall, this);
 	previousHotkey =

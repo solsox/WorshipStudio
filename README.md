@@ -35,7 +35,8 @@ Funciona en **macOS, Windows y Linux**. Licencia **GPL-2.0** (fork de [OBS Studi
 - Clickers, flechas, Re Pág/Av Pág, tecla B para ocultar y atajos globales.
 
 **En vivo**
-- **Modo culto** (solo lo necesario) y **modo técnico** (todo OBS) con un clic.
+- **EN ESPERA / EN PANTALLA**: lo que elegís espera en la vista previa y pasa a la pantalla con un botón.
+- **Personalizar apariencia**: modo claro u oscuro y color principal.
 - **Orden del culto**: cuenta regresiva, himnos, cantos, pasajes, presentaciones, rótulos, anuncios y escenas,
   preparado antes y pasado con un botón. Se guarda como archivo `.wsservice`.
 - **Control desde el celular** por la red local (página web con PIN y código QR, sin instalar nada).

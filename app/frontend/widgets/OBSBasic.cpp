@@ -47,7 +47,7 @@
 #include <docks/AppearanceDialog.hpp>
 #include <docks/WelcomeGuide.hpp>
 #include <docks/WorshipLive.hpp>
-#include <docks/WorshipModes.hpp>
+#include <docks/WorshipLayout.hpp>
 #include <docks/WorshipRender.hpp>
 #include <docks/WorshipSelfTest.hpp>
 #include <settings/OBSBasicSettings.hpp>
@@ -1333,7 +1333,6 @@ void OBSBasic::OBSInit()
 	config_set_bool(App()->GetUserConfig(), "WorshipStudio", "PresentationDockPlaced", true);
 	config_set_bool(App()->GetUserConfig(), "WorshipStudio", "SongsDockPlaced", true);
 
-	/* Modo culto (simple) / Modo tecnico (all of OBS). */
 	/* Content requested from the phone remote. */
 	WorshipLive &live = WorshipLive::instance();
 	connect(&live, &WorshipLive::hymnRequested, hymnalDock,
@@ -1344,10 +1343,10 @@ void OBSBasic::OBSInit()
 	connect(&live, &WorshipLive::countdownRequested, liveToolsDock,
 		[liveToolsDock](int minutes) { liveToolsDock->startCountdown(minutes, QString()); });
 
-	auto *modes = new WorshipModes(this, ui->viewMenu, ui->statusbar, liveToolsDock,
-				       {serviceDock, songsDock, hymnalDock, bibleDock, presentationDock},
-				       [this]() { on_resetDocks_triggered(true); });
-	QTimer::singleShot(0, modes, &WorshipModes::restore);
+	auto *layout = new WorshipLayout(this, ui->viewMenu, liveToolsDock,
+					 {serviceDock, songsDock, hymnalDock, bibleDock, presentationDock},
+					 [this]() { on_resetDocks_triggered(true); });
+	QTimer::singleShot(0, layout, &WorshipLayout::restore);
 
 	auto *appearanceAction = new QAction(QStringLiteral("Personalizar apariencia..."), this);
 	ui->viewMenu->insertAction(ui->viewMenu->actions().value(0), appearanceAction);

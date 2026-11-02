@@ -2,12 +2,13 @@
 (function () {
   var ua = navigator.userAgent || "";
   var platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "";
-  var isMac = /Mac/i.test(platform + ua) && !/iPhone|iPad/i.test(ua);
-  if (isMac) {
-    var mac = document.getElementById("dl-mac");
-    if (mac) mac.classList.add("is-detected");
+  var os = /iPhone|iPad|Android/i.test(ua) ? "" : /Mac/i.test(platform + ua) ? "mac" : /Win/i.test(platform + ua) ? "win" : /Linux|X11/i.test(platform + ua) ? "linux" : "";
+  var names = { mac: "Mac", win: "Windows", linux: "Linux" };
+  if (os) {
+    var card = document.getElementById("dl-" + os);
+    if (card) card.classList.add("is-detected");
     var cta = document.getElementById("cta-principal");
-    if (cta) cta.textContent = "Descargar gratis para Mac";
+    if (cta) cta.textContent = "Descargar gratis para " + names[os];
   }
 
   /* Accessible tabs (arrow keys move between them). */
