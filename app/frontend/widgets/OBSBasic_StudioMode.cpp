@@ -49,6 +49,7 @@ QString FriendlySceneName(obs_source_t *scene)
 void OBSBasic::CreateProgramDisplay()
 {
 	program = new OBSQTDisplay();
+	program->setObjectName(QStringLiteral("programDisplay"));
 
 	program->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(program.data(), &QWidget::customContextMenuRequested, this, &OBSBasic::ProgramViewContextMenuRequested);

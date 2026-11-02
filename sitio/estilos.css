@@ -302,3 +302,95 @@ mark::after { content: ""; position: absolute; left: -2%; right: -2%; bottom: .0
 .legal p, .legal li { color: var(--ink-2); line-height: 1.65; }
 .legal ul { padding-left: 20px; }
 .legal a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ======================================================================
+   Night edition: one deep black page with warm light, like the app
+   (ink black, bone buttons, ember glow from the logo).
+   ====================================================================== */
+:root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+  --bg: #070605;
+  --sand: #0D0B0A;
+  --card: #12100E;
+  --ink: #F4F1EC;
+  --ink-2: #CBC4BA;
+  --muted: #8F877D;
+  --line: rgba(244, 241, 236, .09);
+  --bone: #E6DED0;
+  --ember-soft: rgba(226, 88, 43, .14);
+  --no: #4A433D;
+  --shadow: 0 30px 80px -30px rgba(0, 0, 0, .8);
+}
+body { background: var(--bg); color: var(--ink); }
+::selection { background: rgba(230, 222, 208, .25); }
+
+/* Type: tighter, bigger, calmer */
+h1, h2 { letter-spacing: -.045em; font-weight: 700; }
+h2 { font-size: clamp(36px, 5vw, 64px); }
+.sub, .hero__lead { color: var(--muted); }
+.eyebrow { color: var(--muted); letter-spacing: .12em; }
+
+/* Navigation as a floating glass bar */
+.nav { background: rgba(7, 6, 5, .6) !important; backdrop-filter: saturate(140%) blur(14px); -webkit-backdrop-filter: saturate(140%) blur(14px); border-bottom: 1px solid var(--line); }
+.nav__links a { color: var(--ink-2); }
+.nav__links a:hover { color: var(--ink); }
+
+/* Pill buttons: bone primary, quiet ghost */
+.btn { border-radius: 999px !important; }
+.btn--primary { background: linear-gradient(180deg, #F4EFE6, #E2D9C9) !important; color: #15120F !important; border: 1px solid rgba(255, 255, 255, .5) !important; box-shadow: 0 10px 30px -12px rgba(230, 222, 208, .45), inset 0 1px 0 rgba(255, 255, 255, .8) !important; }
+.btn--primary:hover { background: #F7F3EC !important; transform: translateY(-1px); }
+.btn--ghost { background: rgba(244, 241, 236, .05) !important; color: var(--ink) !important; border: 1px solid var(--line) !important; }
+.btn--ghost:hover { background: rgba(244, 241, 236, .09) !important; }
+.pill { background: rgba(244, 241, 236, .05); border: 1px solid var(--line); color: var(--ink-2); }
+.pill__new { background: var(--bone); color: #15120F; }
+
+/* Hero */
+.hero { position: relative; overflow: hidden; padding-bottom: 0; }
+.hero::before { content: ""; position: absolute; inset: -20% -10% auto; height: 900px; background:
+  radial-gradient(40% 50% at 50% 30%, rgba(226, 88, 43, .22), transparent 70%),
+  radial-gradient(30% 40% at 30% 10%, rgba(230, 222, 208, .10), transparent 70%),
+  radial-gradient(30% 40% at 70% 15%, rgba(140, 70, 160, .12), transparent 70%);
+  pointer-events: none; }
+.hero__in { position: relative; text-align: center; }
+.hero h1 { font-size: clamp(48px, 8vw, 104px); line-height: .98; }
+.hero__lead { max-width: 640px; margin-left: auto; margin-right: auto; font-size: clamp(17px, 1.6vw, 20px); }
+.hero__lead b { color: var(--ink); font-weight: 600; }
+.hero__os a { color: var(--ink-2); }
+.assure { color: var(--muted); }
+
+/* The app in a window with light behind it */
+.showcase { position: relative; margin-top: clamp(48px, 7vw, 88px); padding-bottom: clamp(40px, 6vw, 80px); }
+.showcase__glow { position: absolute; left: 8%; right: 8%; top: 8%; bottom: 10%; background: radial-gradient(50% 60% at 50% 40%, rgba(226, 88, 43, .45), rgba(140, 60, 120, .18) 50%, transparent 75%); filter: blur(60px); pointer-events: none; }
+.window { position: relative; border-radius: 16px; overflow: hidden; background: #0B0A09; border: 1px solid rgba(244, 241, 236, .14); box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 40px 120px -30px rgba(0, 0, 0, .9), 0 0 80px -20px rgba(226, 88, 43, .35); }
+.window__bar { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px; background: linear-gradient(180deg, #1B1917, #141210); border-bottom: 1px solid rgba(244, 241, 236, .08); }
+.window__bar i { width: 12px; height: 12px; border-radius: 50%; background: #3A3632; }
+.window__bar i:nth-child(1) { background: #FF5F57; } .window__bar i:nth-child(2) { background: #FEBC2E; } .window__bar i:nth-child(3) { background: #28C840; }
+.window__bar span { flex: 1; text-align: center; margin-right: 52px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.window img { width: 100%; }
+
+/* Statement block */
+.statement { padding: clamp(80px, 12vw, 160px) 0; text-align: center; }
+.statement p { margin: 0 auto; max-width: 18ch; font-size: clamp(34px, 5.4vw, 72px); line-height: 1.05; letter-spacing: -.045em; font-weight: 700; color: var(--ink); }
+.statement span { color: var(--muted); }
+
+/* Sections and cards */
+.section--sand { background: transparent !important; }
+.section--ink { background: radial-gradient(60% 80% at 50% 0%, rgba(226, 88, 43, .10), transparent 70%), #0A0908 !important; }
+.works { background: transparent; border-color: var(--line); }
+.feat, .dl, .panel, .card, .vs, details, .steps li, .guide, .tile figcaption {
+  border-color: var(--line) !important; }
+.feat, .dl, .card { background: linear-gradient(180deg, rgba(244, 241, 236, .045), rgba(244, 241, 236, .015)) !important; border: 1px solid var(--line) !important; border-radius: 18px !important; box-shadow: none !important; transition: border-color .2s, transform .2s; }
+.feat:hover, .dl:hover, .card:hover { border-color: rgba(230, 222, 208, .28) !important; transform: translateY(-2px); }
+.feat svg { stroke: var(--bone) !important; }
+.panel { background: linear-gradient(180deg, rgba(244, 241, 236, .04), rgba(244, 241, 236, .01)) !important; border: 1px solid var(--line); border-radius: 22px; }
+.tabs { background: rgba(244, 241, 236, .04) !important; border: 1px solid var(--line); border-radius: 999px; }
+.tabs [role="tab"][aria-selected="true"] { background: var(--bone) !important; color: #15120F !important; }
+.tabs [role="tab"] { border-radius: 999px; color: var(--ink-2); }
+mark { background: none; color: var(--bone); }
+kbd { background: #1A1816; border-color: #2D2A27; color: var(--ink); }
+.ticks li::before { color: var(--bone); }
+.guide img, .panel__media img { border-radius: 14px; border: 1px solid var(--line); }
+.footer { border-top: 1px solid var(--line); background: #050403; }
+.final { background: radial-gradient(50% 70% at 50% 100%, rgba(226, 88, 43, .22), transparent 70%); }
+.sticker { background: var(--bone); color: #15120F; }
+.showcase { padding-bottom: 24px; }
+.works { padding-top: 24px; }

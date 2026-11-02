@@ -38,6 +38,8 @@ jobs:
       - name: Empaquetar
         run: |
           mkdir -p ../dist
+          # Third-party plugins (submodules) also say WorshipStudio
+          python3 ../herramientas/limpiar-marca.py build_macos/frontend/RelWithDebInfo/WorshipStudio.app
           ditto -c -k --keepParent build_macos/frontend/RelWithDebInfo/WorshipStudio.app ../dist/WorshipStudio-macOS-arm64.zip
           # Disk image: drag WorshipStudio onto Applications
           mkdir -p dmg && ditto build_macos/frontend/RelWithDebInfo/WorshipStudio.app dmg/WorshipStudio.app
@@ -75,6 +77,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force ../dist | Out-Null
+          python ../herramientas/limpiar-marca.py build_x64/WorshipStudio
           "Abri bin\64bit\WorshipStudio.exe para empezar." | Out-File build_x64/WorshipStudio/LEEME.txt -Encoding utf8
           Compress-Archive -Path build_x64/WorshipStudio -DestinationPath ../dist/WorshipStudio-Windows-x64.zip -Force
       - name: Instalador
@@ -131,6 +134,7 @@ jobs:
       - name: Empaquetar
         run: |
           cmake --install build_ubuntu --prefix "$PWD/WorshipStudio"
+          python3 ../herramientas/limpiar-marca.py WorshipStudio
           cat > WorshipStudio/worshipstudio.sh <<'SH'
           #!/bin/sh
           # Lanzador: usa las bibliotecas que vienen en esta carpeta.

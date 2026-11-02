@@ -120,7 +120,8 @@ void OBSBasic::CreateFiltersWindow(obs_source_t *source)
 void OBSBasic::updateCheckFinished()
 {
 	ui->actionCheckForUpdates->setEnabled(true);
-	ui->actionRepair->setEnabled(true);
+	if (ui->actionRepair)
+		ui->actionRepair->setEnabled(true);
 }
 
 void OBSBasic::ResetUI()
@@ -373,14 +374,16 @@ void OBSBasic::on_actionUploadLastCrashLog_triggered()
 
 void OBSBasic::on_actionCheckForUpdates_triggered()
 {
-	CheckForUpdates(true);
+	/* WorshipStudio updates are downloaded from its releases page. */
+	QDesktopServices::openUrl(QUrl("https://github.com/solsox/WorshipStudio/releases/latest", QUrl::TolerantMode));
 }
 
 void OBSBasic::on_actionRepair_triggered()
 {
 #if defined(_WIN32)
 	ui->actionCheckForUpdates->setEnabled(false);
-	ui->actionRepair->setEnabled(false);
+	if (ui->actionRepair)
+		ui->actionRepair->setEnabled(false);
 
 	if (updateCheckThread && updateCheckThread->isRunning()) {
 		return;
@@ -419,19 +422,19 @@ void OBSBasic::logUploadFinished(const std::string &text, const std::string &err
 
 void OBSBasic::on_actionHelpPortal_triggered()
 {
-	QUrl url = QUrl("https://obsproject.com/help", QUrl::TolerantMode);
+	QUrl url = QUrl("https://solsox.github.io/WorshipStudio/#preguntas", QUrl::TolerantMode);
 	QDesktopServices::openUrl(url);
 }
 
 void OBSBasic::on_actionWebsite_triggered()
 {
-	QUrl url = QUrl("https://obsproject.com", QUrl::TolerantMode);
+	QUrl url = QUrl("https://solsox.github.io/WorshipStudio/", QUrl::TolerantMode);
 	QDesktopServices::openUrl(url);
 }
 
 void OBSBasic::on_actionDiscord_triggered()
 {
-	QUrl url = QUrl("https://obsproject.com/discord", QUrl::TolerantMode);
+	QUrl url = QUrl("mailto:contact.worshipstudio@gmail.com", QUrl::TolerantMode);
 	QDesktopServices::openUrl(url);
 }
 
@@ -457,14 +460,13 @@ void OBSBasic::on_actionShowWhatsNew_triggered()
 
 void OBSBasic::on_actionReleaseNotes_triggered()
 {
-	QString addr("https://github.com/obsproject/obs-studio/releases");
-	QUrl url(QString("%1/%2").arg(addr, obs_get_version_string()), QUrl::TolerantMode);
+	QUrl url("https://github.com/solsox/WorshipStudio/releases", QUrl::TolerantMode);
 	QDesktopServices::openUrl(url);
 }
 
 void OBSBasic::on_actionShowSettingsFolder_triggered()
 {
-	const std::string userConfigPath = App()->userConfigLocation.u8string() + "/obs-studio";
+	const std::string userConfigPath = App()->userConfigLocation.u8string() + "/" OBS_APP_CONFIG_DIR;
 	const QString userConfigLocation = QString::fromStdString(userConfigPath);
 
 	QDesktopServices::openUrl(QUrl::fromLocalFile(userConfigLocation));

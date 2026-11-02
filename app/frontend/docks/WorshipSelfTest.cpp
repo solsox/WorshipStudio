@@ -31,6 +31,8 @@
 #include <QPainter>
 #include <QDockWidget>
 #include <QMainWindow>
+#include <QMenuBar>
+#include <QMenu>
 #include <QFile>
 #include <QFileInfo>
 #include <QImage>
@@ -45,6 +47,34 @@ namespace {
 QImage renderSource(obs_source_t *source)
 {
 	return WorshipOutput::RenderSource(source, WorshipOutput::CanvasWidth(), WorshipOutput::CanvasHeight());
+}
+
+/* A window screenshot with the preview and program screens painted in:
+ * the video displays are native surfaces that grab() leaves black. */
+static QPixmap grabWithScreens(QWidget *window)
+{
+	QPixmap shot = window->grab();
+	QPainter painter(&shot);
+	auto paint = [&](const char *name, obs_source_t *source) {
+		auto *display = window->findChild<QWidget *>(QString::fromLatin1(name));
+		if (!display || !source || !display->isVisible())
+			return;
+		const QRect area(display->mapTo(window, QPoint(0, 0)), display->size());
+		const QImage image = WorshipOutput::RenderSource(source, 1280, 720);
+		if (image.isNull())
+			return;
+		const QSize size = QSize(16, 9).scaled(area.size() - QSize(16, 16), Qt::KeepAspectRatio);
+		painter.fillRect(area, Qt::black);
+		painter.drawImage(QRect(area.center() - QPoint(size.width() / 2, size.height() / 2), size), image);
+	};
+	if (obs_frontend_preview_program_mode_active()) {
+		OBSSourceAutoRelease preview = obs_frontend_get_current_preview_scene();
+		paint("preview", preview);
+	}
+	OBSSourceAutoRelease program = obs_frontend_get_current_scene();
+	paint(obs_frontend_preview_program_mode_active() ? "programDisplay" : "preview", program);
+	painter.end();
+	return shot;
 }
 
 struct SelfTest {
@@ -840,6 +870,15 @@ struct SelfTest {
 				check(hymnal->window()->grab().save(path), QStringLiteral("captura paso %1").arg(step));
 				(*tour)->bubbleWidget()->grab().save(
 					outDir.absoluteFilePath(QStringLiteral("recorrido-globo%1.png").arg(step, 2, 10, QLatin1Char('0'))));
+				/* The window with the bubble on top, as people see it. */
+				QWidget *window = hymnal->window();
+				QPixmap shot = grabWithScreens(window);
+				QPainter painter(&shot);
+				QWidget *bubble = (*tour)->bubbleWidget();
+				const QPoint at = window->mapFromGlobal(bubble->mapToGlobal(QPoint(0, 0)));
+				painter.drawPixmap(at, bubble->grab());
+				painter.end();
+				shot.save(outDir.absoluteFilePath(QStringLiteral("recorrido-completo%1.png").arg(step, 2, 10, QLatin1Char('0'))));
 			});
 		}
 		/* Creating a scene during step 1 finishes it by itself. */
@@ -952,6 +991,35 @@ struct SelfTest {
 		add(200, [=]() { bible->setStyle(WorshipRender::RecommendedFonts().value(0), 0); });
 	}
 
+	/* Every menu (File, Edit, View, Docks, Profile, Scene Collection, Tools,
+	 * Help) speaks of WorshipStudio only. */
+	void addMenuSteps()
+	{
+		add(200, [this]() {
+			log(QStringLiteral("--- Menus ---"));
+			auto *window = qobject_cast<QMainWindow *>(hymnal->window());
+			QStringList found;
+			int count = 0;
+			std::function<void(QMenu *)> walk = [&](QMenu *menu) {
+				for (QAction *action : menu->actions()) {
+					if (action->menu())
+						walk(action->menu());
+					const QString text = action->text();
+					if (text.isEmpty())
+						continue;
+					++count;
+					if (text.contains(QStringLiteral("OBS")) || text.contains(QStringLiteral("Discord")))
+						found << text;
+				}
+			};
+			for (QAction *top : window->menuBar()->actions())
+				if (top->menu())
+					walk(top->menu());
+			check(count > 50 && found.isEmpty(),
+			      QStringLiteral("menus: %1 opciones, sin la marca anterior %2").arg(count).arg(found.join(QStringLiteral(" | "))));
+		});
+	}
+
 	/* Screenshots of the main window with each WorshipStudio dock in front. */
 	void addInterfaceSteps()
 	{
@@ -982,7 +1050,7 @@ struct SelfTest {
 			add(700, [=]() {
 				QWidget *window = hymnal->window();
 				const QString path = outDir.absoluteFilePath(QStringLiteral("interfaz-%1.png").arg(names.at(i)));
-				check(window && window->grab().save(path), QStringLiteral("captura de la interfaz %1").arg(path));
+				check(window && grabWithScreens(window).save(path), QStringLiteral("captura de la interfaz %1").arg(path));
 			});
 		}
 		add(200, [=]() {
@@ -1110,8 +1178,10 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Songs
 		test->addLiveSteps();
 	if (wanted("importar"))
 		test->addImportSteps();
-	if (wanted("interfaz"))
+	if (wanted("interfaz")) {
+		test->addMenuSteps();
 		test->addInterfaceSteps();
+	}
 	if (wanted("cantos"))
 		test->addSongSteps();
 	if (wanted("biblia"))

@@ -204,7 +204,8 @@ void OBSBasic::CheckForUpdates(bool manualUpdate)
 {
 #if _WIN32
 	ui->actionCheckForUpdates->setEnabled(false);
-	ui->actionRepair->setEnabled(false);
+	if (ui->actionRepair)
+		ui->actionRepair->setEnabled(false);
 
 	if (updateCheckThread && updateCheckThread->isRunning()) {
 		return;

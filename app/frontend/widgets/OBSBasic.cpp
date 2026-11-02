@@ -1367,6 +1367,11 @@ void OBSBasic::OBSInit()
 					 {serviceDock, songsDock, hymnalDock, bibleDock, presentationDock},
 					 [this]() { on_resetDocks_triggered(true); });
 	QTimer::singleShot(0, layout, &WorshipLayout::restore);
+	/* Resetting the interface or the docks brings back WorshipStudio's
+	 * arrangement, not the stock one without its panels. */
+	for (QAction *reset : {ui->resetUI, ui->resetDocks})
+		connect(reset, &QAction::triggered, layout,
+			[layout]() { QTimer::singleShot(0, layout, &WorshipLayout::applyLayout); });
 
 	/* A personalized theme is a copy of the bundled one: rebuild it so
 	 * updates to WorshipStudio's look reach people who customized it. */
@@ -1498,19 +1503,26 @@ void OBSBasic::OBSInit()
 	ui->actionShowMacPermissions = nullptr;
 #endif
 
-#if defined(_WIN32) || defined(__APPLE__)
-	if (App()->IsUpdaterDisabled()) {
-		ui->actionCheckForUpdates->setEnabled(false);
+	/* WorshipStudio's Help menu: no repair or "what's new" from the original
+	 * project's servers, no log uploads to them and no Discord. Logs can still
+	 * be opened and viewed; "Check for updates" opens WorshipStudio's
+	 * downloads. */
 #if defined(_WIN32)
-		ui->actionRepair->setEnabled(false);
+	delete ui->actionRepair;
+	ui->actionRepair = nullptr;
 #endif
-	}
-#endif
-
-#ifndef WHATSNEW_ENABLED
 	delete ui->actionShowWhatsNew;
 	ui->actionShowWhatsNew = nullptr;
-#endif
+	delete ui->actionDiscord;
+	ui->actionDiscord = nullptr;
+	delete ui->actionUploadCurrentLog;
+	ui->actionUploadCurrentLog = nullptr;
+	delete ui->actionUploadLastLog;
+	ui->actionUploadLastLog = nullptr;
+	if (ui->actionUploadLastCrashLog) {
+		delete ui->actionUploadLastCrashLog;
+		ui->actionUploadLastCrashLog = nullptr;
+	}
 
 	if (safe_mode) {
 		ui->actionRestartSafe->setText(QTStr("Basic.MainMenu.Help.RestartNormal"));

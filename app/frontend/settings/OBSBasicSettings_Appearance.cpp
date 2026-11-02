@@ -1,6 +1,7 @@
 #include "OBSBasicSettings.hpp"
 
 #include <OBSApp.hpp>
+#include <ui-config.h>
 #include <utility/platform.hpp>
 
 #include <qt-wrappers.hpp>
@@ -12,7 +13,10 @@ void OBSBasicSettings::InitAppearancePage()
 
 	for (const OBSTheme &theme : App()->GetThemes()) {
 		if (theme.isBaseTheme && (HighContrastEnabled() || theme.isVisible || theme.id == currentBaseTheme)) {
-			ui->theme->addItem(theme.name, theme.id);
+			/* The base theme carries WorshipStudio's own variants. */
+			ui->theme->addItem(theme.id == QStringLiteral("com.obsproject.Yami") ? QStringLiteral("WorshipStudio")
+											     : theme.name,
+					   theme.id);
 		}
 	}
 
@@ -66,12 +70,19 @@ void OBSBasicSettings::LoadThemeList(bool reload)
 		if (theme.isBaseTheme || theme.parent != baseThemeId) {
 			continue;
 		}
+		/* Only WorshipStudio's looks (dark, light, personalized), not the stock ones. */
+		if (theme.id.startsWith(QStringLiteral("com.obsproject.Yami"))) {
+			continue;
+		}
 
 		ui->themeVariant->addItem(theme.name, theme.id);
 		if (baseTheme && theme.filename == baseTheme->filename) {
 			defaultVariant = theme.id;
 		}
 	}
+
+	if (ui->themeVariant->findData(QStringLiteral(DEFAULT_THEME)) != -1)
+		defaultVariant = QStringLiteral(DEFAULT_THEME);
 
 	int idx = ui->themeVariant->findData(currentTheme->id);
 	if (idx != -1) {
