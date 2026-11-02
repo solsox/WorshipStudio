@@ -44,7 +44,7 @@
         <ul class="assure" aria-label="Garantías">
           <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Gratis para siempre</li>
           <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Sin cuentas ni internet</li>
-          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Basado en OBS Studio</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Código abierto</li>
         </ul>
       </div>
       <div class="wrap">
@@ -198,8 +198,8 @@
           <div class="vs__row vs__head" role="row">
             <span role="columnheader"></span>
             <span role="columnheader" class="vs__us"><img src="logo.svg" alt="" width="40" height="40">WorshipStudio<em class="sticker">Gratis</em></span>
-            <span role="columnheader">Programa de letras pago + OBS</span>
-            <span role="columnheader">Solo OBS</span>
+            <span role="columnheader">Programa de letras pago + programa de transmisión</span>
+            <span role="columnheader">Solo un programa de transmisión</span>
           </div>
           <div class="vs__row" role="row"><span role="rowheader">Canciones, Biblia e himnarios</span><span class="y" role="cell" aria-label="Sí"></span><span class="y" role="cell" aria-label="Sí"></span><span class="n" role="cell" aria-label="No"></span></div>
           <div class="vs__row" role="row"><span role="rowheader">PowerPoint y PDF diapositiva por diapositiva</span><span class="y" role="cell" aria-label="Sí"></span><span class="y" role="cell" aria-label="Sí"></span><span class="n" role="cell" aria-label="No"></span></div>
@@ -228,7 +228,7 @@
         <img src="img/guia.jpg" alt="Guía de inicio de WorshipStudio: paso 2, las dos pantallas EN ESPERA y EN PANTALLA" loading="lazy" width="1200" height="1042">
         <div>
           <h3>La primera vez, te guía paso a paso.</h3>
-          <p>Al abrirlo, una guía corta te muestra qué hace cada parte de la ventana y te ayuda a conectar el proyector. Si ya usás OBS, todo está donde lo esperás.</p>
+          <p>Al abrirlo, una guía corta te muestra qué hace cada parte de la ventana y te ayuda a conectar el proyector. En pocos minutos estás proyectando.</p>
         </div>
       </div>
     </section>
@@ -247,17 +247,17 @@
             <span class="dl__t"><b>macOS</b><small>Apple Silicon · versión 0.6</small></span>
             <span class="btn btn--primary">Descargar</span>
           </a>
-          <a class="dl dl--soon" href="https://github.com/solsox/WorshipStudio/releases">
+          <a class="dl" id="dl-win" href="https://github.com/solsox/WorshipStudio/releases/latest/download/WorshipStudio-Windows-x64.zip">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5 10 4.5v7H3zM11 4.4 21 3v8.5H11zM3 12.5h7v7l-7-1zM11 12.5h10V21l-10-1.4z"/></svg>
-            <span class="dl__t"><b>Windows</b><small>10 y 11 · muy pronto</small></span>
-            <span class="btn btn--ghost">Seguir versiones</span>
+            <span class="dl__t"><b>Windows</b><small>10 y 11 (64 bits) · versión 0.6.1</small></span>
+            <span class="btn btn--primary">Descargar</span>
           </a>
-          <a class="dl dl--soon" href="https://github.com/solsox/WorshipStudio/blob/main/docs/desarrollo/compilar.md">
+          <a class="dl" id="dl-linux" href="https://github.com/solsox/WorshipStudio/releases/latest/download/WorshipStudio-Linux-x86_64.tar.gz">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M6 21c0-4 2.7-7 6-7s6 3 6 7z"/></svg>
-            <span class="dl__t"><b>Linux</b><small>Ubuntu 24.04 · desde el código</small></span>
-            <span class="btn btn--ghost">Instrucciones</span>
+            <span class="dl__t"><b>Linux</b><small>Ubuntu 24.04 · versión 0.6.1</small></span>
+            <span class="btn btn--primary">Descargar</span>
           </a>
-          <details class="note"><summary>¿macOS no deja abrirla la primera vez?</summary><p>Hacé clic derecho sobre WorshipStudio → Abrir → Abrir. Pasa porque todavía no tiene el certificado de Apple, que las donaciones ayudan a pagar.</p></details>
+          <details class="note"><summary>¿Aparece una advertencia la primera vez?</summary><p><b>Mac:</b> clic derecho sobre WorshipStudio → Abrir → Abrir. <b>Windows:</b> descomprimí el zip, abrí <code>bin\64bit\WorshipStudio.exe</code> y, si aparece “Windows protegió su PC”, tocá “Más información” → “Ejecutar de todas formas”. <b>Linux:</b> descomprimí y abrí <code>worshipstudio.sh</code>. Pasa porque todavía no tiene los certificados de Apple y Microsoft, que las donaciones ayudan a pagar.</p></details>
         </div>
       </div>
     </section>
@@ -267,8 +267,8 @@
       <div class="wrap duo">
         <div class="card">
           <p class="eyebrow">Código abierto</p>
-          <h3>Construido sobre OBS Studio, a la vista de todos.</h3>
-          <p>Todo lo que hace OBS sigue funcionando. El código es abierto (GPL-2.0), la app no envía datos y tus canciones son archivos tuyos.</p>
+          <h3>Abierto y transparente, a la vista de todos.</h3>
+          <p>El código es abierto (GPL-2.0): cualquiera puede revisarlo y mejorarlo. La app no envía datos ni pide cuentas, y tus canciones son archivos tuyos.</p>
           <p class="links"><a href="https://github.com/solsox/WorshipStudio" rel="noopener">Ver el código →</a><a href="https://github.com/solsox/WorshipStudio/blob/main/docs/producto/roadmap.md" rel="noopener">Hoja de ruta →</a></p>
         </div>
         <div class="card card--ember" id="donar">
@@ -295,8 +295,8 @@
           <details><summary>¿Sirve para mi congregación?</summary><p>Sirve para cualquier comunidad que cante, lea o presente en una pantalla: iglesias de cualquier denominación, congregaciones, sinagogas, colegios y eventos.</p></details>
           <details><summary>¿Necesito internet?</summary><p>No. Funciona sin conexión; solo hace falta internet para transmitir en vivo.</p></details>
           <details><summary>¿Incluye la Reina-Valera 1960 y los himnarios?</summary><p>Trae seis versiones libres de la Biblia. La RV1960 y los himnarios tienen derechos de autor: cada comunidad puede importarlos si tiene permiso, y estamos gestionando autorizaciones.</p></details>
-          <details><summary>¿Cuándo sale para Windows?</summary><p>El código ya es compatible; el instalador llega en las próximas versiones.</p></details>
-          <details><summary>Ya uso OBS. ¿Pierdo mis escenas?</summary><p>No. WorshipStudio guarda su configuración aparte; podés tener los dos.</p></details>
+          <details><summary>¿Funciona en Windows y Linux?</summary><p>Sí: hay descargas para macOS, Windows 10/11 y Ubuntu. La versión de Windows es nueva; si algo falla, contanos en GitHub.</p></details>
+          <details><summary>¿Puedo usarlo junto a otros programas?</summary><p>Sí. WorshipStudio guarda su configuración aparte y no toca la de otros programas que tengas instalados.</p></details>
         </div>
       </div>
     </section>
@@ -315,7 +315,7 @@
   <footer class="footer">
     <div class="wrap footer__in">
       <a class="brand" href="#"><img src="logo.svg" alt="" width="28" height="28"><span class="wordmark"><em>Worship</em>Studio</span></a>
-      <p>Software libre (GPL-2.0) basado en <a href="https://obsproject.com" rel="noopener">OBS Studio</a>; no afiliado al OBS Project. Fotos de <a href="https://unsplash.com" rel="noopener">Unsplash</a>. Tipografías Inter y DM Serif Display (OFL). Las diapositivas son capturas reales de la app con textos de la Reina-Valera 1909 (dominio público).</p>
+      <p>Software libre (GPL-2.0). Fotos de <a href="https://unsplash.com" rel="noopener">Unsplash</a>. Tipografías Inter y DM Serif Display (OFL). Las diapositivas son capturas reales de la app con textos de la Reina-Valera 1909 (dominio público).</p>
       <nav aria-label="Pie"><a href="https://github.com/solsox/WorshipStudio" rel="noopener">Código</a><a href="https://github.com/solsox/WorshipStudio/releases" rel="noopener">Versiones</a><a href="https://github.com/solsox/WorshipStudio/issues" rel="noopener">Reportar un problema</a></nav>
     </div>
   </footer>
