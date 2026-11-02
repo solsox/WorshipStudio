@@ -108,6 +108,8 @@ mark { background: none; color: var(--ember); position: relative; white-space: n
 mark::after { content: ""; position: absolute; left: -2%; right: -2%; bottom: .04em; height: .18em; background: var(--gold); opacity: .55; border-radius: 4px; z-index: -1; transform: rotate(-1deg); }
 .hero__lead { margin: 24px auto 0; max-width: 36em; font-size: clamp(17px, 1.5vw, 20px); color: var(--ink-2); }
 .hero__cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 32px; }
+.hero__os { margin: 14px 0 0; color: var(--muted); font-size: 14px; text-align: center; }
+.hero__os a { color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .assure { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; list-style: none; padding: 0; margin: 22px 0 0; color: var(--muted); font-size: 14px; }
 .assure li { display: inline-flex; align-items: center; gap: 6px; }
 .assure svg { width: 16px; height: 16px; fill: none; stroke: var(--yes); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
@@ -291,3 +293,12 @@ mark::after { content: ""; position: absolute; left: -2%; right: -2%; bottom: .0
   .dl .btn { grid-column: 1 / -1; }
   .sticker--hero { top: 12px; right: 12px; font-size: 12px; }
 }
+
+/* Licencias */
+.legal { padding: clamp(120px, 14vw, 160px) 0 72px; }
+.legal__in { max-width: 760px; }
+.legal h1 { margin: 0 0 12px; }
+.legal h2 { margin: 40px 0 10px; font-size: 22px; }
+.legal p, .legal li { color: var(--ink-2); line-height: 1.65; }
+.legal ul { padding-left: 20px; }
+.legal a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
