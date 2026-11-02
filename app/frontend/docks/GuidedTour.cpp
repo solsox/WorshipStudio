@@ -24,6 +24,10 @@
 #include <Idian/Utils.hpp>
 
 #include <QApplication>
+#include <QPropertyAnimation>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QTabBar>
 #include <QDockWidget>
 #include <QEvent>
 #include <QHBoxLayout>
@@ -108,11 +112,17 @@ void raiseDock(QMainWindow *window, const char *name)
 }
 } // namespace
 
-GuidedTour::GuidedTour(QMainWindow *window_) : QWidget(window_), window(window_)
+/* The dimmed layer is a transparent window of its own over WorshipStudio's
+ * window: it also covers the video previews (native surfaces) and docks
+ * raised to switch tabs. Clicks go through the lit holes. */
+GuidedTour::GuidedTour(QMainWindow *window_)
+	: QWidget(window_, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowDoesNotAcceptFocus),
+	  window(window_)
 {
-	setAttribute(Qt::WA_TransparentForMouseEvents, false);
+	setAttribute(Qt::WA_TranslucentBackground);
+	setAttribute(Qt::WA_NoSystemBackground);
+	setAttribute(Qt::WA_ShowWithoutActivating);
 	setAttribute(Qt::WA_DeleteOnClose);
-	setGeometry(window->rect());
 	window->installEventFilter(this);
 
 	/* The bubble is its own small floating window: the video previews are
@@ -183,10 +193,7 @@ GuidedTour::GuidedTour(QMainWindow *window_) : QWidget(window_), window(window_)
 	connect(timer, &QTimer::timeout, this, &GuidedTour::refresh);
 
 	buildSteps();
-	show();
-	raise();
-	bubble->show();
-	bubble->raise();
+	timer->setInterval(150);
 	timer->start();
 	goTo(0);
 }
@@ -238,12 +245,14 @@ void GuidedTour::buildSteps()
 				 auto *list = w->findChild<QListWidget *>(QStringLiteral("songsList"));
 				 return list && list->count() > songCount;
 			 }});
+	steps.back().dock = "songsDock";
 
 	steps.push_back({tr("5. Preparalo en espera"),
 			 tr("Hacé <b>doble clic</b> en el canto: aparece <b>EN ESPERA</b>. La congregación todavía no "
 			    "lo ve, así podés revisar que esté bien."),
 			 byName("songsList"), [w]() { raiseDock(w, "songsDock"); },
 			 []() { return previewName().startsWith(QStringLiteral("WS Cantos")); }});
+	steps.back().dock = "songsDock";
 
 	steps.push_back({tr("6. Pasalo a la pantalla"),
 			 tr("Tocá <b>Pasar a pantalla</b>: ahora lo ve la gente. Avanzá con <b>Siguiente ▶</b>, las "
@@ -255,11 +264,13 @@ void GuidedTour::buildSteps()
 			 tr("Escribí una cita como <i>Juan 3:16</i> o una frase, y hacé doble clic en el versículo. "
 			    "<b>Más Biblias</b> descarga otras versiones gratis."),
 			 byName("bibleSearch"), [w]() { raiseDock(w, "bibleDock"); }, {}});
+	steps.back().dock = "bibleDock";
 
 	steps.push_back({tr("8. Organizá la reunión"),
 			 tr("En <b>Orden del culto</b> agregá cantos, himnos, pasajes y anuncios en el orden de la "
 			    "reunión. Durante el culto, <b>Siguiente elemento</b> lleva cada uno a la pantalla."),
 			 byName("serviceDock"), [w]() { raiseDock(w, "serviceDock"); }, {}});
+	steps.back().dock = "serviceDock";
 
 	steps.push_back({tr("9. Conectá el proyector"),
 			 tr("Tocá <b>Pantalla del proyector</b> y elegí el proyector o la TV: ahí se verá a pantalla "
@@ -341,6 +352,8 @@ void GuidedTour::goTo(int index)
 	const Step &step = steps[current];
 	if (step.prepare)
 		step.prepare();
+	if (step.target)
+		scrollIntoView(step.target());
 	snapshot();
 
 	counterLabel->setText(current == 0 || current == stepCount() - 1
@@ -376,24 +389,101 @@ bool GuidedTour::targetVisible() const
 	return target && target->isVisible() && target->width() > 0;
 }
 
+bool GuidedTour::shouldShow() const
+{
+	/* Out of the way while another app, a dialog (naming a scene, the
+	 * appearance window...) or a menu is in front. */
+	if (!window || !window->isVisible() || window->isMinimized())
+		return false;
+	if (QApplication::applicationState() != Qt::ApplicationActive)
+		return false;
+	if (QApplication::activePopupWidget() || QApplication::activeModalWidget())
+		return false;
+	QWidget *active = QApplication::activeWindow();
+	return !active || active == window || active == bubble || active == this;
+}
+
+/* Finds the tab button of a tabbed dock ("Cantos", "Biblia"...). */
+static QRect dockTabRect(QMainWindow *window, const char *dockName)
+{
+	auto *dock = window->findChild<QDockWidget *>(QString::fromLatin1(dockName));
+	if (!dock)
+		return {};
+	for (QTabBar *bar : window->findChildren<QTabBar *>(Qt::FindDirectChildrenOnly)) {
+		if (!bar->isVisible())
+			continue;
+		for (int i = 0; i < bar->count(); ++i) {
+			if (bar->tabText(i) == dock->windowTitle()) {
+				const QRect tab = bar->tabRect(i);
+				return QRect(bar->mapTo(window, tab.topLeft()), tab.size());
+			}
+		}
+	}
+	return {};
+}
+
+void GuidedTour::scrollIntoView(QWidget *target)
+{
+	if (!target)
+		return;
+	/* Panels like En vivo scroll: glide to the button being explained. */
+	for (QWidget *parent = target->parentWidget(); parent; parent = parent->parentWidget()) {
+		auto *area = qobject_cast<QScrollArea *>(parent);
+		if (!area || !area->widget())
+			continue;
+		const int y = target->mapTo(area->widget(), QPoint(0, 0)).y();
+		const int wanted = qMax(0, y - (area->viewport()->height() - target->height()) / 2);
+		QScrollBar *bar = area->verticalScrollBar();
+		const int to = qBound(bar->minimum(), wanted, bar->maximum());
+		if (to == bar->value())
+			return;
+		auto *animation = new QPropertyAnimation(bar, "value", this);
+		animation->setDuration(650);
+		animation->setEasingCurve(QEasingCurve::InOutCubic);
+		animation->setStartValue(bar->value());
+		animation->setEndValue(to);
+		animation->start(QAbstractAnimation::DeleteWhenStopped);
+		return;
+	}
+}
+
 void GuidedTour::refresh()
 {
 	if (!window || current < 0)
 		return;
-	setGeometry(window->rect());
+
+	const bool show_ = shouldShow();
+	setVisible(show_);
+	bubble->setVisible(show_);
+	if (!show_)
+		return;
+
+	/* Same place and size as the window's contents. */
+	setGeometry(QRect(window->mapToGlobal(QPoint(0, 0)), window->size()));
 
 	const Step &step = steps[current];
+	holes.clear();
 	QWidget *target = step.target ? step.target() : nullptr;
-	if (target && target->isVisible())
-		hole = QRect(target->mapTo(window, QPoint(0, 0)), target->size()).adjusted(-6, -6, 6, 6);
-	else
-		hole = QRect();
+	if (target && target->isVisible()) {
+		/* Only the part that can be seen (a scrolled panel cuts it). */
+		const QRect visible = target->visibleRegion().boundingRect();
+		if (!visible.isEmpty())
+			holes << QRect(target->mapTo(window, visible.topLeft()), visible.size())
+					 .adjusted(-6, -6, 6, 6)
+					 .intersected(window->rect());
+	}
+	if (step.dock) {
+		const QRect tab = dockTabRect(window, step.dock);
+		if (!tab.isEmpty())
+			holes << tab.adjusted(-3, -3, 3, 3);
+	}
 
-	/* Clicks inside the hole reach the real window. */
+	/* Clicks inside the holes reach the real window. */
 	QRegion mask(rect());
-	if (!hole.isNull())
+	for (const QRect &hole : holes)
 		mask = mask.subtracted(QRegion(hole));
 	setMask(mask);
+	raise();
 
 	if (!finishedStep && step.done && step.done()) {
 		finishedStep = true;
@@ -414,6 +504,7 @@ void GuidedTour::placeBubble()
 	bubble->adjustSize();
 	const QSize size = bubble->size();
 	const QRect area = window->rect().adjusted(16, 16, -16, -16);
+	const QRect hole = holes.value(0);
 	QPoint pos;
 	if (hole.isNull()) {
 		pos = area.center() - QPoint(size.width() / 2, size.height() / 2);
@@ -438,17 +529,16 @@ void GuidedTour::paintEvent(QPaintEvent *)
 	p.setRenderHint(QPainter::Antialiasing);
 	QPainterPath dim;
 	dim.addRect(rect());
-	if (!hole.isNull()) {
+	for (const QRect &hole : holes) {
 		QPainterPath cut;
 		cut.addRoundedRect(hole, 10, 10);
 		dim = dim.subtracted(cut);
 	}
-	p.fillPath(dim, QColor(8, 7, 6, 165));
-	if (!hole.isNull()) {
-		p.setPen(QPen(QColor(0xE6, 0xDE, 0xD0), 2.5));
-		p.setBrush(Qt::NoBrush);
+	p.fillPath(dim, QColor(8, 7, 6, 170));
+	p.setPen(QPen(QColor(0xE6, 0xDE, 0xD0), 2.5));
+	p.setBrush(Qt::NoBrush);
+	for (const QRect &hole : holes)
 		p.drawRoundedRect(QRectF(hole).adjusted(1, 1, -1, -1), 10, 10);
-	}
 }
 
 bool GuidedTour::eventFilter(QObject *watched, QEvent *event)

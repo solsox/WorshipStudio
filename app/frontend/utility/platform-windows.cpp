@@ -408,10 +408,10 @@ void TaskbarOverlaySetStatus(TaskbarOverlayStatus status)
 	QIcon qicon;
 	switch (status) {
 	case TaskbarOverlayStatusActive:
-		qicon = QIcon::fromTheme("obs-active", QIcon(":/res/images/active.png"));
+		qicon = QIcon(":/res/images/active.png");
 		break;
 	case TaskbarOverlayStatusPaused:
-		qicon = QIcon::fromTheme("obs-paused", QIcon(":/res/images/paused.png"));
+		qicon = QIcon(":/res/images/paused.png");
 		break;
 	case TaskbarOverlayStatusInactive:
 		taskbarIcon->SetOverlayIcon(hwnd, nullptr, nullptr);

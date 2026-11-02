@@ -12,6 +12,7 @@
   <meta name="theme-color" content="#16110F">
   <link rel="icon" href="logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="estilos.css">
+  <link rel="stylesheet" href="demo.css">
 </head>
 <body>
   <a class="skip" href="#contenido">Saltar al contenido</a>
@@ -50,10 +51,45 @@
       </div>
       <div class="wrap showcase">
         <div class="showcase__glow" aria-hidden="true"></div>
-        <div class="window">
-          <div class="window__bar" aria-hidden="true"><i></i><i></i><i></i><span>WorshipStudio</span></div>
-          <img src="img/app.jpg" alt="WorshipStudio: un canto EN ESPERA a la izquierda, un salmo EN PANTALLA a la derecha y el Control en vivo con el botón Pasar a pantalla" width="2000" height="1305">
+        <div class="window demo" id="demo" data-os="mac" tabindex="0" aria-label="Demostración interactiva de WorshipStudio">
+          <div class="window__bar demo__bar" aria-hidden="true"><i></i><i></i><i></i><span>WorshipStudio</span><b class="demo__win"><em>—</em><em>▢</em><em>✕</em></b></div>
+          <div class="demo__fit"><div class="demo__app">
+            <aside class="d-col d-left">
+              <div class="d-dock"><h5>Escenas</h5><ul class="d-list" id="d-scenes"><li data-scene="camara">Cámara</li><li data-scene="pulpito">Púlpito</li><li data-scene="anuncios">Anuncios</li></ul><div class="d-tools">+ &nbsp;🗑</div></div>
+              <div class="d-dock"><h5>Fuentes</h5><ul class="d-list d-src" id="d-sources"><li>📷 Cámara principal</li><li>🎤 Micrófono púlpito</li><li>🖼 Logo de la iglesia</li></ul></div>
+            </aside>
+            <main class="d-col d-mid">
+              <div class="d-screens">
+                <figure class="d-screen" id="d-wait"><figcaption>EN ESPERA · <span>Vista previa</span></figcaption><div class="d-slide"></div></figure>
+                <div class="d-trans"><button type="button" id="d-go-mid">Transición</button><small>Desvanecimiento · 300 ms</small></div>
+                <figure class="d-screen d-screen--live" id="d-live"><figcaption>EN PANTALLA · <span>Programa</span></figcaption><div class="d-slide"></div></figure>
+              </div>
+              <div class="d-bottom">
+                <div class="d-dock d-mixer"><h5>Mezclador de audio</h5><div class="d-meter"><i></i><i></i></div><div class="d-meter d-meter--b"><i></i><i></i></div><small>Mic/Aux · Música</small></div>
+                <div class="d-dock d-controls"><h5>Controles</h5><button type="button" id="d-stream">Iniciar transmisión</button><button type="button" id="d-record">Iniciar grabación</button><button type="button" id="d-studio" class="on">Modo Estudio</button></div>
+              </div>
+            </main>
+            <aside class="d-col d-right">
+              <div class="d-dock d-content">
+                <div class="d-panel" data-panel="orden"><h5>Orden del culto</h5><ol class="d-list" id="d-order"></ol><button type="button" class="d-primary" id="d-next-item">Siguiente elemento</button></div>
+                <div class="d-panel" data-panel="cantos"><h5>Cantos</h5><ul class="d-list" id="d-songs"></ul><div class="d-thumbs" id="d-thumbs"></div></div>
+                <div class="d-panel" data-panel="himnario"><h5>Himnario</h5><ul class="d-list" id="d-hymns"></ul></div>
+                <div class="d-panel" data-panel="biblia"><h5>Biblia</h5><input id="d-bible" placeholder="Juan 3:16, Sal 23, Is 40:31" autocomplete="off" aria-label="Buscar pasaje"><ul class="d-list" id="d-verses"></ul></div>
+                <div class="d-panel" data-panel="presentaciones"><h5>Presentaciones</h5><div class="d-thumbs" id="d-slides"></div></div>
+                <nav class="d-tabs" id="d-tabs"><button type="button" data-tab="orden">Orden</button><button type="button" data-tab="cantos" class="on">Cantos</button><button type="button" data-tab="himnario">Himnario</button><button type="button" data-tab="biblia">Biblia</button><button type="button" data-tab="presentaciones">Present.</button></nav>
+              </div>
+              <div class="d-dock d-livebox"><h5>Control en vivo</h5>
+                <p class="d-status"><b class="r"></b><strong>EN PANTALLA:</strong> <span id="d-st-live">nada</span></p>
+                <p class="d-status"><b class="g"></b><strong>EN ESPERA:</strong> <span id="d-st-wait">nada</span></p>
+                <button type="button" class="d-primary d-go" id="d-go">Pasar a pantalla ➜</button>
+                <div class="d-row"><button type="button" id="d-prev">◀ Anterior</button><button type="button" id="d-next">Siguiente ▶</button><button type="button" id="d-hide">Ocultar</button></div>
+              </div>
+            </aside>
+          </div></div>
+          <div class="demo__hint" id="d-hint">👆 Probalo: elegí un canto y tocá <b>Pasar a pantalla</b></div>
         </div>
+        <noscript><img src="img/app.jpg" alt="WorshipStudio" width="2000" height="1305"></noscript>
+      </div>
       </div>
     </section>
 
@@ -340,5 +376,6 @@
   </footer>
 
   <script src="app.js" defer></script>
+  <script src="demo.js" defer></script>
 </body>
 </html>

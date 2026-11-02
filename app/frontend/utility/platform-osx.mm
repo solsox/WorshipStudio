@@ -306,9 +306,9 @@ void TaskbarOverlaySetStatus(TaskbarOverlayStatus status)
 {
     QIcon icon;
     if (status == TaskbarOverlayStatusActive)
-        icon = QIcon::fromTheme("obs-active", QIcon(":/res/images/active_mac.png"));
+        icon = QIcon(":/res/images/active_mac.png");
     else if (status == TaskbarOverlayStatusPaused)
-        icon = QIcon::fromTheme("obs-paused", QIcon(":/res/images/paused_mac.png"));
+        icon = QIcon(":/res/images/paused_mac.png");
 
     NSDockTile *tile = [NSApp dockTile];
     [tile setContentView:[[DockView alloc] initWithIcon:icon]];

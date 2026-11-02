@@ -728,7 +728,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	sourceCreated.Connect(obs_get_signal_handler(), "source_create", ReloadAudioSources, this);
 	channelChanged.Connect(obs_get_signal_handler(), "channel_change", ReloadAudioSources, this);
 
-	hotkeyConflictIcon = QIcon::fromTheme("obs", QIcon(":/res/images/warning.svg"));
+	hotkeyConflictIcon = QIcon(":/res/images/warning.svg");
 
 	auto ReloadHotkeys = [](void *data, calldata_t *) {
 		auto settings = static_cast<OBSBasicSettings *>(data);

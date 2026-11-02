@@ -310,7 +310,7 @@ void OBSBasic::PauseRecording()
 #else
 			QIcon trayIconFile = QIcon(":/res/images/obs_paused.png");
 #endif
-			trayIcon->setIcon(QIcon::fromTheme("obs-tray-paused", trayIconFile));
+			trayIcon->setIcon(trayIconFile);
 		}
 
 		OnEvent(OBS_FRONTEND_EVENT_RECORDING_PAUSED);
@@ -345,7 +345,7 @@ void OBSBasic::UnpauseRecording()
 #else
 			QIcon trayIconFile = QIcon(":/res/images/tray_active.png");
 #endif
-			trayIcon->setIcon(QIcon::fromTheme("obs-tray-active", trayIconFile));
+			trayIcon->setIcon(trayIconFile);
 		}
 
 		OnEvent(OBS_FRONTEND_EVENT_RECORDING_UNPAUSED);

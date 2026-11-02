@@ -29,7 +29,7 @@ void OBSBasic::SystemTrayInit()
 #else
 	QIcon trayIconFile = QIcon(":/res/images/obs.png");
 #endif
-	trayIcon = new QSystemTrayIcon(QIcon::fromTheme("obs-tray", trayIconFile), this);
+	trayIcon = new QSystemTrayIcon(trayIconFile, this);
 	trayIcon->setToolTip(OBS_APP_NAME);
 
 	trayMenu = new QMenu(this);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QPointer>
+#include <QVector>
 #include <QWidget>
 
 #include <functional>
@@ -44,13 +45,15 @@ private:
 		std::function<void()> prepare;
 		std::function<bool()> done;
 		QWidget *extra = nullptr;
+		/* Tabbed dock whose tab button is lit too, so people see where to click. */
+		const char *dock = nullptr;
 	};
 
 	QPointer<QMainWindow> window;
 	std::vector<Step> steps;
 	int current = -1;
 	bool finishedStep = false;
-	QRect hole;
+	QVector<QRect> holes;
 
 	QWidget *bubble = nullptr;
 	QLabel *counterLabel = nullptr;
@@ -74,4 +77,6 @@ private:
 	void placeBubble();
 	void snapshot();
 	void finish();
+	void scrollIntoView(QWidget *target);
+	bool shouldShow() const;
 };
