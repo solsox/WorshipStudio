@@ -838,7 +838,24 @@ void OBSBasic::AddSourceDialog()
 
 void OBSBasic::on_actionAddSource_triggered()
 {
-	AddSourceDialog();
+	/* WorshipStudio content first (it follows its panel), then any other. */
+	QMenu menu(this);
+	const struct {
+		const char *panel;
+		const char *text;
+	} panels[] = {{"songsDock", QT_TRANSLATE_NOOP("WorshipStudio", "Cantos y coros")},
+		      {"bibleDock", QT_TRANSLATE_NOOP("WorshipStudio", "Biblia")},
+		      {"hymnalDock", QT_TRANSLATE_NOOP("WorshipStudio", "Himnario")},
+		      {"presentationDock", QT_TRANSLATE_NOOP("WorshipStudio", "Presentaciones (PDF, PowerPoint...)")}};
+	for (const auto &entry : panels) {
+		const QString panel = QString::fromLatin1(entry.panel);
+		menu.addAction(QCoreApplication::translate("WorshipStudio", entry.text), this,
+			       [this, panel]() { AddPanelSource(panel, false); });
+	}
+	menu.addSeparator();
+	QAction *other = menu.addAction(QCoreApplication::translate("WorshipStudio", "Otra fuente (cámara, imagen, video...)..."));
+	connect(other, &QAction::triggered, this, &OBSBasic::AddSourceDialog);
+	menu.exec(QCursor::pos());
 }
 
 static bool remove_items(obs_scene_t *, obs_sceneitem_t *item, void *param)

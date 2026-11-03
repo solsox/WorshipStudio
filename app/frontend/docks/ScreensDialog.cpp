@@ -250,6 +250,37 @@ bool ScreensDialog::CreateStreamScenes(StreamLayout layout, const QString &camer
 	create(CameraSceneName, [&](obs_scene_t *scene) {
 		place(scene, camera, {0.0f, 0.0f, 1.0f, 1.0f}, OBS_BOUNDS_SCALE_OUTER);
 	});
+	const auto arrange = [&](obs_scene_t *scene, obs_source_t *cameraSource) {
+		Box cameraBox, screenBox;
+		bool screenOnTop = true;
+		boxesFor(layout, &cameraBox, &screenBox, &screenOnTop);
+		const obs_bounds_type cameraBounds =
+			layout == StreamLayout::CameraWithCorner ? OBS_BOUNDS_SCALE_OUTER : OBS_BOUNDS_SCALE_INNER;
+		WorshipOutput::FitItem(scene, cameraSource, cameraBox.x, cameraBox.y, cameraBox.w, cameraBox.h,
+				       OBS_ALIGN_CENTER, cameraBounds);
+		WorshipOutput::FitItem(scene, projectorSource, screenBox.x, screenBox.y, screenBox.w, screenBox.h);
+		if (obs_sceneitem_t *item = obs_scene_find_source(scene, WorshipOutput::RoomScreenScene))
+			obs_sceneitem_set_order(item, screenOnTop ? OBS_ORDER_MOVE_TOP : OBS_ORDER_MOVE_BOTTOM);
+	};
+	/* "Cámara + proyector" already there: only its camera and projector are
+	 * placed again with the chosen design; nothing is added or removed. */
+	if (OBSSourceAutoRelease comboSource = obs_get_source_by_name(ComboSceneName)) {
+		obs_scene_t *combo = obs_scene_from_source(comboSource);
+		if (combo && obs_scene_find_source(combo, WorshipOutput::RoomScreenScene)) {
+			OBSSource comboCamera;
+			obs_scene_enum_items(
+				combo,
+				[](obs_scene_t *, obs_sceneitem_t *item, void *param) {
+					obs_source_t *source = obs_sceneitem_get_source(item);
+					if (isCamera(source))
+						*static_cast<OBSSource *>(param) = OBSSource(source);
+					return true;
+				},
+				&comboCamera);
+			if (comboCamera)
+				arrange(combo, comboCamera);
+		}
+	}
 	create(ComboSceneName, [&](obs_scene_t *scene) {
 		Box cameraBox, screenBox;
 		bool screenOnTop = true;
@@ -362,7 +393,7 @@ ScreensDialog::ScreensDialog(QWidget *parent) : QDialog(parent)
 							: (screens.size() > 1 ? 1 : monitorCombo->count() - 1));
 	form->addRow(tr("Proyector"), monitorCombo);
 
-	createCheck = new QCheckBox(tr("Crear las escenas \"Solo cámara\" y \"Cámara + proyector\""), details);
+	createCheck = new QCheckBox(tr("Crear o acomodar las escenas \"Solo cámara\" y \"Cámara + proyector\""), details);
 	createCheck->setChecked(true);
 	form->addRow(QString(), createCheck);
 

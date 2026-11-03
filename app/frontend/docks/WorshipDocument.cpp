@@ -287,6 +287,19 @@ void Converter::convert(const QString &path, Done done)
 					 work,
 					 source};
 		libreOffice.output = QDir(work).absoluteFilePath(info.completeBaseName() + QStringLiteral(".pdf"));
+#if defined(__APPLE__)
+		/* Launched hidden and in the background (open -g -j): no window, no
+		 * focus stolen from WorshipStudio while it converts. */
+		const QString bundle =
+			QDir::cleanPath(QFileInfo(soffice).absoluteDir().absoluteFilePath(QStringLiteral("../..")));
+		if (bundle.endsWith(QStringLiteral(".app"))) {
+			QStringList arguments{QStringLiteral("-g"), QStringLiteral("-j"), QStringLiteral("-W"), QStringLiteral("-n"),
+					      QStringLiteral("-a"), bundle, QStringLiteral("--args")};
+			arguments << libreOffice.arguments;
+			libreOffice.program = QStringLiteral("/usr/bin/open");
+			libreOffice.arguments = arguments;
+		}
+#endif
 	}
 
 #if defined(__APPLE__)

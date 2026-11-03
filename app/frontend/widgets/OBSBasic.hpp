@@ -1437,6 +1437,8 @@ private:
 	static void RenderProgram(void *data, uint32_t cx, uint32_t cy);
 
 	void UpdatePreviewProgramIndicators();
+	/* WorshipStudio: "Cantos en vivo" and the others as a source of the scene. */
+	void AddPanelSource(const QString &panel, bool useSelection);
 
 private slots:
 	void EnablePreviewProgram();

@@ -1318,46 +1318,7 @@ void OBSBasic::OBSInit()
 
 	/* Songs, verses, hymns and presentations dropped on Sources become a
 	 * source of the scene: "Cantos en vivo" follows the Cantos panel. */
-	WorshipDrag::InstallDropTarget(ui->sources, [this](const QString &panel) {
-		static const QHash<QString, int> followers{{QStringLiteral("songsDock"), 0},
-							   {QStringLiteral("bibleDock"), 1},
-							   {QStringLiteral("hymnalDock"), 2},
-							   {QStringLiteral("presentationDock"), 3}};
-		const auto tell = [](const QString &text) { QToolTip::showText(QCursor::pos(), text); };
-		QObject *dock = findChild<QObject *>(panel);
-		if (!dock || !followers.contains(panel))
-			return;
-
-		const bool studio = obs_frontend_preview_program_mode_active();
-		OBSSourceAutoRelease target = studio ? obs_frontend_get_current_preview_scene()
-						     : obs_frontend_get_current_scene();
-		obs_scene_t *scene = target ? obs_scene_from_source(target) : nullptr;
-		if (!scene || WorshipOutput::IsInternalScene(QT_UTF8(obs_source_get_name(target)))) {
-			tell(QCoreApplication::translate("WorshipStudio",
-							 "Primero elegí una de tus escenas en el panel Escenas."));
-			return;
-		}
-
-		bool shown = false;
-		{
-			WorshipOutput::SourceOnlyScope sourceOnly;
-			QMetaObject::invokeMethod(dock, "useAsSource", Qt::DirectConnection, Q_RETURN_ARG(bool, shown));
-		}
-		const QString followerName = WorshipOutput::FollowerNames().at(followers.value(panel));
-		OBSSourceAutoRelease follower = obs_get_source_by_name(QT_TO_UTF8(followerName));
-		if (!shown || !follower) {
-			tell(QCoreApplication::translate("WorshipStudio", "Elegí primero qué mostrar en ese panel."));
-			return;
-		}
-		if (!obs_scene_find_source(scene, QT_TO_UTF8(followerName))) {
-			obs_scene_add(scene, follower);
-			WorshipOutput::FitItem(scene, follower, 0.0f, 0.0f, 1.0f, 1.0f);
-		}
-		tell(QCoreApplication::translate("WorshipStudio",
-						 "Listo: \"%1\" es una fuente de esta escena. Movela y agrandala "
-						 "como quieras; el panel la sigue controlando.")
-			     .arg(followerName));
-	});
+	WorshipDrag::InstallDropTarget(ui->sources, [this](const QString &panel) { AddPanelSource(panel, true); });
 
 	const QString selfTestDir = qEnvironmentVariable("WORSHIPSTUDIO_SELFTEST");
 	if (!selfTestDir.isEmpty()) {
@@ -2473,4 +2434,47 @@ OBSPromptResult OBSBasic::PromptForName(const OBSPromptRequest &request, const O
 void OBSBasic::on_actionOpenPluginManager_triggered()
 {
 	App()->pluginManagerOpenDialog();
+}
+
+/* Adds "Cantos en vivo" (and the others) to the scene being edited. With
+ * `useSelection`, what is selected in the panel is shown in it (a drop). */
+void OBSBasic::AddPanelSource(const QString &panel, bool useSelection)
+{
+	static const QHash<QString, int> followers{{QStringLiteral("songsDock"), 0},
+						   {QStringLiteral("bibleDock"), 1},
+						   {QStringLiteral("hymnalDock"), 2},
+						   {QStringLiteral("presentationDock"), 3}};
+	const auto tell = [](const QString &text) { QToolTip::showText(QCursor::pos(), text); };
+	QObject *dock = findChild<QObject *>(panel);
+	if (!dock || !followers.contains(panel))
+		return;
+
+	const bool studio = obs_frontend_preview_program_mode_active();
+	OBSSourceAutoRelease target = studio ? obs_frontend_get_current_preview_scene() : obs_frontend_get_current_scene();
+	obs_scene_t *scene = target ? obs_scene_from_source(target) : nullptr;
+	if (!scene || WorshipOutput::IsInternalScene(QT_UTF8(obs_source_get_name(target)))) {
+		tell(QCoreApplication::translate("WorshipStudio", "Primero elegí una de tus escenas en el panel Escenas."));
+		return;
+	}
+
+	bool shown = false;
+	if (useSelection) {
+		WorshipOutput::SourceOnlyScope sourceOnly;
+		QMetaObject::invokeMethod(dock, "useAsSource", Qt::DirectConnection, Q_RETURN_ARG(bool, shown));
+	}
+	const QString followerName = WorshipOutput::FollowerNames().at(followers.value(panel));
+	/* Empty until the panel shows something; then it follows the panel. */
+	OBSScene follower = WorshipOutput::EnsureScene(QT_TO_UTF8(followerName));
+	if (useSelection && !shown) {
+		tell(QCoreApplication::translate("WorshipStudio", "Elegí primero qué mostrar en ese panel."));
+		return;
+	}
+	if (!obs_scene_find_source(scene, QT_TO_UTF8(followerName))) {
+		obs_scene_add(scene, obs_scene_get_source(follower));
+		WorshipOutput::FitItem(scene, obs_scene_get_source(follower), 0.0f, 0.0f, 1.0f, 1.0f);
+	}
+	tell(QCoreApplication::translate("WorshipStudio",
+					 "Listo: \"%1\" es una fuente de esta escena. Movela y agrandala "
+					 "como quieras; el panel la sigue controlando.")
+		     .arg(followerName));
 }
