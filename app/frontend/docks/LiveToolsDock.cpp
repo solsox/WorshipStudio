@@ -449,8 +449,19 @@ void LiveToolsDock::rebuildProjectorScenes(const QString &onAir)
 				     : key == QStringLiteral("\x01content") ? onAir.startsWith(QStringLiteral("WS "))
 									     : onAir == key;
 		button->setChecked(current);
-		if (key == QStringLiteral("\x01content"))
+		if (key == QStringLiteral("\x01content")) {
 			button->setEnabled(!content.isEmpty());
+			/* Named after what it really shows: "Biblia", "Cuenta regresiva"... */
+			QString name = content;
+			if (name.startsWith(QStringLiteral("WS ")))
+				name = name.mid(3);
+			if (name.endsWith(QStringLiteral(" B")))
+				name.chop(2);
+			if (name == QStringLiteral("Presentacion"))
+				name = QStringLiteral("Presentación");
+			button->setText(name.isEmpty() ? tr("Cantos, Biblia...")
+						       : QCoreApplication::translate("WorshipStudio", name.toUtf8().constData()));
+		}
 	}
 }
 
