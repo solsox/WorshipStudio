@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Logo de WorshipStudio: un ventanal en arco lleno de luz, con la cruz en el
-espacio negativo, sobre negro tinta. Genera el SVG de la web y todos los
-íconos de la app (macOS, Windows, Linux, bandeja) con Chrome sin ventana.
+"""Logo de WorshipStudio: un ventanal en arco lleno de luz, con la cruz, sobre
+una Biblia abierta y negro tinta. Parte de herramientas/logo/logo-1024.png
+(fondo transparente) y genera los íconos de la web y de la app (macOS,
+Windows, Linux) y la silueta de la bandeja, dibujada con Chrome sin ventana.
 
 Uso: python3 herramientas/generar-logo.py
 """
@@ -12,69 +13,11 @@ import subprocess
 import sys
 import tempfile
 
-from PIL import Image
+from PIL import Image, ImageFilter
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP = os.path.join(RAIZ, "app")
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-
-DEFS = """
-  <defs>
-    <linearGradient id="fondo" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#2B2622"/><stop offset="1" stop-color="#0D0C0B"/>
-    </linearGradient>
-    <linearGradient id="borde" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".16"/>
-      <stop offset=".5" stop-color="#FFFFFF" stop-opacity=".03"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity=".06"/>
-    </linearGradient>
-    <linearGradient id="luz" x1="0" y1="1" x2="0" y2="0">
-      <stop offset="0" stop-color="#FFE3B0"/><stop offset=".28" stop-color="#FFA764"/>
-      <stop offset=".62" stop-color="#D9532E"/><stop offset="1" stop-color="#4A2140"/>
-    </linearGradient>
-    <radialGradient id="sol" cx=".5" cy="1" r=".8">
-      <stop offset="0" stop-color="#FFF4DC" stop-opacity=".95"/>
-      <stop offset=".55" stop-color="#FFC98A" stop-opacity=".25"/>
-      <stop offset="1" stop-color="#FFC98A" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="halo" cx=".5" cy=".6" r=".5">
-      <stop offset="0" stop-color="#F0703A" stop-opacity=".40"/>
-      <stop offset="1" stop-color="#F0703A" stop-opacity="0"/>
-    </radialGradient>
-    <clipPath id="arco"><path d="M318 830V478a194 194 0 0 1 388 0v352z"/></clipPath>
-    <clipPath id="cuadro"><rect width="1024" height="1024" rx="230"/></clipPath>
-  </defs>"""
-
-CUERPO = """
-  <g clip-path="url(#cuadro)">
-    <rect width="1024" height="1024" fill="url(#fondo)"/>
-    <ellipse cx="512" cy="610" rx="420" ry="330" fill="url(#halo)"/>
-  </g>
-  <rect x="3" y="3" width="1018" height="1018" rx="227" fill="none" stroke="url(#borde)" stroke-width="6"/>
-  <path d="M276 850V478a236 236 0 0 1 472 0v372" fill="none" stroke="#E6DED0" stroke-opacity=".24" stroke-width="10" stroke-linecap="round"/>
-  <g clip-path="url(#arco)">
-    <rect x="300" y="260" width="424" height="590" fill="url(#luz)"/>
-    <rect x="300" y="260" width="424" height="590" fill="url(#sol)"/>
-    <rect x="501" y="260" width="22" height="590" fill="#14110F"/>
-    <rect x="300" y="476" width="424" height="22" fill="#14110F"/>
-  </g>
-  <rect x="236" y="828" width="552" height="10" rx="5" fill="#E6DED0" fill-opacity=".24"/>"""
-
-
-def logo(extra=""):
-    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" '
-            'aria-label="WorshipStudio">' + DEFS + CUERPO + extra + "\n</svg>\n")
-
-
-def logo_mac():
-    """macOS: el cuadro ocupa 824 de 1024 y lleva sombra, como los íconos del sistema."""
-    interior = DEFS + CUERPO
-    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">'
-            '<defs><filter id="sombra" x="-20%" y="-20%" width="140%" height="140%">'
-            '<feDropShadow dx="0" dy="10" stdDeviation="14" flood-opacity=".35"/></filter></defs>'
-            '<g filter="url(#sombra)"><svg x="100" y="100" width="824" height="824" viewBox="0 0 1024 1024">'
-            + interior + "</svg></g></svg>\n")
-
 
 def mono(paused=False):
     """Bandeja de macOS: silueta negra (el sistema la tiñe)."""
@@ -109,17 +52,22 @@ def main():
     if not os.path.exists(CHROME):
         sys.exit("Hace falta Google Chrome para dibujar los íconos.")
     tmp = tempfile.mkdtemp()
-    plano = logo()
-    mac = logo_mac()
-    grande = render(plano, 1024, tmp)
-    grande_mac = render(mac, 1024, tmp)
+    grande = Image.open(os.path.join(RAIZ, "herramientas", "logo", "logo-1024.png")).convert("RGBA")
+    # macOS: el cuadro ocupa 824 de 1024 y lleva una sombra suave, como los del sistema.
+    grande_mac = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
+    sombra = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
+    cuadro = grande.resize((824, 824), Image.LANCZOS)
+    negro = Image.new("RGBA", (824, 824), (0, 0, 0, 110))
+    negro.putalpha(cuadro.getchannel("A").point(lambda a: a * 110 // 255))
+    sombra.alpha_composite(negro, (100, 112))
+    grande_mac.alpha_composite(sombra.filter(ImageFilter.GaussianBlur(14)))
+    grande_mac.alpha_composite(cuadro, (100, 100))
 
     def tam(img, s):
         return img.resize((s, s), Image.LANCZOS)
 
     # Web
-    with open(os.path.join(RAIZ, "sitio", "logo.svg"), "w") as f:
-        f.write(plano)
+    tam(grande, 512).save(os.path.join(RAIZ, "sitio", "logo.png"))
     tam(grande, 180).save(os.path.join(RAIZ, "sitio", "img", "icono-180.png"))
     tam(grande, 32).save(os.path.join(RAIZ, "sitio", "img", "icono-32.png"))
 
@@ -158,8 +106,14 @@ def main():
     linux = os.path.join(APP, "frontend", "cmake", "linux", "icons")
     for s in (128, 256, 512):
         tam(grande, s).save(os.path.join(linux, f"obs-logo-{s}.png"))
+    # El "scalable" de Linux lleva la imagen grande dentro de un SVG.
+    import base64
+    datos = io.BytesIO()
+    tam(grande, 512).save(datos, "PNG")
     with open(os.path.join(linux, "obs-logo-scalable.svg"), "w") as f:
-        f.write(plano)
+        f.write('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
+                'viewBox="0 0 512 512"><image width="512" height="512" xlink:href="data:image/png;base64,'
+                + base64.b64encode(datos.getvalue()).decode() + '"/></svg>\n')
 
     shutil.rmtree(tmp)
     print("Logo listo: web, macOS, Windows, Linux y bandeja.")

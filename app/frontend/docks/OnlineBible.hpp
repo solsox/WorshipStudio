@@ -31,7 +31,7 @@ QString DataFor(const QString &id);
 bool IsOnline(const QString &data);
 QString IdOf(const QString &data);
 
-/* Versions known to work, shown before the rest of the catalog. */
+/* Preferred order of the versions, when they are enabled for the app key. */
 QVector<Version> Favorites();
 
 /* The versions enabled for the app key in these languages (ISO 639-3). */

@@ -141,6 +141,7 @@ QVector<Version> Favorites()
 	return {
 		{QStringLiteral("149"), QStringLiteral("RVR1960"), QStringLiteral("Reina Valera 1960"), QStringLiteral("spa")},
 		{QStringLiteral("150"), QStringLiteral("RVR95"), QStringLiteral("Reina Valera 1995"), QStringLiteral("spa")},
+		{QStringLiteral("147"), QStringLiteral("RVES"), QStringLiteral("Reina-Valera Antigua"), QStringLiteral("spa")},
 		{QStringLiteral("128"), QStringLiteral("NVI"), QStringLiteral("Nueva Versión Internacional"), QStringLiteral("spa")},
 	};
 }

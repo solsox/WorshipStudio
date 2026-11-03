@@ -1,6 +1,7 @@
 #pragma once
 
 #include "OBSDock.hpp"
+#include "OnlineBible.hpp"
 #include "WorshipRender.hpp"
 
 #include <obs.hpp>
@@ -110,6 +111,7 @@ private:
 	QSet<int> onlineLoaded;
 	QSet<int> onlineLoading;
 	bool onlineCatalogAsked = false;
+	QVector<OnlineBible::Version> onlineVersions;
 	bool loadOnlineBible(const QString &id, QString *error);
 	void ensureOnlineChapter(int book, int chapter);
 	void addOnlineVersions();

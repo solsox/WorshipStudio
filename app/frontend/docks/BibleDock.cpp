@@ -287,11 +287,12 @@ void BibleDock::addOnlineVersions()
 		versionCombo->setItemData(versionCombo->count() - 1,
 					  tr("Se lee por internet y no se guarda en la computadora."), Qt::ToolTipRole);
 	};
-	for (const OnlineBible::Version &version : OnlineBible::Favorites())
-		addVersion(version);
-
-	if (onlineCatalogAsked)
+	/* Only the versions enabled for the app key are listed (asked once). */
+	if (onlineCatalogAsked) {
+		for (const OnlineBible::Version &version : onlineVersions)
+			addVersion(version);
 		return;
+	}
 	onlineCatalogAsked = true;
 	/* The rest of the versions enabled for WorshipStudio, in Spanish and in
 	 * the language of the app. */
@@ -306,9 +307,28 @@ void BibleDock::addOnlineVersions()
 	if (iso3.contains(uiLanguage))
 		languages << iso3.value(uiLanguage);
 	OnlineBible::FetchVersions(languages, this, [this, addVersion](const QVector<OnlineBible::Version> &versions) {
-		QSignalBlocker blocker(versionCombo);
-		for (const OnlineBible::Version &version : versions)
-			addVersion(version);
+		/* Best known versions first (Reina Valera, NVI...). */
+		QVector<OnlineBible::Version> sorted = versions;
+		const QVector<OnlineBible::Version> favorites = OnlineBible::Favorites();
+		const auto rank = [&](const OnlineBible::Version &version) {
+			for (int i = 0; i < favorites.size(); ++i) {
+				if (favorites.at(i).id == version.id)
+					return i;
+			}
+			return (int)favorites.size();
+		};
+		std::stable_sort(sorted.begin(), sorted.end(), [&](const auto &a, const auto &b) { return rank(a) < rank(b); });
+		onlineVersions = sorted;
+		{
+			QSignalBlocker blocker(versionCombo);
+			for (const OnlineBible::Version &version : sorted)
+				addVersion(version);
+		}
+		/* The version used last time may be one of these. */
+		const QString saved = WorshipOutput::ConfigString(ConfigVersion);
+		const int index = versionCombo->findData(saved);
+		if (OnlineBible::IsOnline(saved) && index >= 0 && index != versionCombo->currentIndex())
+			versionCombo->setCurrentIndex(index);
 	});
 }
 
@@ -435,7 +455,9 @@ void BibleDock::onVersionChanged(int index)
 	}
 
 	searchEdit->setEnabled(true);
-	WorshipOutput::SetConfigString(ConfigVersion, path);
+	/* An online version chosen last time is restored when the list arrives. */
+	if (!OnlineBible::IsOnline(WorshipOutput::ConfigString(ConfigVersion)) || online || onlineCatalogAsked)
+		WorshipOutput::SetConfigString(ConfigVersion, path);
 	blog(LOG_INFO, "[WorshipStudio] Biblia loaded: %s, %d verses", QT_TO_UTF8(versionName),
 	     (int)allVerses.size());
 
