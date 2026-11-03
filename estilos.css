@@ -480,7 +480,7 @@ kbd { background: #1A1816; border-color: #2D2A27; color: var(--ink); }
 @media (max-width: 640px) { .nav__in { padding-left: 12px; } .nav .wordmark { font-size: 17px; } }
 
 /* ======================================================================
-   Type and shape, Raycast-like: Geist at calm weights, the logo's serif italic for
+   Type and shape, Raycast-like: Geist at calm weights, the serif italic only in the logo; softer corners.
    one word that matters, and softer, less rounded corners.
    ====================================================================== */
 @font-face { font-family: "Geist"; src: url("fuentes/Geist-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
@@ -496,8 +496,6 @@ h1, h2, h3, h4 { font-family: var(--display); font-weight: 560; letter-spacing: 
 h2 { font-weight: 560; letter-spacing: -.04em; line-height: 1.04; }
 h3 { font-weight: 560; letter-spacing: -.025em; }
 h4 { font-weight: 560; letter-spacing: -.015em; }
-h1 em, h2 em, h3 em, .statement em { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: -.02em; font-size: .96em; color: var(--bone); }
-.hero h1 em { padding-right: .04em; }
 .statement p { font-weight: 540; letter-spacing: -.04em; }
 .eyebrow { font: 500 12.5px/1 var(--text); text-transform: uppercase; letter-spacing: .16em; }
 .sub, .hero__lead { letter-spacing: -.005em; }
