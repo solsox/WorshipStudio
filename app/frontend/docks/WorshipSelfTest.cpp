@@ -10,6 +10,7 @@
 #include "LiveToolsDock.hpp"
 #include "ServiceDock.hpp"
 #include "SongLibrary.hpp"
+#include "SongEditor.hpp"
 #include "WorshipLive.hpp"
 #include "WorshipRemote.hpp"
 #include "GuidedTour.hpp"
@@ -718,6 +719,97 @@ struct SelfTest {
 			capture(projector ? obs_scene_from_source(projector) : nullptr, QStringLiteral("web-proyector"));
 			OBSSourceAutoRelease stream = obs_frontend_get_current_scene();
 			capture(stream ? obs_scene_from_source(stream) : nullptr, QStringLiteral("web-transmision"));
+		});
+	}
+
+	/* Pictures for the guides on the website (WORSHIPSTUDIO_SELFTEST_ONLY=capturas). */
+	void addGuidePictureSteps()
+	{
+		QMainWindow *window = qobject_cast<QMainWindow *>(hymnal->window());
+		const auto save = [this](QWidget *widget, const QString &name) {
+			if (!widget)
+				return;
+			widget->grab().save(outDir.absoluteFilePath(name + QStringLiteral(".png")));
+			log(QStringLiteral("captura de guía %1").arg(name));
+		};
+		const auto raise = [window](const char *name) {
+			for (QDockWidget *dock : window->findChildren<QDockWidget *>())
+				if (dock->objectName() == QLatin1String(name))
+					dock->raise();
+		};
+		add(300, [=]() {
+			log(QStringLiteral("--- Capturas para las guías ---"));
+			WorshipOutput::SetSeparateRoomScreen(false);
+			Song song;
+			song.title = QStringLiteral("Cantad al Señor");
+			song.fontFamily = WorshipRender::RecommendedFonts().value(0);
+			song.background.preset = 11;
+			song.slides = SongLibrary::parseText(QStringLiteral(
+				"[Estrofa 1]\nCantad al Señor un cántico nuevo\ncantad al Señor toda la tierra\n\n"
+				"[Coro]\nCantad al Señor, bendecid su nombre\nanunciad de día en día su salvación\n\n"
+				"[Estrofa 2]\nCantad entre las naciones su gloria\nen todos los pueblos sus maravillas\n\n[Coro]"));
+			auto *editor = new SongEditor(song, window);
+			editor->setAttribute(Qt::WA_DeleteOnClose);
+			editor->resize(880, 600);
+			editor->show();
+			QTimer::singleShot(900, editor, [=]() {
+				save(editor, QStringLiteral("guia-canto-editor"));
+				editor->close();
+			});
+		});
+		add(1400, [=]() {
+			/* Shown with "por separado" chosen, so its options are visible. */
+			WorshipOutput::SetSeparateRoomScreen(true);
+			auto *dialog = new ScreensDialog(window);
+			WorshipOutput::SetSeparateRoomScreen(false);
+			dialog->setAttribute(Qt::WA_DeleteOnClose);
+			dialog->show();
+			QTimer::singleShot(700, dialog, [=]() {
+				save(dialog, QStringLiteral("guia-proyector-ventana"));
+				dialog->close();
+			});
+		});
+		add(1200, [=]() {
+			auto *dialog = new MigrationDialog(songs, bible, hymnal, window);
+			dialog->setAttribute(Qt::WA_DeleteOnClose);
+			dialog->show();
+			QTimer::singleShot(700, dialog, [=]() {
+				save(dialog, QStringLiteral("guia-traer"));
+				dialog->close();
+			});
+		});
+		add(1200, [=]() {
+			songs->deleteSong(QStringLiteral("Cantad al Señor"));
+			songs->projectNewSong(QStringLiteral("Cantad al Señor"),
+					      QStringLiteral("Cantad al Señor un cántico nuevo\ncantad al Señor toda la tierra\n\n"
+							     "[Coro]\nCantad al Señor, bendecid su nombre\nanunciad de día en día su salvación"),
+					      11);
+			raise("songsDock");
+		});
+		add(900, [=]() {
+			save(window->findChild<QWidget *>(QStringLiteral("songsDock")), QStringLiteral("guia-cantos-panel"));
+			bible->projectQuery(QStringLiteral("Juan 3:16"), 0);
+			raise("bibleDock");
+		});
+		add(900, [=]() {
+			save(window->findChild<QWidget *>(QStringLiteral("bibleDock")), QStringLiteral("guia-biblia-panel"));
+			const QString deck = qEnvironmentVariable("WORSHIPSTUDIO_SELFTEST_PRESENTATIONS").section(QLatin1Char(';'), 0, 0);
+			if (!deck.isEmpty())
+				presentations->openFiles({deck});
+			raise("presentationDock");
+		});
+		waitFor(20000, [=]() { return !presentations->isConverting() && presentations->slideCount() > 0; });
+		add(900, [=]() {
+			presentations->project();
+			save(window->findChild<QWidget *>(QStringLiteral("presentationDock")), QStringLiteral("guia-powerpoint-panel"));
+			if (QWidget *live = window->findChild<QWidget *>(QStringLiteral("liveToolsDock")))
+				for (QScrollArea *area : live->findChildren<QScrollArea *>())
+					area->verticalScrollBar()->setValue(0);
+		});
+		add(600, [=]() {
+			save(window->findChild<QWidget *>(QStringLiteral("liveToolsDock")), QStringLiteral("guia-envivo-panel"));
+			grabWithScreens(window).save(outDir.absoluteFilePath(QStringLiteral("guia-ventana.png")));
+			songs->deleteSong(QStringLiteral("Cantad al Señor"));
 		});
 	}
 
@@ -1471,6 +1563,8 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Songs
 		test->addScreensSteps();
 	if (only.contains(QStringLiteral("vitrina")))
 		test->addShowcaseSteps();
+	if (only.contains(QStringLiteral("capturas")))
+		test->addGuidePictureSteps();
 	if (wanted("importar"))
 		test->addImportSteps();
 	if (wanted("interfaz")) {

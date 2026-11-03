@@ -605,3 +605,27 @@ h4 { font-weight: 560; letter-spacing: -.015em; }
 .guia__pasos li::marker { color: var(--bone); font-weight: 600; }
 .guias section { scroll-margin-top: 90px; }
 .guide video { width: 100%; border-radius: 14px; border: 1px solid var(--line); background: #000; display: block; }
+
+/* Real Apple, Windows and Linux logos, tinted with the text color */
+.os-icon { display: inline-block; width: 22px; height: 22px; flex: none; background: currentColor;
+  -webkit-mask: var(--os) center / contain no-repeat; mask: var(--os) center / contain no-repeat; }
+.os-icon--apple { --os: url("img/os/apple.png"); }
+.os-icon--windows { --os: url("img/os/windows.png"); }
+.os-icon--linux { --os: url("img/os/linux.png"); }
+.os-icon--download { background: none; }
+.dl > .os-icon { width: 30px; height: 30px; color: var(--ink); }
+.btn-dl .os-icon { width: 20px; height: 20px; }
+
+/* Step by step guides */
+.pasos { list-style: none; padding: 0; margin: 22px 0 0; display: grid; gap: 18px; counter-reset: none; }
+.paso { border: 1px solid var(--line); border-radius: 16px; padding: 18px; background: linear-gradient(180deg, rgba(244, 241, 236, .035), rgba(244, 241, 236, .01)); }
+.paso__t { display: flex; gap: 14px; align-items: flex-start; }
+.paso__n { flex: none; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--bone); color: #15120F; font: 600 15px/1 var(--text); margin-top: 2px; }
+.paso h3 { font-size: 19px; margin: 2px 0 6px; }
+.paso p { margin: 0; color: var(--ink-2); line-height: 1.6; }
+.paso img { display: block; width: 100%; margin-top: 14px; border-radius: 12px; border: 1px solid var(--line); background: #000; }
+.paso__fotos { display: grid; grid-template-columns: 1fr 2.3fr; gap: 12px; align-items: start; }
+.tip { margin-top: 16px; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(220, 197, 156, .25); background: rgba(220, 197, 156, .06); color: var(--ink-2); font-size: 15px; }
+.guias h2 { margin-top: 8px; }
+@media (max-width: 680px) { .paso { padding: 14px; } .paso__fotos { grid-template-columns: 1fr; } }
+.paso > img { max-width: 760px; }
