@@ -28,8 +28,8 @@ struct Base {
 };
 
 const Base Bases[] = {
-	{"tinta", "Negro tinta", false,
-	 {"#6E6862", "#4E4944", "#3A3632", "#2D2A27", "#22201E", "#1A1817", "#131211", "#0C0B0A"}, "#A39D95"},
+	{"tinta", "Negro ónix", false,
+	 {"#5E5953", "#3E3A36", "#2B2825", "#201E1C", "#181716", "#121110", "#0C0B0B", "#070707"}, "#9C958B"},
 	{"ciruela", "Ciruela", false,
 	 {"#6E5A78", "#58465F", "#46374E", "#382B3F", "#2C2132", "#221A27", "#1A131E", "#110C14"}, "#B4A5BC"},
 	{"mate", "Negro mate", false,
@@ -67,7 +67,7 @@ struct Swatch {
 
 /* Saturated enough for buttons, readable with white text on top. */
 const Swatch Swatches[] = {
-	{"Hueso", "#E6DED0"},  {"Vainilla", "#EADBB8"}, {"Brasa", "#E2582B"},   {"Dorado", "#C08A1E"},
+	{"Champán", "#DCC59C"}, {"Hueso", "#E6DED0"}, {"Vainilla", "#EADBB8"}, {"Brasa", "#E2582B"},   {"Dorado", "#C08A1E"},
 	{"Esmeralda", "#24966C"}, {"Turquesa", "#17919F"}, {"Azul", "#2C78DB"}, {"Indigo", "#5E66E0"},
 	{"Violeta", "#8752DE"}, {"Rosa", "#D63E73"},
 };
@@ -76,7 +76,7 @@ const Swatch Swatches[] = {
 QColor AppearanceDialog::savedAccent()
 {
 	const QColor saved(WorshipOutput::ConfigString(ConfigAccent));
-	return saved.isValid() ? saved : QColor(0xE6, 0xDE, 0xD0);
+	return saved.isValid() ? saved : QColor(0xDC, 0xC5, 0x9C);
 }
 
 bool AppearanceDialog::savedLight()

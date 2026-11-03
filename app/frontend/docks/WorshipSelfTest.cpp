@@ -40,6 +40,8 @@
 #include <QImage>
 #include <QPointer>
 #include <QTextStream>
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QTimer>
 
 #include <functional>
@@ -666,6 +668,55 @@ struct SelfTest {
 			OBSSourceAutoRelease practice = obs_get_source_by_name("Transmisión (recorrido)");
 			if (practice)
 				obs_source_remove(practice);
+		});
+	}
+
+	/* Pictures for the website: projector and stream separately, with a photo
+	 * of a preacher in place of the camera (WORSHIPSTUDIO_SELFTEST_PHOTO). */
+	void addShowcaseSteps()
+	{
+		const QString title = QStringLiteral("Cantad al Señor");
+		add(300, [=]() {
+			log(QStringLiteral("--- Vitrina para la web ---"));
+			WorshipOutput::SetSeparateRoomScreen(true);
+			OBSScene projector = WorshipOutput::EnsureScene(WorshipOutput::RoomScreenScene);
+			OBSScene combo = WorshipOutput::EnsureScene("Cámara + proyector");
+			OBSScene camera = WorshipOutput::EnsureScene("Solo cámara");
+			OBSDataAutoRelease photo = obs_data_create();
+			obs_data_set_string(photo, "file", QT_TO_UTF8(qEnvironmentVariable("WORSHIPSTUDIO_SELFTEST_PHOTO")));
+			bool created = false;
+			OBSSource cam = WorshipOutput::EnsureSource(camera, "Cámara del púlpito", "image_source", photo, &created);
+			WorshipOutput::FitItem(camera, cam, 0.0f, 0.0f, 1.0f, 1.0f, OBS_ALIGN_CENTER, OBS_BOUNDS_SCALE_OUTER);
+			if (!obs_scene_find_source(combo, "Cámara del púlpito")) {
+				obs_scene_add(combo, cam);
+				WorshipOutput::FitItem(combo, cam, 0.0f, 0.0f, 1.0f, 1.0f, OBS_ALIGN_CENTER, OBS_BOUNDS_SCALE_OUTER);
+				obs_scene_add(combo, obs_scene_get_source(projector));
+				WorshipOutput::FitItem(combo, obs_scene_get_source(projector), 0.63f, 0.63f, 0.34f, 0.34f);
+			}
+			obs_frontend_set_preview_program_mode(false);
+			obs_frontend_set_current_scene(obs_scene_get_source(combo));
+			songs->deleteSong(title);
+			check(songs->projectNewSong(title, QStringLiteral("Cantad al Señor un cántico nuevo\ncantad al Señor toda la tierra\n\n"
+									  "[Coro]\nCantad al Señor, bendecid su nombre\nanunciad de día en día su salvación"),
+						    11),
+			      QStringLiteral("vitrina: canto en el proyector"));
+		});
+		add(400, [=]() {
+			if (QMainWindow *window = qobject_cast<QMainWindow *>(hymnal->window())) {
+				if (QWidget *live = window->findChild<QWidget *>(QStringLiteral("liveToolsDock")))
+					for (QScrollArea *area : live->findChildren<QScrollArea *>())
+						area->verticalScrollBar()->setValue(0);
+				for (QDockWidget *dock : window->findChildren<QDockWidget *>())
+					if (dock->objectName() == QStringLiteral("songsDock"))
+						dock->raise();
+			}
+		});
+		add(2500, [=]() {
+			grabWithScreens(hymnal->window()).save(outDir.absoluteFilePath(QStringLiteral("web-app-proyector.png")));
+			OBSSourceAutoRelease projector = obs_get_source_by_name(WorshipOutput::RoomScreenScene);
+			capture(projector ? obs_scene_from_source(projector) : nullptr, QStringLiteral("web-proyector"));
+			OBSSourceAutoRelease stream = obs_frontend_get_current_scene();
+			capture(stream ? obs_scene_from_source(stream) : nullptr, QStringLiteral("web-transmision"));
 		});
 	}
 
@@ -1389,6 +1440,8 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Songs
 		test->addLiveSteps();
 	if (wanted("sala"))
 		test->addScreensSteps();
+	if (only.contains(QStringLiteral("vitrina")))
+		test->addShowcaseSteps();
 	if (wanted("importar"))
 		test->addImportSteps();
 	if (wanted("interfaz")) {

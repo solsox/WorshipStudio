@@ -574,7 +574,7 @@ void GuidedTour::paintEvent(QPaintEvent *)
 		dim = dim.subtracted(cut);
 	}
 	p.fillPath(dim, QColor(8, 7, 6, 170));
-	p.setPen(QPen(QColor(0xE6, 0xDE, 0xD0), 2.5));
+	p.setPen(QPen(QColor(0xDC, 0xC5, 0x9C), 2.5));
 	p.setBrush(Qt::NoBrush);
 	for (const QRect &hole : holes)
 		p.drawRoundedRect(QRectF(hole).adjusted(1, 1, -1, -1), 10, 10);

@@ -6,28 +6,28 @@
     dark: 'true';
 }
 
-/* Calm, low-glare dark theme for the booth during a service: warm ink black
- * neutrals, bone primary buttons, rounded shapes and quiet borders. */
+/* Calm, low-glare dark theme for the booth during a service: deep warm onyx
+ * neutrals, champagne primary buttons, rounded shapes and quiet borders. */
 @OBSThemeVars {
-    --grey1: #6E6862;
-    --grey2: #4E4944;
-    --grey3: #3A3632;
-    --grey4: #2D2A27;
-    --grey5: #22201E;
-    --grey6: #1A1817;
-    --grey7: #131211;
-    --grey8: #0C0B0A;
+    --grey1: #5E5953;
+    --grey2: #3E3A36;
+    --grey3: #2B2825;
+    --grey4: #201E1C;
+    --grey5: #181716;
+    --grey6: #121110;
+    --grey7: #0C0B0B;
+    --grey8: #070707;
 
-    --ws_ember1: #8A8276;
-    --ws_ember2: #6E675D;
-    --ws_ember3: #5A544B;
-    --ws_ember4: #46413A;
-    --ws_ember5: #34302B;
+    --ws_ember1: #A08B66;
+    --ws_ember2: #81704F;
+    --ws_ember3: #655840;
+    --ws_ember4: #4A4131;
+    --ws_ember5: #332D23;
 
-    /* Primary buttons: bone with ink text (selections use the shades above). */
-    --ws_button1: #F1EBE0;
-    --ws_button2: #E6DED0;
-    --ws_on_button: #1B1915;
+    /* Primary buttons: champagne with ink text (selections use the shades above). */
+    --ws_button1: #E8D5B0;
+    --ws_button2: #DCC59C;
+    --ws_on_button: #16130E;
 
     --primary: var(--ws_ember3);
     --primary_light: var(--ws_ember2);
@@ -35,7 +35,7 @@
     --primary_dark: var(--ws_ember4);
     --primary_darker: var(--ws_ember5);
 
-    --text_muted: #A39D95;
+    --text_muted: #9C958B;
 
     --border_color: var(--grey4);
     --border_radius: 8px;

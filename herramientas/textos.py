@@ -19,7 +19,7 @@ LIT = re.compile(r'"((?:[^"\\]|\\.)*)"')
 # Texts that reach tr() through a table (colors, backgrounds), kept after the
 # extracted ones so numbering of existing texts does not move.
 EXTRA = ['Ciruela', 'Negro mate', 'Negro profundo', 'Negro brillante', 'Blanco', 'Vainilla', 'Hueso',
-         'Brasa', 'Indigo', 'Esmeralda', 'Azul', 'Violeta', 'Rosa', 'Dorado', 'Turquesa']
+         'Brasa', 'Indigo', 'Esmeralda', 'Azul', 'Violeta', 'Rosa', 'Dorado', 'Turquesa', 'Champán', 'Negro ónix']
 
 def unescape(text):
     return re.sub(r'\\(.)', lambda m: {'n': '\n', 't': '\t'}.get(m.group(1), m.group(1)), text)

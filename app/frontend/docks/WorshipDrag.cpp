@@ -43,7 +43,7 @@ QPixmap dragLabel(const QString &text, const QFont &font)
 	painter.setRenderHint(QPainter::Antialiasing);
 	QPainterPath path;
 	path.addRoundedRect(QRectF(0.5, 0.5, size.width() - 1, size.height() - 1), 8, 8);
-	painter.fillPath(path, QColor(0xE6, 0xDE, 0xD0, 235));
+	painter.fillPath(path, QColor(0xDC, 0xC5, 0x9C, 240));
 	painter.setPen(QColor(0x1B, 0x19, 0x17));
 	painter.setFont(font);
 	painter.drawText(QRect(QPoint(0, 0), size), Qt::AlignCenter, shown);

@@ -126,7 +126,7 @@ const char *const RemotePage = R"HTML(<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0E0F14"><title>WorshipStudio · Control</title>
 <style>
-:root{--bg:#0C0B0A;--s1:#131211;--s2:#1A1817;--line:#2D2A27;--t:#F4F1EC;--m:#A39D95;--a:#E6DED0;--on:#1B1915;--g:#E8C46A;--ok:#30A46C;--red:#E5484D}
+:root{--bg:#070707;--s1:#0F0E0D;--s2:#181716;--line:#2B2825;--t:#F4F1EC;--m:#9C958B;--a:#DCC59C;--on:#16130E;--g:#E8C46A;--ok:#30A46C;--red:#E5484D}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--bg);color:var(--t);font:16px/1.45 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;padding:max(14px,env(safe-area-inset-top)) 14px calc(84px + env(safe-area-inset-bottom))}
 header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}

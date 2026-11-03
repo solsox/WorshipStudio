@@ -69,7 +69,7 @@ QString AskWorshipLanguage(const QString &current, const QStringList &preferred)
 		"QListWidget::item{padding:9px 10px;border-radius:7px;}"
 		"QListWidget::item:selected{background:#5A544B;color:#FFFFFF;}"
 		"QListWidget::item:hover:!selected{background:#22201E;}"
-		"QPushButton{background:#E6DED0;color:#1B1915;border:none;border-radius:8px;padding:10px 18px;"
+		"QPushButton{background:#DCC59C;color:#16130E;border:none;border-radius:8px;padding:10px 18px;"
 		"font-size:15px;font-weight:600;}"
 		"QPushButton:hover{background:#F1EBE0;}"));
 
