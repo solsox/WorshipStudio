@@ -251,18 +251,42 @@ void GuidedTour::buildSteps()
 			 }});
 	steps.back().dock = "songsDock";
 
-	steps.push_back({tr("5. Preparalo en espera"),
-			 tr("Hacé <b>doble clic</b> en el canto: aparece <b>EN ESPERA</b>. La congregación todavía no "
-			    "lo ve, así podés revisar que esté bien."),
-			 byName("songsList"), [w]() { raiseDock(w, "songsDock"); },
-			 []() { return previewName().startsWith(QStringLiteral("WS Cantos")); }});
-	steps.back().dock = "songsDock";
+	if (WorshipOutput::SeparateRoomScreen()) {
+		/* Room and stream separately: the song goes straight to the room,
+		 * and the stream is switched with the three EN VIVO buttons. */
+		steps.push_back({tr("5. Mostralo en la sala"),
+				 tr("Hacé <b>doble clic</b> en el canto: aparece en la <b>SALA</b>, lo que ve la iglesia. "
+				    "Lo ves en el monitor de <b>En vivo</b>. Avanzá con <b>Siguiente ▶</b> o las flechas."),
+				 byName("songsList"),
+				 [w]() {
+					 raiseDock(w, "songsDock");
+					 /* The room monitor is at the top of the En vivo panel. */
+					 if (QWidget *live = w->findChild<QWidget *>(QStringLiteral("liveToolsDock")))
+						 for (QScrollArea *area : live->findChildren<QScrollArea *>())
+							 area->verticalScrollBar()->setValue(0);
+				 },
+				 []() { return WorshipOutput::OnAirSceneName().startsWith(QStringLiteral("WS Cantos")); }});
+		steps.back().dock = "songsDock";
 
-	steps.push_back({tr("6. Pasalo a la pantalla"),
-			 tr("Tocá <b>Pasar a pantalla</b>: ahora lo ve la gente. Avanzá con <b>Siguiente ▶</b>, las "
-			    "flechas del teclado o el presentador inalámbrico."),
-			 byName("liveGo"), {},
-			 []() { return programName().startsWith(QStringLiteral("WS Cantos")); }});
+		steps.push_back({tr("6. Elegí qué ve internet"),
+				 tr("<b>EN VIVO</b> es lo que sale por internet. Con estos botones lo cambiás al instante: "
+				    "<b>Cámara</b> para la predicación, <b>Cámara + pantalla</b> para los cantos y "
+				    "<b>Pantalla</b> para un anuncio."),
+				 byName("liveShots"), {}, {}});
+	} else {
+		steps.push_back({tr("5. Preparalo en espera"),
+				 tr("Hacé <b>doble clic</b> en el canto: aparece <b>EN ESPERA</b>. La congregación todavía no "
+				    "lo ve, así podés revisar que esté bien."),
+				 byName("songsList"), [w]() { raiseDock(w, "songsDock"); },
+				 []() { return previewName().startsWith(QStringLiteral("WS Cantos")); }});
+		steps.back().dock = "songsDock";
+
+		steps.push_back({tr("6. Pasalo a la pantalla"),
+				 tr("Tocá <b>Pasar a pantalla</b>: ahora lo ve la gente. Avanzá con <b>Siguiente ▶</b>, las "
+				    "flechas del teclado o el presentador inalámbrico."),
+				 byName("liveGo"), {},
+				 []() { return programName().startsWith(QStringLiteral("WS Cantos")); }});
+	}
 
 	steps.push_back({tr("7. La Biblia, igual de fácil"),
 			 tr("Escribí una cita como <i>Juan 3:16</i> o una frase, y hacé doble clic en el versículo. "
@@ -278,7 +302,8 @@ void GuidedTour::buildSteps()
 
 	steps.push_back({tr("9. Conectá el proyector"),
 			 tr("Tocá <b>Pantalla del proyector</b> y elegí el proyector o la TV: ahí se verá a pantalla "
-			    "completa lo que está EN PANTALLA."),
+			    "completa lo que está EN PANTALLA.<br>¿Transmitís? Con <b>Separar sala y en vivo</b> la "
+			    "<b>SALA</b> ve la letra completa y <b>EN VIVO</b> internet ve la cámara con la letra."),
 			 byName("liveProjector"), {}, {}});
 
 	auto *customize = new QPushButton(tr("Personalizar ahora..."), extraSlot);
@@ -316,9 +341,11 @@ GuidedTour *GuidedTour::start(QMainWindow *window)
 {
 	for (GuidedTour *existing : window->findChildren<GuidedTour *>())
 		existing->finish();
-	/* The tour teaches the on hold -> on screen flow. */
-	if (!obs_frontend_preview_program_mode_active())
-		obs_frontend_set_preview_program_mode(true);
+	/* The tour teaches the on hold -> on screen flow; with the room and the
+	 * stream separately there is one big picture (EN VIVO) instead. */
+	const bool studio = !WorshipOutput::SeparateRoomScreen();
+	if (obs_frontend_preview_program_mode_active() != studio)
+		obs_frontend_set_preview_program_mode(studio);
 	return new GuidedTour(window);
 }
 

@@ -9,6 +9,7 @@
 
 class BackgroundPicker;
 class QComboBox;
+class QButtonGroup;
 class QLabel;
 class QLineEdit;
 class QPushButton;
@@ -62,6 +63,11 @@ private:
 	QPushButton *hideButton = nullptr;
 	QPushButton *goLiveButton = nullptr;
 	QPushButton *projectorButton = nullptr;
+	/* Room and stream separately: live room picture and EN VIVO shots. */
+	QWidget *roomMonitor = nullptr;
+	QWidget *shotRow = nullptr;
+	QButtonGroup *shotGroup = nullptr;
+	QPushButton *separateButton = nullptr;
 
 	/* Countdown */
 	QComboBox *countdownMode = nullptr;

@@ -1,4 +1,5 @@
 #include "WorshipOutput.hpp"
+#include "WorshipLive.hpp"
 
 #include <OBSApp.hpp>
 
@@ -192,6 +193,8 @@ void SetSeparateRoomScreen(bool separate)
 	SetConfigString("SeparateRoomScreen", separate ? QStringLiteral("1") : QStringLiteral("0"));
 	if (separate)
 		EnsureScene(RoomScreenScene);
+	/* Panels and labels that name SALA / EN VIVO refresh. */
+	QMetaObject::invokeMethod(&WorshipLive::instance(), "changed", Qt::QueuedConnection);
 }
 
 QString OnAirSceneName()

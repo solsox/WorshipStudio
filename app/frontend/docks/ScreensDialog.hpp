@@ -3,7 +3,7 @@
 #include <QDialog>
 
 class QButtonGroup;
-class QCheckBox;
+class QRadioButton;
 class QComboBox;
 class QLabel;
 class QWidget;
@@ -18,7 +18,19 @@ class ScreensDialog : public QDialog {
 public:
 	explicit ScreensDialog(QWidget *parent = nullptr);
 
-	enum class StreamLayout { CameraWithCorner = 0, ScreenWithCamera = 1, SideBySide = 2, ScreenOnly = 3 };
+	enum class StreamLayout { CameraWithCorner = 0, ScreenWithCamera = 1, SideBySide = 2, ScreenOnly = 3, CameraOnly = 4 };
+
+	/* What EN VIVO shows right now, switched from the En vivo panel without
+	 * rebuilding the scene: the camera alone, camera with the screen (the
+	 * design chosen here) or the screen alone. Fades between them. */
+	enum class StreamShot { Camera = 0, CameraAndScreen = 1, Screen = 2 };
+	static bool ShowShot(StreamShot shot);
+	static StreamShot CurrentShot();
+	/* "● SALA ..." and "● EN VIVO ...": the same names and colors everywhere. */
+	static QString RoomChip(const QString &text);
+	static QString LiveChip(const QString &text);
+	/* Live picture of the room screen, for the En vivo panel. */
+	static QWidget *CreateRoomMonitor(QWidget *parent);
 
 	/* Builds (or rebuilds) the "Transmisión" scene; returns false without a
 	 * camera when one is needed. Also used by the self test. */
@@ -31,7 +43,8 @@ public:
 	static QStringList Cameras();
 
 private:
-	QCheckBox *separateCheck = nullptr;
+	QRadioButton *sameRadio = nullptr;
+	QRadioButton *separateRadio = nullptr;
 	QComboBox *monitorCombo = nullptr;
 	QComboBox *cameraCombo = nullptr;
 	QButtonGroup *layoutGroup = nullptr;

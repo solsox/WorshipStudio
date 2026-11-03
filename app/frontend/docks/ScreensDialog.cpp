@@ -23,7 +23,8 @@
 #include <Idian/Utils.hpp>
 
 #include <QButtonGroup>
-#include <QCheckBox>
+#include <QFrame>
+#include <QRadioButton>
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QFormLayout>
@@ -32,6 +33,7 @@
 #include <QPainter>
 #include <QPushButton>
 #include <QScreen>
+#include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -43,6 +45,7 @@ constexpr const char *NewCameraName = "Cámara";
 constexpr const char *ConfigMonitor = "RoomScreenMonitor";
 constexpr const char *ConfigLayout = "StreamLayout";
 constexpr const char *ConfigCamera = "StreamCamera";
+constexpr const char *ConfigShot = "StreamShot";
 
 const char *const CameraIds[] = {"macos-avcapture", "macos-avcapture-fast", "av_capture_input", "dshow_input",
 				 "v4l2_input"};
@@ -84,6 +87,11 @@ void boxesFor(ScreensDialog::StreamLayout layout, Box *camera, Box *screen, bool
 		*camera = {0.0f, 0.0f, 0.0f, 0.0f};
 		*screen = {0.0f, 0.0f, 1.0f, 1.0f};
 		*screenOnTop = true;
+		break;
+	case ScreensDialog::StreamLayout::CameraOnly:
+		*camera = {0.0f, 0.0f, 1.0f, 1.0f};
+		*screen = {0.0f, 0.0f, 0.0f, 0.0f};
+		*screenOnTop = false;
 		break;
 	}
 }
@@ -262,27 +270,71 @@ void ScreensDialog::RestoreRoomScreen()
 		OpenRoomScreen(monitor);
 }
 
+namespace {
+/* "● SALA" / "● EN VIVO": the two names used everywhere, with their colors. */
+QString chip(const QString &color, const QString &name, const QString &text)
+{
+	return QStringLiteral("<span style=\"color:%1\">●</span> <b>%2</b> &nbsp;%3").arg(color, name.toHtmlEscaped(), text.toHtmlEscaped());
+}
+
+QWidget *choiceCard(QRadioButton *radio, const QString &text, QWidget *parent)
+{
+	auto *card = new QFrame(parent);
+	card->setFrameShape(QFrame::StyledPanel);
+	auto *layout = new QVBoxLayout(card);
+	layout->setContentsMargins(14, 12, 14, 12);
+	layout->setSpacing(4);
+	QFont bold = radio->font();
+	bold.setBold(true);
+	radio->setFont(bold);
+	radio->setParent(card);
+	auto *label = new QLabel(text, card);
+	label->setWordWrap(true);
+	label->setContentsMargins(24, 0, 0, 0);
+	idian::Utils::addClass(label, "text-muted");
+	layout->addWidget(radio);
+	layout->addWidget(label);
+	return card;
+}
+} // namespace
+
+QString ScreensDialog::RoomChip(const QString &text)
+{
+	return chip(QStringLiteral("#F2A65A"), tr("SALA"), text);
+}
+
+QString ScreensDialog::LiveChip(const QString &text)
+{
+	return chip(QStringLiteral("#E5484D"), tr("EN VIVO"), text);
+}
+
 ScreensDialog::ScreensDialog(QWidget *parent) : QDialog(parent)
 {
-	setWindowTitle(tr("Pantallas y transmisión"));
-	setMinimumWidth(620);
+	setWindowTitle(tr("Sala y en vivo"));
+	setMinimumWidth(640);
 	auto *layout = new QVBoxLayout(this);
 	layout->setSpacing(12);
 
-	auto *intro = new QLabel(tr("Como en las transmisiones profesionales: la pantalla de la sala muestra solo la "
-				    "letra, la Biblia o la presentación, y la transmisión muestra la cámara con eso "
-				    "mismo más chico."),
+	auto *names = new QLabel(RoomChip(tr("lo que ve la iglesia en el proyector o la TV.")) + QStringLiteral("<br>") +
+					 LiveChip(tr("lo que ve internet (YouTube, Facebook) y la grabación.")),
 				 this);
-	intro->setWordWrap(true);
-	layout->addWidget(intro);
+	names->setTextFormat(Qt::RichText);
+	names->setWordWrap(true);
+	layout->addWidget(names);
 
-	separateCheck = new QCheckBox(tr("La sala y la transmisión muestran cosas distintas"), this);
-	separateCheck->setChecked(WorshipOutput::SeparateRoomScreen());
-	layout->addWidget(separateCheck);
+	sameRadio = new QRadioButton(tr("Lo mismo en la sala y en vivo"));
+	separateRadio = new QRadioButton(tr("Sala y en vivo por separado · recomendado si transmitís"));
+	layout->addWidget(choiceCard(sameRadio,
+				     tr("Lo más simple: lo que mandás a la pantalla también sale por internet."), this));
+	layout->addWidget(choiceCard(separateRadio,
+				     tr("La sala ve la letra o la Biblia a pantalla completa. En vivo se ve la cámara "
+					"con eso mismo más chico, y lo cambiás con un botón."),
+				     this));
+	(WorshipOutput::SeparateRoomScreen() ? separateRadio : sameRadio)->setChecked(true);
 
 	details = new QWidget(this);
 	auto *form = new QFormLayout(details);
-	form->setContentsMargins(0, 0, 0, 0);
+	form->setContentsMargins(0, 4, 0, 0);
 	form->setVerticalSpacing(10);
 
 	monitorCombo = new QComboBox(details);
@@ -299,7 +351,8 @@ ScreensDialog::ScreensDialog(QWidget *parent) : QDialog(parent)
 	monitorCombo->addItem(tr("En una ventana (para probar)"), -1);
 	const QString savedMonitor = WorshipOutput::ConfigString(ConfigMonitor);
 	const int monitorIndex = savedMonitor.isEmpty() ? -1 : monitorCombo->findData(savedMonitor.toInt());
-	monitorCombo->setCurrentIndex(monitorIndex >= 0 ? monitorIndex : qMin(1, monitorCombo->count() - 1));
+	monitorCombo->setCurrentIndex(monitorIndex >= 0 ? monitorIndex
+							: (screens.size() > 1 ? 1 : monitorCombo->count() - 1));
 	form->addRow(tr("Proyector de la sala"), monitorCombo);
 
 	cameraCombo = new QComboBox(details);
@@ -314,31 +367,32 @@ ScreensDialog::ScreensDialog(QWidget *parent) : QDialog(parent)
 	auto *layoutsRow = new QHBoxLayout(layouts);
 	layoutsRow->setContentsMargins(0, 0, 0, 0);
 	layoutGroup = new QButtonGroup(this);
-	const QStringList names{tr("Cámara y pantalla en la esquina"), tr("Pantalla y cámara en la esquina"),
-				tr("Lado a lado"), tr("Igual que la sala")};
-	for (int i = 0; i < names.size(); ++i) {
+	const QStringList designs{tr("Cámara y pantalla en la esquina"), tr("Pantalla y cámara en la esquina"),
+				  tr("Lado a lado")};
+	for (int i = 0; i < designs.size(); ++i) {
 		auto *button = new QToolButton(layouts);
 		button->setCheckable(true);
 		button->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 		button->setIcon(layoutIcon(static_cast<StreamLayout>(i)));
 		button->setIconSize(QSize(128, 72));
-		button->setText(names.at(i));
-		button->setMinimumWidth(140);
+		button->setText(designs.at(i));
+		button->setMinimumWidth(150);
 		layoutGroup->addButton(button, i);
 		layoutsRow->addWidget(button);
 	}
 	const int savedLayout = WorshipOutput::ConfigString(ConfigLayout).toInt();
-	if (QAbstractButton *button = layoutGroup->button(qBound(0, savedLayout, 3)))
+	if (QAbstractButton *button = layoutGroup->button(qBound(0, savedLayout, 2)))
 		button->setChecked(true);
-	form->addRow(tr("Transmisión"), layouts);
-	layout->addWidget(details);
+	form->addRow(tr("Cámara + pantalla"), layouts);
 
-	auto *hint = new QLabel(tr("Se crea la escena \"Transmisión\". Podés moverla y agrandar cada parte como "
-				   "cualquier escena, y usar \"Pantalla de la sala\" como fuente en tus otras escenas."),
-				this);
+	auto *hint = new QLabel(tr("Durante la reunión, en el panel En vivo cambiás lo que ve internet con tres "
+				   "botones: Cámara, Cámara + pantalla y Pantalla. La escena \"Transmisión\" se "
+				   "puede retocar como cualquier escena."),
+				details);
 	hint->setWordWrap(true);
 	idian::Utils::addClass(hint, "text-muted");
-	layout->addWidget(hint);
+	form->addRow(hint);
+	layout->addWidget(details);
 
 	status = new QLabel(this);
 	status->setWordWrap(true);
@@ -349,8 +403,8 @@ ScreensDialog::ScreensDialog(QWidget *parent) : QDialog(parent)
 	idian::Utils::addClass(applyButton, "button-primary");
 	layout->addWidget(buttons);
 
-	const auto updateEnabled = [this]() { details->setEnabled(separateCheck->isChecked()); };
-	connect(separateCheck, &QCheckBox::toggled, this, updateEnabled);
+	const auto updateEnabled = [this]() { details->setVisible(separateRadio->isChecked()); adjustSize(); };
+	connect(separateRadio, &QRadioButton::toggled, this, updateEnabled);
 	updateEnabled();
 	connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 	connect(applyButton, &QPushButton::clicked, this, &ScreensDialog::apply);
@@ -358,21 +412,31 @@ ScreensDialog::ScreensDialog(QWidget *parent) : QDialog(parent)
 
 void ScreensDialog::apply()
 {
-	const bool separate = separateCheck->isChecked();
-	if (!separate) {
+	/* What the congregation sees now stays on screen when switching. */
+	const QString onAir = WorshipOutput::OnAirSceneName();
+	const auto keepOnScreen = [&onAir]() {
+		if (onAir.isEmpty() || !WorshipOutput::IsInternalScene(onAir))
+			return;
+		OBSSourceAutoRelease source = obs_get_source_by_name(QT_TO_UTF8(onAir));
+		if (obs_scene_t *scene = source ? obs_scene_from_source(source) : nullptr)
+			WorshipOutput::ShowScene(scene);
+	};
+
+	if (!separateRadio->isChecked()) {
 		WorshipOutput::SetSeparateRoomScreen(false);
+		/* Straight to the screen (also in Studio Mode): it was already on air. */
+		OBSSourceAutoRelease source = onAir.isEmpty() ? nullptr : obs_get_source_by_name(QT_TO_UTF8(onAir));
+		if (source && WorshipOutput::IsInternalScene(onAir))
+			obs_frontend_set_current_scene(source);
 		accept();
 		return;
 	}
 
-	/* What is on screen now stays there when switching. */
-	const QString onAir = WorshipOutput::OnAirSceneName();
 	WorshipOutput::SetSeparateRoomScreen(true);
-	if (!onAir.isEmpty() && WorshipOutput::IsInternalScene(onAir)) {
-		OBSSourceAutoRelease source = obs_get_source_by_name(QT_TO_UTF8(onAir));
-		if (obs_scene_t *scene = source ? obs_scene_from_source(source) : nullptr)
-			WorshipOutput::ShowScene(scene);
-	}
+	keepOnScreen();
+	/* One big picture (EN VIVO) and the room monitor: no second preview. */
+	if (obs_frontend_preview_program_mode_active())
+		obs_frontend_set_preview_program_mode(false);
 
 	const auto layout = static_cast<StreamLayout>(qMax(0, layoutGroup->checkedId()));
 	QString error;
@@ -386,6 +450,170 @@ void ScreensDialog::apply()
 	WorshipOutput::SetConfigString(ConfigCamera, cameraCombo->currentData().toString().isEmpty()
 							     ? QString::fromUtf8(NewCameraName)
 							     : cameraCombo->currentData().toString());
+	ShowShot(StreamShot::CameraAndScreen);
 	OpenRoomScreen(monitor);
 	accept();
+}
+
+namespace {
+struct StreamItems {
+	obs_sceneitem_t *camera = nullptr;
+	obs_sceneitem_t *screen = nullptr;
+};
+
+StreamItems streamItems(obs_scene_t *stream)
+{
+	StreamItems items;
+	obs_scene_enum_items(
+		stream,
+		[](obs_scene_t *, obs_sceneitem_t *item, void *param) {
+			auto *found = static_cast<StreamItems *>(param);
+			obs_source_t *source = obs_sceneitem_get_source(item);
+			if (strcmp(obs_source_get_name(source), WorshipOutput::RoomScreenScene) == 0)
+				found->screen = item;
+			else if (isCamera(source) && !found->camera)
+				found->camera = item;
+			return true;
+		},
+		&items);
+	return items;
+}
+
+void fadeOn(obs_sceneitem_t *item)
+{
+	for (bool show : {true, false}) {
+		if (obs_sceneitem_get_transition(item, show))
+			continue;
+		OBSSourceAutoRelease fade = obs_source_create_private("fade_transition", "WS Fundido", nullptr);
+		obs_sceneitem_set_transition(item, show, fade);
+		obs_sceneitem_set_transition_duration(item, show, 400);
+	}
+}
+
+void placeItem(obs_sceneitem_t *item, const Box &box, obs_bounds_type bounds)
+{
+	const float W = (float)WorshipOutput::CanvasWidth(), H = (float)WorshipOutput::CanvasHeight();
+	vec2 pos, size;
+	vec2_set(&pos, W * box.x, H * box.y);
+	vec2_set(&size, W * box.w, H * box.h);
+	obs_sceneitem_defer_update_begin(item);
+	obs_sceneitem_set_alignment(item, OBS_ALIGN_LEFT | OBS_ALIGN_TOP);
+	obs_sceneitem_set_pos(item, &pos);
+	obs_sceneitem_set_bounds_type(item, bounds);
+	obs_sceneitem_set_bounds_alignment(item, OBS_ALIGN_CENTER);
+	obs_sceneitem_set_bounds(item, &size);
+	obs_sceneitem_defer_update_end(item);
+}
+
+/* Live picture of the room screen, refreshed a few times per second. A
+ * plain widget (not a native display) so it scrolls with the panel. */
+class RoomMonitor : public QLabel {
+public:
+	explicit RoomMonitor(QWidget *parent) : QLabel(parent)
+	{
+		setMinimumHeight(90);
+		/* Small enough that the EN VIVO buttons stay in view. */
+		setMaximumHeight(150);
+		setAlignment(Qt::AlignCenter);
+		setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+		setStyleSheet(QStringLiteral("background:#000; border-radius:6px;"));
+		timer.setInterval(200);
+		connect(&timer, &QTimer::timeout, this, [this]() { refresh(); });
+	}
+	bool hasHeightForWidth() const override { return true; }
+	int heightForWidth(int width) const override { return qMin(150, width * 9 / 16); }
+	QSize sizeHint() const override { return {266, 150}; }
+
+protected:
+	void showEvent(QShowEvent *event) override
+	{
+		QLabel::showEvent(event);
+		timer.start();
+		refresh();
+	}
+	void hideEvent(QHideEvent *event) override
+	{
+		QLabel::hideEvent(event);
+		timer.stop();
+	}
+
+private:
+	QTimer timer;
+
+	void refresh()
+	{
+		if (!isVisible() || width() < 20)
+			return;
+		OBSSourceAutoRelease room = obs_get_source_by_name(WorshipOutput::RoomScreenScene);
+		const qreal ratio = devicePixelRatioF();
+		const QSize size = QSize(16, 9).scaled(QSize(width() - 2, height() - 2) * ratio, Qt::KeepAspectRatio);
+		QImage image = room ? WorshipOutput::RenderSource(room, (uint32_t)size.width(), (uint32_t)size.height())
+				    : QImage();
+		if (image.isNull()) {
+			image = QImage(size, QImage::Format_RGB32);
+			image.fill(Qt::black);
+		}
+		QPixmap pixmap = QPixmap::fromImage(image);
+		pixmap.setDevicePixelRatio(ratio);
+		setPixmap(pixmap);
+	}
+};
+} // namespace
+
+QWidget *ScreensDialog::CreateRoomMonitor(QWidget *parent)
+{
+	return new RoomMonitor(parent);
+}
+
+ScreensDialog::StreamShot ScreensDialog::CurrentShot()
+{
+	return static_cast<StreamShot>(qBound(0, WorshipOutput::ConfigString(ConfigShot).isEmpty()
+							 ? 1
+							 : WorshipOutput::ConfigString(ConfigShot).toInt(),
+					      2));
+}
+
+bool ScreensDialog::ShowShot(StreamShot shot)
+{
+	OBSSourceAutoRelease source = obs_get_source_by_name(StreamSceneName);
+	obs_scene_t *stream = source ? obs_scene_from_source(source) : nullptr;
+	StreamItems items = stream ? streamItems(stream) : StreamItems();
+	if (!stream || !items.screen) {
+		/* No stream scene yet (or it was emptied): build it again. */
+		if (!BuildStreamScene(static_cast<StreamLayout>(WorshipOutput::ConfigString(ConfigLayout).toInt()),
+				      WorshipOutput::ConfigString(ConfigCamera)))
+			return false;
+		OBSSourceAutoRelease rebuilt = obs_get_source_by_name(StreamSceneName);
+		stream = rebuilt ? obs_scene_from_source(rebuilt) : nullptr;
+		items = stream ? streamItems(stream) : StreamItems();
+		if (!items.screen)
+			return false;
+	}
+
+	StreamLayout layout = static_cast<StreamLayout>(qBound(0, WorshipOutput::ConfigString(ConfigLayout).toInt(), 2));
+	/* Without a camera, EN VIVO always shows the screen. */
+	if (shot == StreamShot::Screen || !items.camera)
+		layout = StreamLayout::ScreenOnly;
+	else if (shot == StreamShot::Camera)
+		layout = StreamLayout::CameraOnly;
+
+	Box cameraBox, screenBox;
+	bool screenOnTop = true;
+	boxesFor(layout, &cameraBox, &screenBox, &screenOnTop);
+	fadeOn(items.screen);
+	if (screenBox.w > 0.0f)
+		placeItem(items.screen, screenBox, OBS_BOUNDS_SCALE_INNER);
+	obs_sceneitem_set_visible(items.screen, screenBox.w > 0.0f);
+	if (items.camera) {
+		fadeOn(items.camera);
+		if (cameraBox.w > 0.0f)
+			placeItem(items.camera, cameraBox,
+				  layout == StreamLayout::CameraWithCorner || layout == StreamLayout::CameraOnly
+					  ? OBS_BOUNDS_SCALE_OUTER
+					  : OBS_BOUNDS_SCALE_INNER);
+		obs_sceneitem_set_visible(items.camera, cameraBox.w > 0.0f);
+		obs_sceneitem_set_order(items.screen, screenOnTop ? OBS_ORDER_MOVE_TOP : OBS_ORDER_MOVE_BOTTOM);
+	}
+	WorshipOutput::SetConfigString(ConfigShot, QString::number((int)shot));
+	return true;
 }

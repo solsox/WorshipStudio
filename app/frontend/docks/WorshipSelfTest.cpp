@@ -14,6 +14,7 @@
 #include "WorshipRemote.hpp"
 #include "GuidedTour.hpp"
 #include "MigrationDialog.hpp"
+#include "ScreensDialog.hpp"
 #include "WorshipTranslator.hpp"
 #include <OBSApp.hpp>
 #include <utility/platform.hpp>
@@ -534,10 +535,87 @@ struct SelfTest {
 		add(300, [=]() { songs->deleteSong(title); });
 	}
 
+	/* Room and stream separately: the room shows the content, EN VIVO keeps
+	 * its own scene, content dropped on Sources does not touch the room. */
+	void addScreensSteps()
+	{
+		auto wasSeparate = std::make_shared<bool>(false);
+		const QString title = QStringLiteral("Autoprueba sala y en vivo");
+		const auto programName = []() {
+			OBSSourceAutoRelease program = obs_frontend_get_current_scene();
+			return program ? QT_UTF8(obs_source_get_name(program)) : QString();
+		};
+		const auto visibleIn = [](const char *scene) {
+			OBSSourceAutoRelease source = obs_get_source_by_name(scene);
+			obs_scene_t *s = source ? obs_scene_from_source(source) : nullptr;
+			QString name;
+			if (s)
+				obs_scene_enum_items(
+					s,
+					[](obs_scene_t *, obs_sceneitem_t *item, void *param) {
+						if (obs_sceneitem_visible(item))
+							*static_cast<QString *>(param) =
+								QT_UTF8(obs_source_get_name(obs_sceneitem_get_source(item)));
+						return true;
+					},
+					&name);
+			return name;
+		};
+		add(300, [=]() {
+			log(QStringLiteral("--- Sala y en vivo ---"));
+			*wasSeparate = WorshipOutput::SeparateRoomScreen();
+			WorshipOutput::SetSeparateRoomScreen(true);
+			check(ScreensDialog::BuildStreamScene(ScreensDialog::StreamLayout::ScreenOnly, QString()),
+			      QStringLiteral("sala: escena Transmisión creada"));
+			check(programName() == QStringLiteral("Transmisión"),
+			      QStringLiteral("sala: en vivo muestra Transmisión (%1)").arg(programName()));
+			check(bible->projectQuery(QStringLiteral("Juan 3:16"), 0), QStringLiteral("sala: proyectar Juan 3:16"));
+		});
+		add(800, [=]() {
+			check(WorshipOutput::OnAirSceneName().startsWith(QStringLiteral("WS Biblia")),
+			      QStringLiteral("sala: la sala muestra la Biblia (%1)").arg(WorshipOutput::OnAirSceneName()));
+			check(programName() == QStringLiteral("Transmisión"),
+			      QStringLiteral("sala: en vivo sigue en Transmisión (%1)").arg(programName()));
+			OBSSourceAutoRelease room = obs_get_source_by_name(WorshipOutput::RoomScreenScene);
+			capture(room ? obs_scene_from_source(room) : nullptr, QStringLiteral("sala-pantalla"));
+			OBSSourceAutoRelease stream = obs_frontend_get_current_scene();
+			capture(stream ? obs_scene_from_source(stream) : nullptr, QStringLiteral("sala-envivo"));
+			grabWithScreens(hymnal->window()).save(outDir.absoluteFilePath(QStringLiteral("sala-ventana.png")));
+			check(ScreensDialog::ShowShot(ScreensDialog::StreamShot::Camera) &&
+				      visibleIn("Transmisión") == QLatin1String(WorshipOutput::RoomScreenScene),
+			      QStringLiteral("sala: sin cámara, en vivo muestra la pantalla"));
+			/* A song dropped on Sources: only "Cantos en vivo" changes. */
+			songs->deleteSong(title);
+			WorshipOutput::SourceOnlyScope sourceOnly;
+			check(songs->projectNewSong(title, QStringLiteral("Primera linea\n\n[Coro]\nCoro"), 3),
+			      QStringLiteral("sala: canto como fuente"));
+		});
+		add(800, [=]() {
+			check(WorshipOutput::OnAirSceneName().startsWith(QStringLiteral("WS Biblia")),
+			      QStringLiteral("sala: la sala no cambió con el canto (%1)").arg(WorshipOutput::OnAirSceneName()));
+			check(visibleIn("Cantos en vivo").startsWith(QStringLiteral("WS Cantos")),
+			      QStringLiteral("sala: Cantos en vivo muestra el canto (%1)").arg(visibleIn("Cantos en vivo")));
+			/* Back to one output: what the room showed goes on screen. */
+			const QString onAir = WorshipOutput::OnAirSceneName();
+			WorshipOutput::SetSeparateRoomScreen(false);
+			OBSSourceAutoRelease source = obs_get_source_by_name(QT_TO_UTF8(onAir));
+			if (source)
+				obs_frontend_set_current_scene(source);
+		});
+		add(1200, [=]() {
+			check(programName().startsWith(QStringLiteral("WS Biblia")),
+			      QStringLiteral("sala: al volver a una salida, la Biblia sale en pantalla (%1)").arg(programName()));
+			songs->deleteSong(title);
+			WorshipOutput::SetSeparateRoomScreen(*wasSeparate);
+		});
+	}
+
 	/* Countdown, overlays, stage display, phone remote and service order. */
 	void addLiveSteps()
 	{
 		add(300, [=]() {
+			/* The guide may leave Studio Mode on; these checks expect it off. */
+			obs_frontend_set_preview_program_mode(false);
 			log(QStringLiteral("--- En vivo ---"));
 			liveTools->startCountdown(5, QStringLiteral("El culto comienza en"));
 		});
@@ -902,12 +980,20 @@ struct SelfTest {
 
 	/* The interactive tour: every step points at something visible, and
 	 * doing the step for real moves it on. */
-	void addGuideSteps()
+	void addGuideSteps(bool separate = false)
 	{
 		auto tour = std::make_shared<QPointer<GuidedTour>>();
 		auto steps = std::make_shared<int>(0);
+		auto wasSeparate = std::make_shared<bool>(false);
 		add(300, [=]() {
-			log(QStringLiteral("--- Recorrido de inicio ---"));
+			*wasSeparate = WorshipOutput::SeparateRoomScreen();
+			WorshipOutput::SetSeparateRoomScreen(separate);
+			if (separate)
+				ScreensDialog::BuildStreamScene(ScreensDialog::StreamLayout::ScreenOnly, QString());
+		});
+		add(300, [=]() {
+			log(separate ? QStringLiteral("--- Recorrido de inicio (sala y en vivo por separado) ---")
+				     : QStringLiteral("--- Recorrido de inicio ---"));
 			*tour = GuidedTour::start(qobject_cast<QMainWindow *>(hymnal->window()));
 			*steps = *tour ? (*tour)->stepCount() : 0;
 			check(*steps >= 12, QStringLiteral("recorrido: %1 pasos").arg(*steps));
@@ -933,7 +1019,7 @@ struct SelfTest {
 				const QPoint at = window->mapFromGlobal(bubble->mapToGlobal(QPoint(0, 0)));
 				painter.drawPixmap(at, bubble->grab());
 				painter.end();
-				shot.save(outDir.absoluteFilePath(QStringLiteral("recorrido-completo%1.png").arg(step, 2, 10, QLatin1Char('0'))));
+				shot.save(outDir.absoluteFilePath(QString::fromLatin1(separate ? "recorrido-sala%1.png" : "recorrido-completo%1.png").arg(step, 2, 10, QLatin1Char('0'))));
 			});
 		}
 		/* Creating a scene during step 1 finishes it by itself. */
@@ -954,6 +1040,7 @@ struct SelfTest {
 				obs_source_remove(created);
 			if (*tour)
 				(*tour)->goTo((*tour)->stepCount());
+			WorshipOutput::SetSeparateRoomScreen(*wasSeparate);
 		});
 	}
 
@@ -1223,14 +1310,18 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Songs
 		test->addGallerySteps();
 	if (wanted("estudio"))
 		test->addStudioSteps();
-	if (wanted("guia"))
-		test->addGuideSteps();
+	if (wanted("guia")) {
+		test->addGuideSteps(false);
+		test->addGuideSteps(true);
+	}
 	if (wanted("idiomas"))
 		test->addLanguageSteps();
 	if (wanted("apariencia"))
 		test->addAppearanceSteps();
 	if (wanted("envivo"))
 		test->addLiveSteps();
+	if (wanted("sala"))
+		test->addScreensSteps();
 	if (wanted("importar"))
 		test->addImportSteps();
 	if (wanted("interfaz")) {

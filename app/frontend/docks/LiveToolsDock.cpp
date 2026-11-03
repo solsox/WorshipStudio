@@ -26,6 +26,7 @@
 #include <qt-wrappers.hpp>
 #include <Idian/Utils.hpp>
 
+#include <QButtonGroup>
 #include <QComboBox>
 #include <QDir>
 #include <QFormLayout>
@@ -145,17 +146,51 @@ LiveToolsDock::LiveToolsDock(const QString &objectName, const QString &title, QW
 	nowRow->addWidget(previousButton);
 	nowRow->addWidget(nextButton, 1);
 	nowRow->addWidget(hideButton);
+	/* Room and stream separately (Herramientas > Sala y en vivo). */
+	roomMonitor = ScreensDialog::CreateRoomMonitor(root);
+	roomMonitor->setToolTip(tr("Lo que ve la iglesia en el proyector"));
+	shotRow = new QWidget(root);
+	auto *shotLayout = new QHBoxLayout(shotRow);
+	shotLayout->setContentsMargins(0, 0, 0, 0);
+	shotLayout->setSpacing(4);
+	shotGroup = new QButtonGroup(this);
+	const QStringList shots{tr("Cámara"), tr("Cámara + pantalla"), tr("Pantalla")};
+	for (int i = 0; i < shots.size(); ++i) {
+		auto *button = new QPushButton(shots.at(i), shotRow);
+		button->setCheckable(true);
+		button->setToolTip(tr("Lo que ve internet: %1").arg(shots.at(i)));
+		shotGroup->addButton(button, i);
+		shotLayout->addWidget(button, i == 1 ? 2 : 1);
+	}
+	shotRow->setObjectName(QStringLiteral("liveShots"));
+	connect(shotGroup, &QButtonGroup::idClicked, this, [this](int id) {
+		ScreensDialog::ShowShot(static_cast<ScreensDialog::StreamShot>(id));
+		refreshOnAir();
+	});
+
 	projectorButton = new QPushButton(tr("Pantalla del proyector..."), root);
 	projectorButton->setObjectName(QStringLiteral("liveProjector"));
 	projectorButton->setToolTip(tr("Muestra la salida a pantalla completa en el proyector o TV"));
 
 	layout->addWidget(programLabel);
+	layout->addWidget(roomMonitor);
 	layout->addWidget(previewLabel);
+	layout->addWidget(shotRow);
 	layout->addWidget(nowText);
 	layout->addWidget(nextText);
 	layout->addWidget(goLiveButton);
 	layout->addLayout(nowRow);
 	layout->addWidget(projectorButton);
+	separateButton = new QPushButton(tr("¿Transmitís? Separar sala y en vivo..."), root);
+	separateButton->setObjectName(QStringLiteral("liveSeparate"));
+	separateButton->setToolTip(tr("La iglesia ve la letra a pantalla completa; internet, la cámara con la letra"));
+	connect(separateButton, &QPushButton::clicked, this, [this]() {
+		auto *dialog = new ScreensDialog(window());
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		connect(dialog, &QDialog::finished, this, &LiveToolsDock::refreshOnAir);
+		dialog->open();
+	});
+	layout->addWidget(separateButton);
 
 	/* --- Countdown ---------------------------------------------------- */
 	layout->addWidget(heading(tr("Cuenta regresiva"), root));
@@ -380,17 +415,23 @@ QString LiveToolsDock::describeScene(obs_source_t *sceneSource) const
 
 void LiveToolsDock::refreshOnAir()
 {
-	if (WorshipOutput::SeparateRoomScreen()) {
-		/* The room screen shows the content; the stream keeps its scene. */
+	const bool separate = WorshipOutput::SeparateRoomScreen();
+	roomMonitor->setVisible(separate);
+	shotRow->setVisible(separate);
+	separateButton->setText(separate ? tr("Sala y en vivo...") : tr("¿Transmitís? Separar sala y en vivo..."));
+	projectorButton->setText(separate ? tr("Proyector de la sala...") : tr("Pantalla del proyector..."));
+	if (separate) {
+		/* SALA: the content alone. EN VIVO: the stream with its own scene. */
 		const QString room = WorshipOutput::OnAirSceneName();
 		OBSSourceAutoRelease roomSource = room.isEmpty() ? nullptr : obs_get_source_by_name(QT_TO_UTF8(room));
 		OBSSourceAutoRelease stream = obs_frontend_get_current_scene();
-		programLabel->setText(QStringLiteral("<span style=\"color:#E5484D\">●</span> <b>%1</b> %2")
-					      .arg(tr("EN LA SALA:"), describeScene(roomSource).toHtmlEscaped()));
-		previewLabel->setText(QStringLiteral("<span style=\"color:#8A8276\">●</span> <b>%1</b> %2")
-					      .arg(tr("TRANSMISIÓN:"), describeScene(stream).toHtmlEscaped()));
+		programLabel->setText(ScreensDialog::RoomChip(roomSource ? describeScene(roomSource) : tr("vacía")));
+		const QString state = obs_frontend_streaming_active() ? tr("transmitiendo") : tr("sin transmitir");
+		previewLabel->setText(ScreensDialog::LiveChip(QStringLiteral("%1 · %2").arg(describeScene(stream), state)));
 		previewLabel->setVisible(true);
 		goLiveButton->setVisible(false);
+		if (QAbstractButton *button = shotGroup->button((int)ScreensDialog::CurrentShot()))
+			button->setChecked(true);
 		return;
 	}
 	const bool studio = obs_frontend_preview_program_mode_active();
@@ -480,7 +521,7 @@ void LiveToolsDock::openProgramProjector()
 	menu.addSeparator();
 	menu.addAction(tr("En una ventana"), this, [type, name]() { obs_frontend_open_projector(type, -1, "", name); });
 	menu.addSeparator();
-	menu.addAction(tr("Sala y transmisión por separado..."), this, [this]() {
+	menu.addAction(tr("Sala y en vivo..."), this, [this]() {
 		auto *dialog = new ScreensDialog(window());
 		dialog->setAttribute(Qt::WA_DeleteOnClose);
 		connect(dialog, &QDialog::finished, this, &LiveToolsDock::refreshOnAir);
@@ -659,7 +700,8 @@ void LiveToolsDock::onFrontendEvent(enum obs_frontend_event event, void *data)
 	if (event == OBS_FRONTEND_EVENT_SCENE_CHANGED || event == OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED)
 		QMetaObject::invokeMethod(dock, [dock]() { dock->attachOverlays(); }, Qt::QueuedConnection);
 	if (event == OBS_FRONTEND_EVENT_SCENE_CHANGED || event == OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED ||
-	    event == OBS_FRONTEND_EVENT_STUDIO_MODE_ENABLED || event == OBS_FRONTEND_EVENT_STUDIO_MODE_DISABLED)
+	    event == OBS_FRONTEND_EVENT_STUDIO_MODE_ENABLED || event == OBS_FRONTEND_EVENT_STUDIO_MODE_DISABLED ||
+	    event == OBS_FRONTEND_EVENT_STREAMING_STARTED || event == OBS_FRONTEND_EVENT_STREAMING_STOPPED)
 		QMetaObject::invokeMethod(dock, [dock]() { dock->refreshOnAir(); }, Qt::QueuedConnection);
 }
 

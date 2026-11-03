@@ -1313,6 +1313,9 @@ void OBSBasic::OBSInit()
 					    presentationDock, liveToolsDock, this);
 	AddDockWidget(serviceDock, Qt::LeftDockWidgetArea);
 
+	/* SALA / EN VIVO names on the big pictures follow the room mode. */
+	connect(&WorshipLive::instance(), &WorshipLive::changed, this, [this]() { UpdatePreviewProgramIndicators(); });
+
 	/* Songs, verses, hymns and presentations dropped on Sources become a
 	 * source of the scene: "Cantos en vivo" follows the Cantos panel. */
 	WorshipDrag::InstallDropTarget(ui->sources, [this](const QString &panel) {
@@ -1438,7 +1441,7 @@ void OBSBasic::OBSInit()
 
 	/* Room screen and stream showing different things. */
 	auto *screensAction =
-		new QAction(QCoreApplication::translate("WorshipStudio", "Pantallas y transmisión..."), this);
+		new QAction(QCoreApplication::translate("WorshipStudio", "Sala y en vivo..."), this);
 	ui->menuTools->insertAction(ui->menuTools->actions().value(0), screensAction);
 	ui->menuTools->insertSeparator(ui->menuTools->actions().value(1));
 	connect(screensAction, &QAction::triggered, this, [this]() {

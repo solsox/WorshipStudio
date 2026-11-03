@@ -23,6 +23,7 @@
 
 #include <utility/display-helpers.hpp>
 #include <utility/QuickTransition.hpp>
+#include <docks/WorshipOutput.hpp>
 
 #include <qt-wrappers.hpp>
 #include <slider-ignorewheel.hpp>
@@ -361,6 +362,31 @@ void OBSBasic::ResizeProgram(uint32_t cx, uint32_t cy)
 
 void OBSBasic::UpdatePreviewProgramIndicators()
 {
+	/* Room and stream separately: the big picture is always EN VIVO, what
+	 * internet sees; the room has its own monitor in the En vivo panel. */
+	if (WorshipOutput::SeparateRoomScreen()) {
+		const QString live = QStringLiteral("<span style=\"color:#E5484D\">●</span> ") +
+				     QCoreApplication::translate("WorshipStudio", "EN VIVO · lo que ve internet: %1");
+		ui->previewLabel->setTextFormat(Qt::RichText);
+		ui->previewLabel->setVisible(true);
+		const QString preview =
+			previewProgramMode
+				? QCoreApplication::translate("WorshipStudio", "Preparando para en vivo: %1")
+					  .arg(FriendlySceneName(GetCurrentSceneSource()).toHtmlEscaped())
+				: live.arg(FriendlySceneName(GetCurrentSceneSource()).toHtmlEscaped());
+		if (ui->previewLabel->text() != preview)
+			ui->previewLabel->setText(preview);
+		if (programLabel) {
+			programLabel->setTextFormat(Qt::RichText);
+			programLabel->setVisible(true);
+			programLabel->setText(live.arg(FriendlySceneName(GetProgramSource()).toHtmlEscaped()));
+		}
+		return;
+	}
+	ui->previewLabel->setTextFormat(Qt::PlainText);
+	if (programLabel)
+		programLabel->setTextFormat(Qt::PlainText);
+
 	bool labels = previewProgramMode ? config_get_bool(App()->GetUserConfig(), "BasicWindow", "StudioModeLabels")
 					 : false;
 

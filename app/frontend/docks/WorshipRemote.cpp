@@ -437,7 +437,10 @@ QByteArray WorshipRemote::respond(const QByteArray &method, const QString &targe
 		OBSSourceAutoRelease scene = preview ? (obs_frontend_preview_program_mode_active()
 								? obs_frontend_get_current_preview_scene()
 								: nullptr)
-						     : obs_frontend_get_current_scene();
+						     : WorshipOutput::SeparateRoomScreen()
+							       /* The phone shows what the church sees. */
+							       ? obs_get_source_by_name(WorshipOutput::RoomScreenScene)
+							       : obs_frontend_get_current_scene();
 		QImage image = WorshipOutput::RenderSource(scene, 480, 270);
 		if (image.isNull()) {
 			image = QImage(480, 270, QImage::Format_RGB32);
