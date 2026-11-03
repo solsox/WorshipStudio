@@ -575,3 +575,33 @@ h4 { font-weight: 560; letter-spacing: -.015em; }
   .feat h4 { font-size: 15px; line-height: 1.25; margin-bottom: 4px; }
   .feat p { font-size: 13px; line-height: 1.45; margin: 0; }
 }
+
+/* Hero, Raycast style: one big line, one short line, one premium button */
+.hero h1 { font-size: clamp(40px, 6vw, 80px); max-width: 19ch; margin-left: auto; margin-right: auto; text-wrap: balance; }
+.hero__lead { font-size: clamp(17px, 1.5vw, 20px) !important; max-width: 34em; margin-top: 20px; }
+.hero__cta { margin-top: 34px; }
+.btn-dl { display: inline-flex; align-items: center; gap: 10px; padding: 14px 24px 14px 20px; border-radius: 12px;
+  font: 560 16.5px/1 var(--text); letter-spacing: -.01em; color: #15120E; text-decoration: none;
+  background: linear-gradient(180deg, #FFFDF8 0%, #EFE6D6 55%, #E2D3B6 100%);
+  border: 1px solid rgba(255, 255, 255, .55);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 -2px 0 rgba(120, 95, 50, .18),
+    0 12px 32px -10px rgba(220, 197, 156, .55), 0 2px 6px rgba(0, 0, 0, .35);
+  transition: transform .15s, box-shadow .2s, filter .2s; }
+.btn-dl:hover { transform: translateY(-1px); filter: brightness(1.03);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 -2px 0 rgba(120, 95, 50, .18),
+    0 18px 40px -10px rgba(220, 197, 156, .7), 0 2px 6px rgba(0, 0, 0, .35); }
+.btn-dl:active { transform: translateY(1px); }
+.btn-dl__icon { width: 20px; height: 20px; flex: none; margin-top: -2px; }
+.hero__note { margin: 16px 0 0; font: 400 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--muted); letter-spacing: .01em; }
+.hero__note--links { margin-top: 6px; }
+.hero__note a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--line); }
+.hero__note a:hover { color: var(--ink); }
+@media (max-width: 680px) { .btn-dl { width: 100%; max-width: 360px; justify-content: center; } }
+
+/* Guides */
+.guia__video { width: 100%; aspect-ratio: 1600 / 1034; border-radius: 14px; border: 1px solid var(--line); background: #000; display: block; margin: 18px 0 8px; }
+.guia__pasos { margin: 14px 0 0; padding-left: 22px; display: grid; gap: 8px; }
+.guia__pasos li { color: var(--ink-2); line-height: 1.6; padding-left: 4px; }
+.guia__pasos li::marker { color: var(--bone); font-weight: 600; }
+.guias section { scroll-margin-top: 90px; }
+.guide video { width: 100%; border-radius: 14px; border: 1px solid var(--line); background: #000; display: block; }

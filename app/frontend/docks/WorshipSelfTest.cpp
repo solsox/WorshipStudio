@@ -31,6 +31,7 @@
 
 #include <QDir>
 #include <QPainter>
+#include <QPainterPath>
 #include <QDockWidget>
 #include <QMainWindow>
 #include <QMenuBar>
@@ -1135,6 +1136,34 @@ struct SelfTest {
 				painter.drawPixmap(at, bubble->grab());
 				painter.end();
 				shot.save(outDir.absoluteFilePath(QString::fromLatin1(separate ? "recorrido-sala%1.png" : "recorrido-completo%1.png").arg(step, 2, 10, QLatin1Char('0'))));
+				/* Frame for the guide videos: as people see it (dimmed, the
+				 * area to touch lit), plus where to click. */
+				QPixmap frame = grabWithScreens(window);
+				const qreal ratio = frame.devicePixelRatio();
+				QPainter dim(&frame);
+				dim.setRenderHint(QPainter::Antialiasing);
+				QPainterPath shade;
+				shade.addRect(QRectF(QPointF(0, 0), QSizeF(frame.size()) / ratio));
+				QJsonArray areas;
+				for (const QRect &area : (*tour)->litAreas()) {
+					QPainterPath hole;
+					hole.addRoundedRect(QRectF(area).adjusted(-4, -4, 4, 4), 10, 10);
+					shade = shade.subtracted(hole);
+					areas.append(QJsonArray{area.x() * ratio, area.y() * ratio, area.width() * ratio, area.height() * ratio});
+				}
+				dim.fillPath(shade, QColor(0, 0, 0, 150));
+				for (const QRect &area : (*tour)->litAreas()) {
+					dim.setPen(QPen(QColor(0xDC, 0xC5, 0x9C), 3));
+					dim.setBrush(Qt::NoBrush);
+					dim.drawRoundedRect(QRectF(area).adjusted(-4, -4, 4, 4), 10, 10);
+				}
+				dim.drawPixmap(at, bubble->grab());
+				dim.end();
+				const QString name = QString::fromLatin1(separate ? "video-sala%1" : "video-guia%1").arg(step, 2, 10, QLatin1Char('0'));
+				frame.save(outDir.absoluteFilePath(name + QStringLiteral(".png")));
+				QFile json(outDir.absoluteFilePath(name + QStringLiteral(".json")));
+				if (json.open(QIODevice::WriteOnly))
+					json.write(QJsonDocument(QJsonObject{{QStringLiteral("areas"), areas}}).toJson());
 			});
 		}
 		/* Creating a scene during step 1 finishes it by itself. */

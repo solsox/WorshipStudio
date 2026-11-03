@@ -7,6 +7,8 @@ target_sources(
     docks/AppearanceDialog.hpp
     docks/BackgroundLibrary.cpp
     docks/BackgroundLibrary.hpp
+    docks/BackgroundSearch.cpp
+    docks/BackgroundSearch.hpp
     docks/BibleCatalog.cpp
     docks/BibleCatalog.hpp
     docks/BibleDock.cpp
@@ -18,6 +20,8 @@ target_sources(
     docks/MigrationDialog.cpp
     docks/MigrationDialog.hpp
     docks/OnlineBible.cpp
+    docks/PptxRender.cpp
+    docks/PptxRender.hpp
     docks/OnlineBible.hpp
     docks/ScreensDialog.cpp
     docks/ScreensDialog.hpp
@@ -58,9 +62,18 @@ target_sources(
     docks/WorshipSelfTest.hpp
 )
 
+# PowerPoint files are read inside the app (QZipReader is private API).
+find_package(Qt6 REQUIRED COMPONENTS CorePrivate)
+target_link_libraries(obs-studio PRIVATE Qt::CorePrivate)
+
 # App key of the YouVersion Platform (online Bibles), from the CI secret.
 if(DEFINED ENV{WORSHIPSTUDIO_YOUVERSION_KEY} AND NOT "$ENV{WORSHIPSTUDIO_YOUVERSION_KEY}" STREQUAL "")
   target_compile_definitions(obs-studio PRIVATE "WORSHIPSTUDIO_YOUVERSION_KEY=\"$ENV{WORSHIPSTUDIO_YOUVERSION_KEY}\"")
+endif()
+
+# API key of Pexels (free backgrounds search), from the CI secret.
+if(DEFINED ENV{WORSHIPSTUDIO_PEXELS_KEY} AND NOT "$ENV{WORSHIPSTUDIO_PEXELS_KEY}" STREQUAL "")
+  target_compile_definitions(obs-studio PRIVATE "WORSHIPSTUDIO_PEXELS_KEY=\"$ENV{WORSHIPSTUDIO_PEXELS_KEY}\"")
 endif()
 
 # Phone remote: QR code with the address of the control page.

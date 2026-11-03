@@ -37,6 +37,7 @@
 #include <QVBoxLayout>
 
 #include "BackgroundLibrary.hpp"
+#include "BackgroundSearch.hpp"
 
 #include "moc_SongEditor.cpp"
 
@@ -44,7 +45,7 @@ namespace {
 const QSize EditorThumb(192, 108);
 
 enum ItemRole { KindRole = Qt::UserRole, PresetRole, PathRole };
-enum ItemKind { InheritItem, PresetItem, ColorItem, AddItem, CustomItem, LibraryItem };
+enum ItemKind { InheritItem, PresetItem, ColorItem, AddItem, CustomItem, LibraryItem, SearchItem };
 } // namespace
 
 /* ------------------------------------------------------------------------ */
@@ -113,6 +114,9 @@ void BackgroundPicker::rebuild()
 
 	addItem(tr("Color..."), ColorItem);
 	addItem(allowVideo ? tr("Agregar imágenes o videos...") : tr("Agregar imágenes..."), AddItem);
+	setItemData(count() - 1, AddItem, KindRole);
+	addItem(tr("Buscar fondos en internet..."), SearchItem);
+	setItemData(count() - 1, SearchItem, KindRole);
 }
 
 WorshipRender::Background BackgroundPicker::background(bool *inherit) const
@@ -175,9 +179,10 @@ void BackgroundPicker::onActivated(int index)
 		}
 		chosen.kind = WorshipRender::BackgroundKind::Color;
 		chosen.color = color.name();
-	} else if (kind == AddItem) {
+	} else if (kind == AddItem || kind == SearchItem) {
 		/* Added files stay in Mis fondos for every song and the Bible. */
-		const QStringList added = BackgroundLibrary::AddWithDialog(this, allowVideo);
+		const QStringList added = kind == SearchItem ? BackgroundSearch::Run(this, allowVideo)
+							     : BackgroundLibrary::AddWithDialog(this, allowVideo);
 		if (added.isEmpty()) {
 			setCurrentIndex(lastIndex);
 			return;

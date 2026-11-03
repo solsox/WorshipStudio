@@ -482,6 +482,30 @@ void GuidedTour::scrollIntoView(QWidget *target)
 	}
 }
 
+QVector<QRect> GuidedTour::litAreas() const
+{
+	QVector<QRect> areas;
+	if (current < 0 || current >= (int)steps.size() || !window)
+		return areas;
+	const Step &step = steps[current];
+	QWidget *target = step.target ? step.target() : nullptr;
+	if (target && target->isVisible()) {
+		/* Only the part that can be seen (a scrolled panel cuts it). */
+		const QRect visible = target->visibleRegion().boundingRect();
+		if (!visible.isEmpty())
+			areas << QRect(target->mapTo(window, visible.topLeft()), visible.size())
+					 .adjusted(-6, -6, 6, 6)
+					 .intersected(window->rect());
+	}
+	if (step.dock) {
+		const QRect tab = dockTabRect(window, step.dock);
+		if (!tab.isEmpty())
+			areas << tab.adjusted(-3, -3, 3, 3);
+	}
+	return areas;
+}
+
+
 void GuidedTour::refresh()
 {
 	if (!window || current < 0)
@@ -510,22 +534,7 @@ void GuidedTour::refresh()
 	/* Same place and size as the window's contents. */
 	setGeometry(QRect(window->mapToGlobal(QPoint(0, 0)), window->size()));
 
-	const Step &step = steps[current];
-	holes.clear();
-	QWidget *target = step.target ? step.target() : nullptr;
-	if (target && target->isVisible()) {
-		/* Only the part that can be seen (a scrolled panel cuts it). */
-		const QRect visible = target->visibleRegion().boundingRect();
-		if (!visible.isEmpty())
-			holes << QRect(target->mapTo(window, visible.topLeft()), visible.size())
-					 .adjusted(-6, -6, 6, 6)
-					 .intersected(window->rect());
-	}
-	if (step.dock) {
-		const QRect tab = dockTabRect(window, step.dock);
-		if (!tab.isEmpty())
-			holes << tab.adjusted(-3, -3, 3, 3);
-	}
+	holes = litAreas();
 
 	/* Clicks inside the holes reach the real window. */
 	QRegion mask(rect());

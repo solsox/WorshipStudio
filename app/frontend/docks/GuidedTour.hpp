@@ -32,6 +32,8 @@ public:
 	/* For the self-test: the step points at a real, visible widget. */
 	bool targetVisible() const;
 	QWidget *bubbleWidget() const;
+	/* For the guide videos: the lit areas, in window coordinates. */
+	QVector<QRect> litAreas() const;
 
 protected:
 	void paintEvent(QPaintEvent *event) override;

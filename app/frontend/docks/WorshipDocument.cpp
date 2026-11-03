@@ -1,4 +1,9 @@
 #include "WorshipDocument.hpp"
+#include "PptxRender.hpp"
+
+#include <QApplication>
+#include <QPointer>
+#include <thread>
 #include "WorshipRender.hpp"
 
 #include <util/base.h>
@@ -264,6 +269,40 @@ void Converter::convert(const QString &path, Done done)
 		return;
 	}
 
+	/* PowerPoint (.pptx) is drawn inside WorshipStudio: no other program
+	 * opens and it is ready in a moment. Office suites stay as a fallback. */
+	if (PptxRender::CanRender(source) && !nativeTried) {
+		/* In the background, so the window keeps answering. */
+		QPointer<Converter> self(this);
+		const QString file = source, pdf = target;
+		nativeRunning = true;
+		const Done again = callback;
+		std::thread([self, file, pdf, again]() {
+			QString nativeError;
+			const bool ok = PptxRender::ToPdf(file, pdf, &nativeError, [self](int done, int total) {
+				QMetaObject::invokeMethod(qApp, [self, done, total]() {
+					if (self)
+						emit self->progress(tr("Preparando diapositivas %1 de %2...").arg(done).arg(total));
+				});
+			});
+			QMetaObject::invokeMethod(qApp, [self, file, ok, nativeError, again]() {
+				if (!self || self->source != file)
+					return;
+				self->nativeRunning = false;
+				if (ok) {
+					self->finish(self->target, QString());
+					return;
+				}
+				/* Not readable here: try the office suites installed. */
+				self->nativeTried = true;
+				self->convert(file, again);
+				self->failures.prepend(QStringLiteral("WorshipStudio: ") + nativeError);
+			});
+		}).detach();
+		return;
+	}
+	nativeTried = false;
+
 	const QString suffix = info.suffix().toLower();
 	const QString work = cache.absoluteFilePath(QStringLiteral("work-") + hash);
 	QDir(work).removeRecursively();
@@ -464,6 +503,9 @@ void Converter::tryNext()
 void Converter::cancel()
 {
 	attempts.clear();
+	/* A built-in conversion still running is ignored when it finishes. */
+	nativeRunning = false;
+	source.clear();
 	if (process) {
 		QProcess *running = process;
 		process = nullptr;

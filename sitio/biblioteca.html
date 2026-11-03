@@ -13,7 +13,7 @@
   <link rel="icon" href="logo.png" type="image/png">
   <link rel="icon" href="img/icono-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="img/icono-180.png">
-  <link rel="stylesheet" href="estilos.css?v=15">
+  <link rel="stylesheet" href="estilos.css?v=16">
 </head>
 <body>
   <a class="skip" href="#contenido">Saltar al contenido</a>
@@ -24,6 +24,7 @@
       <nav class="nav__links" aria-label="Secciones">
         <a href="index.html#funciones">Funciones</a>
         <a href="biblioteca.html">Biblioteca</a>
+        <a href="guias.html">Guías</a>
         <a class="nav__donate" href="index.html#donar" aria-label="Donar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C1 8.6 3.1 5 6.6 5c2.1 0 3.6 1.2 5.4 3.2C13.8 6.2 15.3 5 17.4 5 20.9 5 23 8.6 21.6 11.8 19.5 16.4 12 21 12 21z"/></svg><span>Donar</span></a>
       </nav>
       <a class="btn btn--primary btn--sm nav__cta" href="index.html#descargar">Descargar<span class="hide-sm">&nbsp;gratis</span></a>
@@ -36,7 +37,7 @@
       <h1>Todo lo que tu reunión necesita.</h1>
       <p class="sub">Biblias, fondos y lo que ya tenías en otro programa. Todo gratis y listo para usar en WorshipStudio.</p>
 
-      <nav class="lib__nav"><a href="#biblias">Biblias</a><a href="#fondos">Fondos</a><a href="#traer">Traer desde otro programa</a><a href="#derechos">RV1960 e himnarios</a></nav>
+      <nav class="lib__nav"><a href="#biblias">Biblias</a><a href="#fondos">Fondos</a><a href="#traer">Traer desde otro programa</a><a href="#mas">Conseguí más</a></nav>
 
       <section id="biblias">
         <h2>Biblias</h2>
@@ -69,9 +70,16 @@
         </div>
       </section>
 
-      <section id="derechos">
-        <h2>RV1960 e himnarios</h2>
-        <p>La <b>Reina-Valera 1960</b> pertenece a las Sociedades Bíblicas Unidas y el <b>Himnario Adventista</b> (nuevo y antiguo) a su editorial. No podemos repartirlos sin permiso: estamos gestionando las autorizaciones para sumarlos a esta biblioteca. Mientras tanto, si tu iglesia ya los tiene con licencia, podés importarlos.</p>
+      <section id="mas">
+        <h2>Conseguí más</h2>
+        <p class="sub">Lugares gratis y legales para sumar Biblias, cantos, fondos y presentaciones. Bajás el archivo y lo traés a WorshipStudio en dos clics.</p>
+        <div class="lib__cards">
+          <div><h3>Biblias</h3><p><a href="https://ebible.org/download.php" rel="noopener">eBible.org</a>: cientos de traducciones de uso libre. Bajá la versión en <b>OSIS</b> y en la app tocá <b>Biblia → Importar…</b>. También sirven los archivos <b>Zefania XML</b>.</p></div>
+          <div><h3>Cantos</h3><p>Si tu iglesia tiene licencia de <a href="https://songselect.ccli.com" rel="noopener">CCLI SongSelect</a>, descargá la letra en texto. Desde OpenLP, OpenSong, Holyrics o ProPresenter: exportá y elegí la carpeta en <b>Archivo → Traer desde otro programa</b>.</p></div>
+          <div><h3>Fondos fijos y animados</h3><p><a href="https://www.pexels.com/es-es/buscar/videos/fondo%20worship/" rel="noopener">Pexels</a>, <a href="https://pixabay.com/es/videos/search/fondo/" rel="noopener">Pixabay</a> y <a href="https://unsplash.com/es/s/fotos/paisaje" rel="noopener">Unsplash</a> tienen paisajes, luces y fondos en movimiento gratis. Bajalos y sumalos en <b>Fondo → Agregar imágenes o videos</b>.</p></div>
+          <div><h3>Himnarios</h3><p>Usá la versión digital oficial de tu himnario (imágenes, PowerPoint o música por himno) y en la app elegí <b>Himnario → Elegir carpeta</b>. Las presentaciones de PowerPoint se abren directo, sin otro programa.</p></div>
+        </div>
+        <p class="lib__note">Cada sitio tiene su licencia: revisala antes de usar el material en público. WorshipStudio no incluye textos ni himnos con derechos de autor sin permiso.</p>
       </section>
     </div>
   </main>
@@ -81,10 +89,10 @@
       <a class="brand" href="index.html"><img src="logo.png" alt="" width="28" height="28"><span class="wordmark"><em>Worship</em>Studio</span></a>
       <p>Software libre y gratuito. Hecho con cariño para las comunidades que cantan juntas.</p>
       <p class="footer__base">Basado en <a href="https://obsproject.com" rel="noopener">OBS Studio</a> (GPL-2.0).</p>
-      <nav aria-label="Pie"><a href="mailto:contact.worshipstudio@gmail.com">Contacto</a><a href="biblioteca.html">Biblioteca</a><a href="licencias.html">Licencias</a><a href="https://github.com/solsox/WorshipStudio" rel="noopener">Código</a><a href="https://github.com/solsox/WorshipStudio/releases" rel="noopener">Versiones</a></nav>
+      <nav aria-label="Pie"><a href="mailto:contact.worshipstudio@gmail.com">Contacto</a><a href="guias.html">Guías</a><a href="biblioteca.html">Biblioteca</a><a href="licencias.html">Licencias</a><a href="https://github.com/solsox/WorshipStudio" rel="noopener">Código</a><a href="https://github.com/solsox/WorshipStudio/releases" rel="noopener">Versiones</a></nav>
     </div>
   </footer>
-  <script src="app.js?v=15"></script>
-  <script src="biblioteca.js?v=15"></script>
+  <script src="app.js?v=16"></script>
+  <script src="biblioteca.js?v=16"></script>
 </body>
 </html>

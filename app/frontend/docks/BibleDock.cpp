@@ -18,6 +18,7 @@
 #include "BibleDock.hpp"
 #include "OnlineBible.hpp"
 #include "BackgroundLibrary.hpp"
+#include "BackgroundSearch.hpp"
 #include "BibleCatalog.hpp"
 #include "WorshipLive.hpp"
 #include "WorshipOutput.hpp"
@@ -587,6 +588,7 @@ void BibleDock::rebuildBackgroundCombo()
 										 : tr("Color solido..."),
 				 QStringLiteral("color"));
 	backgroundCombo->addItem(tr("Agregar imágenes o videos..."), QStringLiteral("add"));
+	backgroundCombo->addItem(tr("Buscar fondos en internet..."), QStringLiteral("search"));
 
 	switch (bg.kind) {
 	case WorshipRender::BackgroundKind::Preset:
@@ -635,6 +637,8 @@ void BibleDock::onBackgroundActivated(int index)
 		QString file;
 		if (data.startsWith(QStringLiteral("file:")))
 			file = data.mid(5);
+		else if (data == QStringLiteral("search"))
+			file = BackgroundSearch::Run(this, true).value(0);
 		else
 			file = BackgroundLibrary::AddWithDialog(this, true).value(0);
 		if (!file.isEmpty()) {

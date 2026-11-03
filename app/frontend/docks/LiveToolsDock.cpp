@@ -682,8 +682,21 @@ void LiveToolsDock::attachOverlays()
 void LiveToolsDock::setOverlayVisible(const char *sourceName, bool visible)
 {
 	ensureOverlays();
-	if (obs_sceneitem_t *item = obs_scene_find_source(overlaySceneRef, sourceName))
+	if (obs_sceneitem_t *item = obs_scene_find_source(overlaySceneRef, sourceName)) {
+		/* The name slides in from the left and the urgent message from the
+		 * top, like a TV lower third (unless one was chosen by hand). */
+		const bool name = strcmp(sourceName, NameSourceName) == 0;
+		for (bool show : {true, false}) {
+			if (obs_sceneitem_get_transition(item, show))
+				continue;
+			OBSDataAutoRelease settings = obs_data_create();
+			obs_data_set_string(settings, "direction", name ? "left" : "up");
+			OBSSourceAutoRelease slide = obs_source_create_private("slide_transition", "WS Deslizar", settings);
+			obs_sceneitem_set_transition(item, show, slide);
+			obs_sceneitem_set_transition_duration(item, show, 450);
+		}
 		obs_sceneitem_set_visible(item, visible);
+	}
 	attachOverlays();
 }
 

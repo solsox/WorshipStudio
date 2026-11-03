@@ -13,7 +13,7 @@
   <link rel="icon" href="logo.png" type="image/png">
   <link rel="icon" href="img/icono-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="img/icono-180.png">
-  <link rel="stylesheet" href="estilos.css?v=15">
+  <link rel="stylesheet" href="estilos.css?v=16">
 </head>
 <body>
   <a class="skip" href="#contenido">Saltar al contenido</a>
@@ -24,6 +24,7 @@
       <nav class="nav__links" aria-label="Secciones">
         <a href="#funciones">Funciones</a>
         <a href="biblioteca.html">Biblioteca</a>
+        <a href="guias.html">Guías</a>
         <a class="nav__donate" href="#donar" aria-label="Donar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C1 8.6 3.1 5 6.6 5c2.1 0 3.6 1.2 5.4 3.2C13.8 6.2 15.3 5 17.4 5 20.9 5 23 8.6 21.6 11.8 19.5 16.4 12 21 12 21z"/></svg><span>Donar</span></a>
       </nav>
       <a class="btn btn--primary btn--sm nav__cta" href="#descargar">Descargar<span class="hide-sm">&nbsp;gratis</span></a>
@@ -35,18 +36,13 @@
     <section class="hero">
       <div class="wrap hero__in">
         <a class="pill" href="https://github.com/solsox/WorshipStudio/releases/latest" rel="noopener"><span class="pill__new">Nuevo</span> Versión 0.8: proyector y transmisión por separado, Biblias en línea y logo nuevo <span aria-hidden="true">→</span></a>
-        <h1>Toda tu reunión<br>en pantalla.</h1>
-        <p class="hero__lead">Canciones, Biblia, himnarios y presentaciones en el proyector y en vivo, desde un solo programa <b>gratis</b>. Lo preparás en espera y lo mostrás con un clic.</p>
+        <h1>El centro de control audiovisual de tu iglesia.</h1>
+        <p class="hero__lead">Canciones, Biblia y presentaciones en el proyector y en vivo.</p>
         <div class="hero__cta">
-          <a class="btn btn--primary btn--lg" id="cta-principal" href="#descargar">Descargar gratis</a>
-          <a class="btn btn--ghost btn--lg" href="#funciones">Ver cómo funciona</a>
+          <a class="btn-dl" id="cta-principal" href="#descargar"><svg class="btn-dl__icon" id="cta-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="cta-text">Descargar gratis</span></a>
         </div>
-        <p class="hero__os">Descarga directa: <a href="https://github.com/solsox/WorshipStudio/releases/latest/download/WorshipStudio-Windows-x64-Instalador.exe">Windows</a> · <a href="https://github.com/solsox/WorshipStudio/releases/latest/download/WorshipStudio-macOS-arm64.dmg">Mac</a> · <a href="https://github.com/solsox/WorshipStudio/releases/latest/download/WorshipStudio-Linux-x86_64.tar.gz">Linux</a></p>
-        <ul class="assure" aria-label="Garantías">
-          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Gratis para siempre</li>
-          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Sin cuentas ni internet</li>
-          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Código abierto</li>
-        </ul>
+        <p class="hero__note" id="cta-note">Gratis y de código abierto · macOS, Windows y Linux</p>
+        <p class="hero__note hero__note--links"><a href="#descargar">Otras descargas</a> · <a href="#funciones">Ver cómo funciona</a></p>
       </div>
       <div class="wrap showcase">
         <div class="showcase__glow" aria-hidden="true"></div>
@@ -101,7 +97,7 @@
             <ul class="ticks">
               <li>Fondos por canción o por diapositiva, incluso video</li>
               <li>Importa desde OpenLP, OpenSong y ChordPro</li>
-              <li>Himnarios con la pista cantada o instrumental sincronizada</li>
+              <li>Escribí [Coro] una vez y repetilo donde quieras</li>
             </ul>
           </div>
           <div class="panel__media"><img src="img/canto1.jpg" alt="Diapositiva de canción: Cantad al Señor un cántico nuevo" loading="lazy" width="1280" height="720"></div>
@@ -125,6 +121,7 @@
             <h3>Arrastrá el archivo. Nada de exportar imágenes.</h3>
             <p>PowerPoint, Keynote y PDF se proyectan diapositiva por diapositiva. El modo libro divide las páginas verticales para que el texto se lea grande.</p>
             <ul class="ticks">
+              <li>El PowerPoint se abre al instante, sin instalar otro programa</li>
               <li>Funciona con el presentador inalámbrico del orador</li>
               <li>Tecla B para dejar la pantalla en negro</li>
               <li>Carpetas de fotos como presentación</li>
@@ -243,10 +240,11 @@
         <li><span>3</span><h4>Pasalo a pantalla</h4><p>Un clic y lo ve la sala; si querés, también YouTube.</p></li>
       </ol>
       <div class="wrap guide">
-        <img src="img/guia.jpg" alt="Recorrido de inicio de WorshipStudio: el paso 5 ilumina la lista de cantos y explica cómo prepararlo en espera" loading="lazy" width="1600" height="1050">
+        <video src="video/guias/primeros-pasos.mp4" poster="video/guias/primeros-pasos.jpg" muted loop playsinline autoplay preload="none" aria-label="Video: primeros pasos con WorshipStudio"></video>
         <div>
           <h3>La primera vez, aprendés haciendo.</h3>
           <p>Un recorrido interactivo ilumina lo que tenés que tocar en la ventana real: crear una escena, agregar la cámara, un canto, prepararlo en espera y pasarlo a pantalla. Cada paso avanza solo cuando lo hacés.</p>
+          <p class="links"><a href="guias.html">Ver todas las guías con video →</a></p>
         </div>
       </div>
     </section>
@@ -318,7 +316,7 @@
           <details><summary>¿Es gratis de verdad?</summary><p>Sí. Es software libre bajo licencia GPL: sin versión paga, sin límites y sin marcas de agua.</p></details>
           <details><summary>¿Sirve para mi congregación?</summary><p>Sirve para cualquier comunidad que cante, lea o presente en una pantalla: iglesias de cualquier denominación, congregaciones, sinagogas, colegios y eventos.</p></details>
           <details><summary>¿Necesito internet?</summary><p>No. Funciona sin conexión; solo hace falta internet para transmitir en vivo o para descargar más Biblias (una vez).</p></details>
-          <details><summary>¿Qué Biblias trae? ¿Está la RV1960 o la NVI?</summary><p>Trae seis versiones y desde la app descargás gratis más de 1.500 traducciones de uso libre en cientos de idiomas. La RV1960, la NVI, la NTV y los himnarios tienen derechos de autor: si tu comunidad tiene permiso, puede importarlos. Todas las Biblias gratis están en la <a href="biblioteca.html">Biblioteca</a>.</p></details>
+          <details><summary>¿Qué Biblias trae?</summary><p>Seis versiones incluidas, más de 1.500 traducciones gratis para descargar desde la app y versiones que se leen en línea. También podés importar la Biblia que tu iglesia ya tenga, en OSIS o Zefania XML. En la <a href="biblioteca.html#mas">Biblioteca</a> te contamos dónde conseguir más.</p></details>
           <details><summary>¿En qué idiomas está?</summary><p>Español, English, Português, Français, Deutsch, Italiano y 한국어, y lo elegís en el primer paso de la guía. Los menús generales están en más de 70 idiomas.</p></details>
           <details><summary>¿Puedo usar mis propios fondos?</summary><p>Sí. Trae fondos incluidos y podés subir todas las imágenes y videos que quieras: quedan guardados en "Mis fondos" para cantos y Biblia.</p></details>
           <details><summary>Encontré un error o tengo una idea</summary><p>¡Gracias! Escribinos a <a href="mailto:contact.worshipstudio@gmail.com">contact.worshipstudio@gmail.com</a> o desde la app en Ayuda → Enviar comentarios.</p></details>
@@ -345,10 +343,10 @@
       <a class="brand" href="#"><img src="logo.png" alt="" width="28" height="28"><span class="wordmark"><em>Worship</em>Studio</span></a>
       <p>Software libre y gratuito. Hecho con cariño para las comunidades que cantan juntas.</p>
       <p class="footer__base">Basado en <a href="https://obsproject.com" rel="noopener">OBS Studio</a> (GPL-2.0).</p>
-      <nav aria-label="Pie"><a href="mailto:contact.worshipstudio@gmail.com">Contacto</a><a href="biblioteca.html">Biblioteca</a><a href="licencias.html">Licencias</a><a href="https://github.com/solsox/WorshipStudio" rel="noopener">Código</a><a href="https://github.com/solsox/WorshipStudio/releases" rel="noopener">Versiones</a></nav>
+      <nav aria-label="Pie"><a href="mailto:contact.worshipstudio@gmail.com">Contacto</a><a href="guias.html">Guías</a><a href="biblioteca.html">Biblioteca</a><a href="licencias.html">Licencias</a><a href="https://github.com/solsox/WorshipStudio" rel="noopener">Código</a><a href="https://github.com/solsox/WorshipStudio/releases" rel="noopener">Versiones</a></nav>
     </div>
   </footer>
 
-  <script src="app.js?v=15" defer></script>
+  <script src="app.js?v=16" defer></script>
 </body>
 </html>

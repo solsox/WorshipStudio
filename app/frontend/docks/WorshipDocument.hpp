@@ -19,8 +19,10 @@ class QProcess;
  *  - macOS: CoreGraphics
  *  - Windows: Windows.Data.Pdf (Windows 10 or later)
  *  - Linux/FreeBSD: pdftoppm/pdfinfo from poppler-utils
- * Office files are first converted to PDF with whatever office suite is
- * installed (PowerPoint, Keynote or LibreOffice). */
+ * PowerPoint (.pptx) is drawn inside WorshipStudio (PptxRender.hpp), so no
+ * other program opens. Older .ppt, Keynote and OpenDocument files, or a
+ * .pptx that cannot be read, are converted with the office suite installed
+ * (PowerPoint, Keynote or LibreOffice). */
 namespace WorshipDocument {
 
 /* File dialog filter with every supported format. */
@@ -50,7 +52,7 @@ public:
 	~Converter() override;
 
 	void convert(const QString &path, Done done);
-	bool busy() const { return process != nullptr; }
+	bool busy() const { return process != nullptr || nativeRunning; }
 	void cancel();
 
 	/* Human readable list of the converters found on this computer. */
@@ -74,6 +76,9 @@ private:
 	QString target;
 	Done callback;
 	QProcess *process = nullptr;
+	/* The built-in PowerPoint reader was tried for this file. */
+	bool nativeTried = false;
+	bool nativeRunning = false;
 
 	void tryNext();
 	void finish(const QString &pdfPath, const QString &error);
