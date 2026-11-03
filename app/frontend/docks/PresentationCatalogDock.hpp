@@ -41,6 +41,9 @@ public:
 	QString useEdition(int editionIndex, const QString &root);
 
 public slots:
+	/* Shows what is selected inside the panel's "en vivo" scene, without
+	 * changing the screen (dropped on the Sources panel). */
+	bool useAsSource();
 	void nextSlide() { onNextClicked(); }
 	void previousSlide() { onPreviousClicked(); }
 	void toggleHidden();

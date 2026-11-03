@@ -62,7 +62,7 @@ int userSceneCount()
 	obs_frontend_get_scenes(&scenes);
 	int count = 0;
 	for (size_t i = 0; i < scenes.sources.num; ++i)
-		if (!QString::fromUtf8(obs_source_get_name(scenes.sources.array[i])).startsWith(QStringLiteral("WS ")))
+		if (!WorshipOutput::IsInternalScene(QString::fromUtf8(obs_source_get_name(scenes.sources.array[i]))))
 			++count;
 	obs_frontend_source_list_free(&scenes);
 	return count;

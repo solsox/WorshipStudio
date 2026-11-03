@@ -48,7 +48,7 @@ bool remove(const Song &song);
  *   <blank line = new slide>
  *   [Coro]
  *   ...
- * Slides without a [label] keep the label of the previous one. */
+ * A [label] names only the block under it; [Coro] alone repeats the chorus. */
 QString toText(const Song &song);
 QVector<SongSlide> parseText(const QString &text, const QVector<SongSlide> &previous = {});
 

@@ -35,6 +35,9 @@ public:
 	obs_scene_t *outputScene() const { return scene; }
 
 public slots:
+	/* Shows what is selected inside the panel's "en vivo" scene, without
+	 * changing the screen (dropped on the Sources panel). */
+	bool useAsSource();
 	/* Songs were added from outside the dock (migration, folder import). */
 	void reloadLibrary() { reload(); }
 	void nextSlide();

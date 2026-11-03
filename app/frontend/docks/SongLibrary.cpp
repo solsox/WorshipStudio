@@ -6,6 +6,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QRegularExpression>
@@ -194,15 +195,39 @@ bool remove(const Song &song)
 
 QString toText(const Song &song)
 {
+	/* Every labelled slide carries its [label]. A section repeated exactly
+	 * (the chorus after each verse) is written as its [label] alone. */
 	QStringList blocks;
-	QString lastLabel;
-	for (const SongSlide &slide : song.slides) {
+	QHash<QString, QStringList> sections;
+	QString openSection;
+	for (int i = 0; i < song.slides.size(); ++i) {
+		const SongSlide &slide = song.slides.at(i);
+		const QString &label = slide.label;
+		if (!label.isEmpty() && sections.contains(label) && openSection != label) {
+			const QStringList &texts = sections.value(label);
+			bool repeated = i + texts.size() <= song.slides.size();
+			for (int j = 0; repeated && j < texts.size(); ++j) {
+				const SongSlide &other = song.slides.at(i + j);
+				repeated = other.label == label && other.text.trimmed() == texts.at(j);
+			}
+			if (repeated) {
+				blocks << QStringLiteral("[%1]").arg(label);
+				i += (int)texts.size() - 1;
+				openSection.clear();
+				continue;
+			}
+		}
 		QString block;
-		if (!slide.label.isEmpty() && slide.label != lastLabel)
-			block = QStringLiteral("[%1]\n").arg(slide.label);
+		if (!label.isEmpty())
+			block = QStringLiteral("[%1]\n").arg(label);
 		block += slide.text.trimmed();
 		blocks << block;
-		lastLabel = slide.label;
+		if (label.isEmpty() || (sections.contains(label) && openSection != label)) {
+			openSection.clear();
+		} else {
+			sections[label] << slide.text.trimmed();
+			openSection = label;
+		}
 	}
 	return blocks.join(QStringLiteral("\n\n"));
 }
@@ -210,23 +235,47 @@ QString toText(const Song &song)
 QVector<SongSlide> parseText(const QString &text, const QVector<SongSlide> &previous)
 {
 	QVector<SongSlide> slides;
-	QString label;
+	QString pending;  /* [label] written, waiting for its lines */
+	QString openSection; /* label whose first appearance is still being written */
+	QHash<QString, QVector<SongSlide>> sections;
 	QStringList current;
 
-	const auto flush = [&]() {
-		if (current.isEmpty())
-			return;
-		SongSlide slide;
-		slide.label = label;
-		slide.text = current.join(QLatin1Char('\n'));
+	const auto push = [&](SongSlide slide) {
 		/* Keep per-slide backgrounds while the text is being edited. */
 		const int index = (int)slides.size();
+		slide.hasBackground = false;
 		if (index < previous.size() && previous.at(index).hasBackground) {
 			slide.hasBackground = true;
 			slide.background = previous.at(index).background;
 		}
 		slides.push_back(slide);
+	};
+	const auto flush = [&]() {
+		if (current.isEmpty())
+			return;
+		SongSlide slide;
+		/* A label names only the block right under it. */
+		slide.label = pending;
+		slide.text = current.join(QLatin1Char('\n'));
 		current.clear();
+		pending.clear();
+		if (slide.label.isEmpty() || (sections.contains(slide.label) && openSection != slide.label)) {
+			openSection.clear();
+		} else {
+			sections[slide.label].push_back(slide);
+			openSection = slide.label;
+		}
+		push(slide);
+	};
+	/* [Coro] alone repeats the chorus written before. */
+	const auto repeatPending = [&]() {
+		if (pending.isEmpty() || !sections.contains(pending))
+			return false;
+		for (const SongSlide &slide : sections.value(pending))
+			push(slide);
+		pending.clear();
+		openSection.clear();
+		return true;
 	};
 
 	QString normalized = text;
@@ -236,14 +285,18 @@ QVector<SongSlide> parseText(const QString &text, const QVector<SongSlide> &prev
 		const QRegularExpressionMatch match = LabelLine.match(line);
 		if (match.hasMatch()) {
 			flush();
-			label = match.captured(1).trimmed();
+			repeatPending();
+			pending = match.captured(1).trimmed();
 		} else if (line.isEmpty()) {
+			if (current.isEmpty())
+				repeatPending();
 			flush();
 		} else {
 			current << line;
 		}
 	}
 	flush();
+	repeatPending();
 	return slides;
 }
 

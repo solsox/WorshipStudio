@@ -20,6 +20,7 @@
 #include "SongEditor.hpp"
 #include "WorshipLive.hpp"
 #include "WorshipOutput.hpp"
+#include "WorshipDrag.hpp"
 #include "WorshipRender.hpp"
 
 #include <qt-wrappers.hpp>
@@ -107,6 +108,7 @@ SongsDock::SongsDock(const QString &objectName, const QString &title, QWidget *p
 	libraryRow->addWidget(importButton);
 
 	songsList = new QListWidget(root);
+	WorshipDrag::EnableDrag(songsList, objectName);
 	songsList->setObjectName(QStringLiteral("songsList"));
 	songsList->setSelectionMode(QAbstractItemView::SingleSelection);
 
@@ -228,7 +230,7 @@ void SongsDock::rebuildSlides()
 
 	const Song &song = songs.at(selectedSong);
 	for (int i = 0; i < song.slides.size(); ++i) {
-		const QImage image = WorshipRender::Lyrics(SongLibrary::lyricsSlide(song, i), ThumbnailSize * 2);
+		const QImage image = WorshipRender::LyricsPreview(SongLibrary::lyricsSlide(song, i), ThumbnailSize * 2);
 		const QString label = song.slides.at(i).label.isEmpty() ? QString::number(i + 1) : song.slides.at(i).label;
 		auto *item = new QListWidgetItem(
 			QIcon(QPixmap::fromImage(image.scaled(ThumbnailSize, Qt::KeepAspectRatio, Qt::SmoothTransformation))),
@@ -685,4 +687,9 @@ void SongsDock::updateLiveLabel()
 	if (hidden)
 		text += tr("  |  OCULTO");
 	liveLabel->setText(text);
+}
+
+bool SongsDock::useAsSource()
+{
+	return project();
 }

@@ -71,7 +71,7 @@ void WorshipLayout::filterSceneList()
 		return;
 	for (int row = 0; row < list->count(); ++row) {
 		QListWidgetItem *item = list->item(row);
-		item->setHidden(item->text().startsWith(QStringLiteral("WS ")));
+		item->setHidden(WorshipOutput::IsInternalScene(item->text()));
 	}
 }
 

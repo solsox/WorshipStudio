@@ -35,6 +35,8 @@
 #include <docks/WorshipVersion.hpp>
 #include <QDesktopServices>
 #include <QSysInfo>
+#include <QToolTip>
+#include <QHash>
 #include <QUrlQuery>
 #include <docks/BibleDock.hpp>
 #include <dialogs/NameDialog.hpp>
@@ -53,6 +55,9 @@
 #include <docks/AppearanceDialog.hpp>
 #include <docks/GuidedTour.hpp>
 #include <docks/MigrationDialog.hpp>
+#include <docks/ScreensDialog.hpp>
+#include <docks/WorshipDrag.hpp>
+#include <docks/WorshipOutput.hpp>
 #include <docks/WorshipLive.hpp>
 #include <docks/WorshipLayout.hpp>
 #include <docks/WorshipRender.hpp>
@@ -1308,6 +1313,49 @@ void OBSBasic::OBSInit()
 					    presentationDock, liveToolsDock, this);
 	AddDockWidget(serviceDock, Qt::LeftDockWidgetArea);
 
+	/* Songs, verses, hymns and presentations dropped on Sources become a
+	 * source of the scene: "Cantos en vivo" follows the Cantos panel. */
+	WorshipDrag::InstallDropTarget(ui->sources, [this](const QString &panel) {
+		static const QHash<QString, int> followers{{QStringLiteral("songsDock"), 0},
+							   {QStringLiteral("bibleDock"), 1},
+							   {QStringLiteral("hymnalDock"), 2},
+							   {QStringLiteral("presentationDock"), 3}};
+		const auto tell = [](const QString &text) { QToolTip::showText(QCursor::pos(), text); };
+		QObject *dock = findChild<QObject *>(panel);
+		if (!dock || !followers.contains(panel))
+			return;
+
+		const bool studio = obs_frontend_preview_program_mode_active();
+		OBSSourceAutoRelease target = studio ? obs_frontend_get_current_preview_scene()
+						     : obs_frontend_get_current_scene();
+		obs_scene_t *scene = target ? obs_scene_from_source(target) : nullptr;
+		if (!scene || WorshipOutput::IsInternalScene(QT_UTF8(obs_source_get_name(target)))) {
+			tell(QCoreApplication::translate("WorshipStudio",
+							 "Primero elegí una de tus escenas en el panel Escenas."));
+			return;
+		}
+
+		bool shown = false;
+		{
+			WorshipOutput::SourceOnlyScope sourceOnly;
+			QMetaObject::invokeMethod(dock, "useAsSource", Qt::DirectConnection, Q_RETURN_ARG(bool, shown));
+		}
+		const QString followerName = WorshipOutput::FollowerNames().at(followers.value(panel));
+		OBSSourceAutoRelease follower = obs_get_source_by_name(QT_TO_UTF8(followerName));
+		if (!shown || !follower) {
+			tell(QCoreApplication::translate("WorshipStudio", "Elegí primero qué mostrar en ese panel."));
+			return;
+		}
+		if (!obs_scene_find_source(scene, QT_TO_UTF8(followerName))) {
+			obs_scene_add(scene, follower);
+			WorshipOutput::FitItem(scene, follower, 0.0f, 0.0f, 1.0f, 1.0f);
+		}
+		tell(QCoreApplication::translate("WorshipStudio",
+						 "Listo: \"%1\" es una fuente de esta escena. Movela y agrandala "
+						 "como quieras; el panel la sigue controlando.")
+			     .arg(followerName));
+	});
+
 	const QString selfTestDir = qEnvironmentVariable("WORSHIPSTUDIO_SELFTEST");
 	if (!selfTestDir.isEmpty()) {
 		QTimer::singleShot(5000, this, [this, hymnalDock, bibleDock, songsDock, presentationDock, liveToolsDock,
@@ -1384,6 +1432,17 @@ void OBSBasic::OBSInit()
 	ui->viewMenu->insertAction(ui->viewMenu->actions().value(0), appearanceAction);
 	connect(appearanceAction, &QAction::triggered, this, [this]() {
 		auto *dialog = new AppearanceDialog(this);
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		dialog->open();
+	});
+
+	/* Room screen and stream showing different things. */
+	auto *screensAction =
+		new QAction(QCoreApplication::translate("WorshipStudio", "Pantallas y transmisión..."), this);
+	ui->menuTools->insertAction(ui->menuTools->actions().value(0), screensAction);
+	ui->menuTools->insertSeparator(ui->menuTools->actions().value(1));
+	connect(screensAction, &QAction::triggered, this, [this]() {
+		auto *dialog = new ScreensDialog(this);
 		dialog->setAttribute(Qt::WA_DeleteOnClose);
 		dialog->open();
 	});
@@ -1564,6 +1623,8 @@ void OBSBasic::OBSInit()
 void OBSBasic::OnFirstLoad()
 {
 	OnEvent(OBS_FRONTEND_EVENT_FINISHED_LOADING);
+	if (qEnvironmentVariableIsEmpty("WORSHIPSTUDIO_SELFTEST"))
+		ScreensDialog::RestoreRoomScreen();
 
 #ifdef WHATSNEW_ENABLED
 	/* Attempt to load init screen if available */

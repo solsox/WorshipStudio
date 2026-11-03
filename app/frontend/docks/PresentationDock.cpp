@@ -19,6 +19,7 @@
 #include "WorshipDocument.hpp"
 #include "WorshipLive.hpp"
 #include "WorshipOutput.hpp"
+#include "WorshipDrag.hpp"
 #include "WorshipRender.hpp"
 
 #include <qt-wrappers.hpp>
@@ -143,6 +144,7 @@ PresentationDock::PresentationDock(const QString &objectName, const QString &tit
 	openRow->addWidget(removeButton);
 
 	decksList = new QListWidget(root);
+	WorshipDrag::EnableDrag(decksList, objectName);
 	decksList->setSelectionMode(QAbstractItemView::SingleSelection);
 
 	slidesList = new QListWidget(root);
@@ -836,4 +838,11 @@ QString PresentationDock::titleFor(const QString &key)
 					  : QStringLiteral("%1 (%2 imagenes)").arg(folder).arg(images.size());
 	}
 	return QFileInfo(key).fileName();
+}
+
+bool PresentationDock::useAsSource()
+{
+	if (decksList->currentItem())
+		onDeckActivated(decksList->currentItem());
+	return project();
 }

@@ -16,14 +16,17 @@
 ******************************************************************************/
 
 #include "BibleDock.hpp"
+#include "OnlineBible.hpp"
 #include "BackgroundLibrary.hpp"
 #include "BibleCatalog.hpp"
 #include "WorshipLive.hpp"
 #include "WorshipOutput.hpp"
+#include "WorshipDrag.hpp"
 #include "WorshipRender.hpp"
 
 #include <qt-wrappers.hpp>
 #include <Idian/Utils.hpp>
+#include <OBSApp.hpp>
 
 #include <QAbstractItemView>
 #include <QComboBox>
@@ -42,6 +45,7 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QListWidgetItem>
+#include <QLocale>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QSpinBox>
@@ -127,6 +131,7 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 	searchEdit->setClearButtonEnabled(true);
 
 	resultsList = new QListWidget(root);
+	WorshipDrag::EnableDrag(resultsList, objectName, true);
 	resultsList->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	resultsList->setWordWrap(true);
 
@@ -253,6 +258,8 @@ void BibleDock::rebuildVersionCombo(const QString &selectFile)
 		}
 	}
 
+	addOnlineVersions();
+
 	/* Reina Valera 1909 first by default: it is the classic version. */
 	int index = selectFile.isEmpty() ? -1 : versionCombo->findData(selectFile);
 	if (index < 0) {
@@ -266,13 +273,161 @@ void BibleDock::rebuildVersionCombo(const QString &selectFile)
 	onVersionChanged(versionCombo->currentIndex());
 }
 
+void BibleDock::addOnlineVersions()
+{
+	if (!OnlineBible::Available())
+		return;
+	const auto addVersion = [this](const OnlineBible::Version &version) {
+		const QString data = OnlineBible::DataFor(version.id);
+		if (versionCombo->findData(data) >= 0)
+			return;
+		versionCombo->addItem(QStringLiteral("%1 - %2 · %3")
+					      .arg(version.abbrev, version.title, tr("en línea")),
+				      data);
+		versionCombo->setItemData(versionCombo->count() - 1,
+					  tr("Se lee por internet y no se guarda en la computadora."), Qt::ToolTipRole);
+	};
+	for (const OnlineBible::Version &version : OnlineBible::Favorites())
+		addVersion(version);
+
+	if (onlineCatalogAsked)
+		return;
+	onlineCatalogAsked = true;
+	/* The rest of the versions enabled for WorshipStudio, in Spanish and in
+	 * the language of the app. */
+	QStringList languages{QStringLiteral("spa")};
+	const QString uiLanguage = QLocale(QString::fromUtf8(App()->GetLocale())).bcp47Name().section(QLatin1Char('-'), 0, 0);
+	static const QHash<QString, QString> iso3{{QStringLiteral("en"), QStringLiteral("eng")},
+						  {QStringLiteral("pt"), QStringLiteral("por")},
+						  {QStringLiteral("fr"), QStringLiteral("fra")},
+						  {QStringLiteral("de"), QStringLiteral("deu")},
+						  {QStringLiteral("it"), QStringLiteral("ita")},
+						  {QStringLiteral("ko"), QStringLiteral("kor")}};
+	if (iso3.contains(uiLanguage))
+		languages << iso3.value(uiLanguage);
+	OnlineBible::FetchVersions(languages, this, [this, addVersion](const QVector<OnlineBible::Version> &versions) {
+		QSignalBlocker blocker(versionCombo);
+		for (const OnlineBible::Version &version : versions)
+			addVersion(version);
+	});
+}
+
+bool BibleDock::loadOnlineBible(const QString &id, QString *error)
+{
+	/* Same versification as the classic Reina Valera: start from it and
+	 * fill each chapter when it is opened. */
+	if (!loadBible(QDir(bundledDir).absoluteFilePath(QStringLiteral("rv1909.json")), error))
+		return false;
+	for (BibleBook &book : books) {
+		for (QStringList &chapter : book.chapters) {
+			for (QString &verse : chapter)
+				verse.clear();
+		}
+	}
+	for (QString &normalized : normalizedVerses)
+		normalized.clear();
+
+	onlineId = id;
+	onlineCopyright.clear();
+	onlineLoaded.clear();
+	onlineLoading.clear();
+	const QString label = versionCombo->currentText();
+	versionName = label.section(QStringLiteral(" - "), 1).section(QStringLiteral(" · "), 0, 0);
+
+	OnlineBible::FetchIndex(id, this, [this, id](const QVector<QVector<int>> &counts, const QStringList &names) {
+		if (onlineId != id)
+			return;
+		for (int b = 0; b < books.size() && b < counts.size(); ++b) {
+			if (counts.at(b).isEmpty())
+				continue;
+			QVector<QStringList> chapters;
+			for (int c = 0; c < counts.at(b).size(); ++c) {
+				QStringList verses = books.at(b).chapters.value(c);
+				while (verses.size() < counts.at(b).at(c))
+					verses << QString();
+				while (verses.size() > counts.at(b).at(c))
+					verses.removeLast();
+				chapters.push_back(verses);
+			}
+			books[b].chapters = chapters;
+			/* Book names in the language of the version. */
+			const QString name = names.value(b);
+			if (!name.isEmpty() && normalizeBookQuery(name) != books.at(b).key) {
+				books[b].aliases << books.at(b).key;
+				books[b].name = name;
+				books[b].key = normalizeBookQuery(name);
+			}
+		}
+	});
+	OnlineBible::FetchInfo(id, this, [this, id](const QJsonObject &info) {
+		if (onlineId != id)
+			return;
+		onlineCopyright = info.value(QStringLiteral("copyright")).toString().simplified();
+		if (!onlineCopyright.isEmpty())
+			statusLabel->setToolTip(onlineCopyright);
+	});
+	return true;
+}
+
+void BibleDock::ensureOnlineChapter(int book, int chapter)
+{
+	const int key = book * 1000 + chapter;
+	if (onlineId.isEmpty() || onlineLoaded.contains(key) || onlineLoading.contains(key))
+		return;
+	onlineLoading.insert(key);
+	const QString id = onlineId;
+	OnlineBible::FetchChapter(id, book, chapter, this,
+				  [this, id, book, chapter, key](const QStringList &verses, const QString &error) {
+		if (onlineId != id)
+			return;
+		onlineLoading.remove(key);
+		if (!error.isEmpty()) {
+			statusLabel->setText(error);
+			return;
+		}
+		onlineLoaded.insert(key);
+		if (book >= books.size() || chapter > books.at(book).chapters.size())
+			return;
+		QStringList &stored = books[book].chapters[chapter - 1];
+		for (int v = 0; v < verses.size(); ++v) {
+			if (v < stored.size())
+				stored[v] = verses.at(v);
+			else
+				stored << verses.at(v);
+		}
+		/* Refresh the list keeping what the operator selected. */
+		const QVector<BibleVerseRef> keep = selectedVerses();
+		const int row = resultsList->currentRow();
+		QSignalBlocker blocker(resultsList);
+		for (int r = 0; r < resultsList->count(); ++r) {
+			QListWidgetItem *item = resultsList->item(r);
+			const BibleVerseRef ref{item->data(RefBookRole).toInt(), item->data(RefChapterRole).toInt(),
+						item->data(RefVerseRole).toInt()};
+			if (ref.book == book && ref.chapter == chapter)
+				item->setText(QStringLiteral("%1 %2:%3  %4")
+						      .arg(books.at(book).name)
+						      .arg(chapter)
+						      .arg(ref.verse)
+						      .arg(verseText(ref)));
+		}
+		resultsList->setCurrentRow(row, QItemSelectionModel::NoUpdate);
+		blocker.unblock();
+		if (!keep.isEmpty())
+			styleChanged();
+	});
+}
+
 void BibleDock::onVersionChanged(int index)
 {
 	const QString path = versionCombo->itemData(index).toString();
 	const QVector<BibleVerseRef> keep = selectedVerses();
 
 	QString error;
-	if (path.isEmpty() || !loadBible(path, &error)) {
+	const bool online = OnlineBible::IsOnline(path);
+	if (!online)
+		onlineId.clear();
+	statusLabel->setToolTip(QString());
+	if (path.isEmpty() || !(online ? loadOnlineBible(OnlineBible::IdOf(path), &error) : loadBible(path, &error))) {
 		blog(LOG_WARNING, "[WorshipStudio] Biblia not loaded: %s", QT_TO_UTF8(error));
 		statusLabel->setText(path.isEmpty() ? tr("No hay versiones de la Biblia instaladas.") : error);
 		searchEdit->setEnabled(false);
@@ -297,7 +452,8 @@ void BibleDock::onVersionChanged(int index)
 			}));
 		}
 	}
-	statusLabel->setText(tr("%1 - %2 versiculos").arg(versionName).arg(allVerses.size()));
+	statusLabel->setText(online ? tr("%1 · se lee en línea, no se guarda en la computadora").arg(versionName)
+				    : tr("%1 - %2 versiculos").arg(versionName).arg(allVerses.size()));
 	styleChanged();
 }
 
@@ -646,7 +802,9 @@ void BibleDock::addVerseItem(const BibleVerseRef &ref)
 						 .arg(books.at(ref.book).name)
 						 .arg(ref.chapter)
 						 .arg(ref.verse)
-						 .arg(text.isEmpty() ? tr("(sin texto en esta version)") : text));
+						 .arg(!text.isEmpty() ? text
+						      : onlineId.isEmpty() ? tr("(sin texto en esta version)")
+									   : tr("cargando...")));
 	item->setData(RefBookRole, ref.book);
 	item->setData(RefChapterRole, ref.chapter);
 	item->setData(RefVerseRole, ref.verse);
@@ -662,6 +820,7 @@ void BibleDock::onSearchChanged(const QString &text)
 	if (parseReference(text, &book, &chapter, &verseFrom, &verseTo)) {
 		/* Show the whole chapter so the operator can keep moving through it. */
 		const QStringList &verses = books.at(book).chapters.at(chapter - 1);
+		ensureOnlineChapter(book, chapter);
 		for (int v = 1; v <= verses.size(); ++v)
 			addVerseItem({book, chapter, v});
 
@@ -674,7 +833,10 @@ void BibleDock::onSearchChanged(const QString &text)
 		statusLabel->setText(tr("%1 %2 - %3 versiculos").arg(books.at(book).name).arg(chapter).arg(verses.size()));
 	} else {
 		const QString needle = normalizeText(text);
-		if (needle.size() >= 3) {
+		if (!onlineId.isEmpty() && needle.size() >= 3) {
+			/* Online Bibles are read a chapter at a time: no phrase search. */
+			statusLabel->setText(tr("En las versiones en línea escribí una referencia, por ejemplo Juan 3:16"));
+		} else if (needle.size() >= 3) {
 			int count = 0;
 			for (int i = 0; i < normalizedVerses.size() && count < MaxTextResults; ++i) {
 				if (normalizedVerses.at(i).contains(needle)) {
@@ -965,5 +1127,10 @@ bool BibleDock::projectQuery(const QString &query, int layout)
 {
 	layoutCombo->setCurrentIndex(layout);
 	searchEdit->setText(query);
+	return project(selectedVerses(), true);
+}
+
+bool BibleDock::useAsSource()
+{
 	return project(selectedVerses(), true);
 }

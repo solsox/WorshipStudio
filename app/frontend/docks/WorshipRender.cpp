@@ -559,6 +559,26 @@ QImage Bible(const BibleSlide &slide, const QSize &canvas, bool *fits)
 	return output;
 }
 
+QImage LyricsPreview(const LyricsSlide &slide, const QSize &canvas)
+{
+	const QImage lyrics = Lyrics(slide, canvas);
+	if (slide.background.kind != BackgroundKind::Video || slide.layout != LyricsLayout::FullScreen)
+		return lyrics;
+
+	QImage output(canvas, QImage::Format_ARGB32_Premultiplied);
+	output.fill(QColor(0x1b, 0x19, 0x17));
+	QPainter painter(&output);
+	painter.setRenderHint(QPainter::SmoothPixmapTransform);
+	/* Bundled loops have a still in "miniaturas" next to them. */
+	const QFileInfo video(slide.background.path);
+	const QImage still(video.dir().absoluteFilePath(QStringLiteral("miniaturas/%1.jpg").arg(video.completeBaseName())));
+	if (!still.isNull())
+		painter.drawImage(0, 0, coverScaled(still, canvas));
+	painter.drawImage(0, 0, lyrics);
+	painter.end();
+	return output;
+}
+
 QImage Lyrics(const LyricsSlide &slide, const QSize &canvas)
 {
 	const qreal W = canvas.width();

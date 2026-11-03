@@ -18,6 +18,7 @@
 #include "PresentationCatalogDock.hpp"
 #include "WorshipLive.hpp"
 #include "WorshipOutput.hpp"
+#include "WorshipDrag.hpp"
 #include "WorshipRender.hpp"
 
 #include <obs-frontend-api.h>
@@ -83,6 +84,7 @@ PresentationCatalogDock::PresentationCatalogDock(const QString &objectName, cons
 	searchEdit->setClearButtonEnabled(true);
 
 	resultsList = new QListWidget(root);
+	WorshipDrag::EnableDrag(resultsList, objectName);
 	resultsList->setSelectionMode(QAbstractItemView::SingleSelection);
 
 	audioModeCombo = new QComboBox(root);
@@ -648,4 +650,10 @@ void PresentationCatalogDock::updateLiveLabel()
 	}
 
 	liveLabel->setText(text);
+}
+
+bool PresentationCatalogDock::useAsSource()
+{
+	onProjectClicked();
+	return liveEntry >= 0;
 }

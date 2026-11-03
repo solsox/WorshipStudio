@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+# Online Bibles (Reina Valera 1960/1995...): app key of the YouVersion Platform.
+env:
+  WORSHIPSTUDIO_YOUVERSION_KEY: ${{ secrets.YOUVERSION_KEY }}
+
 concurrency:
   group: compilar-${{ github.ref }}
   cancel-in-progress: true

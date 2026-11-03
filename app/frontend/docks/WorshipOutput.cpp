@@ -8,6 +8,59 @@
 namespace WorshipOutput {
 
 static constexpr const char *ConfigSection = "WorshipStudio";
+static int sourceOnlyDepth = 0;
+
+namespace {
+/* The visible content scene inside a follower scene. */
+QString visibleIn(const char *followerName)
+{
+	OBSSourceAutoRelease follower = obs_get_source_by_name(followerName);
+	obs_scene_t *scene = follower ? obs_scene_from_source(follower) : nullptr;
+	if (!scene)
+		return {};
+	QString name;
+	obs_scene_enum_items(
+		scene,
+		[](obs_scene_t *, obs_sceneitem_t *item, void *param) {
+			if (obs_sceneitem_visible(item))
+				*static_cast<QString *>(param) =
+					QT_UTF8(obs_source_get_name(obs_sceneitem_get_source(item)));
+			return true;
+		},
+		&name);
+	return name;
+}
+
+/* Shows `content` (a scene) in the follower scene, with a short fade, and
+ * hides the rest. */
+void follow(const char *followerName, obs_source_t *content)
+{
+	OBSScene follower = EnsureScene(followerName);
+	if (!follower || !content || obs_scene_get_source(follower) == content)
+		return;
+	const char *contentName = obs_source_get_name(content);
+	obs_sceneitem_t *target = obs_scene_find_source(follower, contentName);
+	if (!target) {
+		target = obs_scene_add(follower, content);
+		if (!target)
+			return;
+		FitItem(follower, content, 0.0f, 0.0f, 1.0f, 1.0f);
+		for (bool show : {true, false}) {
+			OBSSourceAutoRelease fade = obs_source_create_private("fade_transition", "WS Fundido", nullptr);
+			obs_sceneitem_set_transition(target, show, fade);
+			obs_sceneitem_set_transition_duration(target, show, 350);
+		}
+	}
+	obs_sceneitem_set_order(target, OBS_ORDER_MOVE_TOP);
+	obs_scene_enum_items(
+		follower,
+		[](obs_scene_t *, obs_sceneitem_t *item, void *param) {
+			obs_sceneitem_set_visible(item, item == static_cast<obs_sceneitem_t *>(param));
+			return true;
+		},
+		target);
+}
+} // namespace
 
 OBSScene EnsureScene(const char *sceneName)
 {
@@ -76,10 +129,12 @@ QString OutputSlot(const char *baseSceneName)
 	const QString base = QString::fromUtf8(baseSceneName);
 	const QString second = base + QStringLiteral(" B");
 
-	OBSSourceAutoRelease program = obs_frontend_get_current_scene();
-	const QString onAir = program ? QT_UTF8(obs_source_get_name(program)) : QString();
+	const QString onAir = OnAirSceneName();
+	/* Used as a source: never change what the congregation is seeing. */
+	if (sourceOnlyDepth > 0)
+		return onAir == base ? QStringLiteral(" B") : QString();
 
-	if (!obs_frontend_preview_program_mode_active())
+	if (!obs_frontend_preview_program_mode_active() || SeparateRoomScreen())
 		return onAir == second ? QStringLiteral(" B") : QString();
 
 	if (onAir == base)
@@ -98,9 +153,75 @@ std::string Named(const char *baseName, const QString &slot)
 	return std::string(baseName) + slot.toStdString();
 }
 
+SourceOnlyScope::SourceOnlyScope()
+{
+	++sourceOnlyDepth;
+}
+
+SourceOnlyScope::~SourceOnlyScope()
+{
+	--sourceOnlyDepth;
+}
+
+QStringList FollowerNames()
+{
+	return {QStringLiteral("Cantos en vivo"), QStringLiteral("Biblia en vivo"), QStringLiteral("Himnario en vivo"),
+		QStringLiteral("Presentación en vivo")};
+}
+
+QString FollowerFor(const QString &name)
+{
+	if (name.startsWith(QStringLiteral("WS Cantos")))
+		return FollowerNames().at(0);
+	if (name.startsWith(QStringLiteral("WS Biblia")))
+		return FollowerNames().at(1);
+	if (name.startsWith(QStringLiteral("WS Himnario")))
+		return FollowerNames().at(2);
+	if (name.startsWith(QStringLiteral("WS Presentacion")))
+		return FollowerNames().at(3);
+	return {};
+}
+
+bool SeparateRoomScreen()
+{
+	return ConfigString("SeparateRoomScreen") == QStringLiteral("1");
+}
+
+void SetSeparateRoomScreen(bool separate)
+{
+	SetConfigString("SeparateRoomScreen", separate ? QStringLiteral("1") : QStringLiteral("0"));
+	if (separate)
+		EnsureScene(RoomScreenScene);
+}
+
+QString OnAirSceneName()
+{
+	if (SeparateRoomScreen())
+		return visibleIn(RoomScreenScene);
+	OBSSourceAutoRelease program = obs_frontend_get_current_scene();
+	return program ? QT_UTF8(obs_source_get_name(program)) : QString();
+}
+
+bool IsInternalScene(const QString &name)
+{
+	return name.startsWith(QStringLiteral("WS ")) || name == QLatin1String(RoomScreenScene) ||
+	       FollowerNames().contains(name);
+}
+
 void ShowScene(obs_scene_t *scene)
 {
 	obs_source_t *source = obs_scene_get_source(scene);
+	const QString name = QT_UTF8(obs_source_get_name(source));
+	const QString follower = FollowerFor(name);
+	if (!follower.isEmpty())
+		follow(QT_TO_UTF8(follower), source);
+	if (sourceOnlyDepth > 0)
+		return;
+	if (SeparateRoomScreen()) {
+		follow(RoomScreenScene, source);
+		return;
+	}
+
 	const bool studio = obs_frontend_preview_program_mode_active();
 
 	/* Already there: a transition to the same scene would restart its

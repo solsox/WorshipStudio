@@ -17,6 +17,12 @@ target_sources(
     docks/LanguageDialog.hpp
     docks/MigrationDialog.cpp
     docks/MigrationDialog.hpp
+    docks/OnlineBible.cpp
+    docks/OnlineBible.hpp
+    docks/ScreensDialog.cpp
+    docks/ScreensDialog.hpp
+    docks/WorshipDrag.cpp
+    docks/WorshipDrag.hpp
     docks/LiveToolsDock.cpp
     docks/LiveToolsDock.hpp
     docks/PresentationCatalogData.cpp
@@ -51,6 +57,11 @@ target_sources(
     docks/WorshipSelfTest.cpp
     docks/WorshipSelfTest.hpp
 )
+
+# App key of the YouVersion Platform (online Bibles), from the CI secret.
+if(DEFINED ENV{WORSHIPSTUDIO_YOUVERSION_KEY} AND NOT "$ENV{WORSHIPSTUDIO_YOUVERSION_KEY}" STREQUAL "")
+  target_compile_definitions(obs-studio PRIVATE "WORSHIPSTUDIO_YOUVERSION_KEY=\"$ENV{WORSHIPSTUDIO_YOUVERSION_KEY}\"")
+endif()
 
 # Phone remote: QR code with the address of the control page.
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)

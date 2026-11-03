@@ -211,8 +211,10 @@ SongEditor::SongEditor(const Song &song, QWidget *parent) : QDialog(parent), edi
 
 	textEdit = new QPlainTextEdit(this);
 	textEdit->setPlaceholderText(tr("[Estrofa 1]\nPrimera linea de la estrofa\nSegunda linea\n\n[Coro]\nLetra del coro\n\n"
+					"[Estrofa 2]\nOtra estrofa\n\n[Coro]\n\n"
 					"Cada linea en blanco empieza una diapositiva nueva.\n"
-					"Los nombres entre corchetes ([Coro], [Puente]) permiten saltar con una tecla."));
+					"[Coro] nombra solo el bloque de abajo; escrito solo, repite el coro.\n"
+					"Con los nombres ([Coro], [Puente]) saltás con una tecla."));
 	textEdit->setPlainText(SongLibrary::toText(song));
 	QFont mono = textEdit->font();
 	mono.setPointSizeF(mono.pointSizeF() * 1.15);
@@ -366,7 +368,7 @@ void SongEditor::refreshSlides()
 	QSignalBlocker blocker(slidesList);
 	slidesList->clear();
 	for (int i = 0; i < edited.slides.size(); ++i) {
-		const QImage image = WorshipRender::Lyrics(SongLibrary::lyricsSlide(edited, i), EditorThumb * 2);
+		const QImage image = WorshipRender::LyricsPreview(SongLibrary::lyricsSlide(edited, i), EditorThumb * 2);
 		const QString label = edited.slides.at(i).label.isEmpty() ? QString::number(i + 1)
 									 : QStringLiteral("%1. %2").arg(i + 1).arg(edited.slides.at(i).label);
 		auto *item = new QListWidgetItem(
@@ -391,7 +393,7 @@ void SongEditor::refreshPreview()
 	const QSize size = canvas.scaled(qMax(200, previewLabel->width() - 4), qMax(112, previewLabel->height() - 4),
 					 Qt::KeepAspectRatio);
 	/* Rendered at full size and scaled so it matches the screen exactly. */
-	const QImage image = WorshipRender::Lyrics(SongLibrary::lyricsSlide(edited, row), canvas);
+	const QImage image = WorshipRender::LyricsPreview(SongLibrary::lyricsSlide(edited, row), canvas);
 	previewLabel->setPixmap(QPixmap::fromImage(image.scaled(size, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
 }
 

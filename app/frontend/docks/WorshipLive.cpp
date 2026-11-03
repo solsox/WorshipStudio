@@ -1,4 +1,5 @@
 #include "WorshipLive.hpp"
+#include "WorshipOutput.hpp"
 
 #include <obs-frontend-api.h>
 #include <obs.hpp>
@@ -7,11 +8,8 @@
 
 namespace {
 /* "WS Presentacion B" -> "Presentaciones": which dock owns a scene. */
-QString ownerOfScene(obs_source_t *scene)
+QString ownerOfName(const QString &name)
 {
-	if (!scene)
-		return {};
-	const QString name = QString::fromUtf8(obs_source_get_name(scene));
 	if (name.startsWith(QStringLiteral("WS Cantos")))
 		return QStringLiteral("Cantos");
 	if (name.startsWith(QStringLiteral("WS Biblia")))
@@ -21,6 +19,11 @@ QString ownerOfScene(obs_source_t *scene)
 	if (name.startsWith(QStringLiteral("WS Presentacion")))
 		return QStringLiteral("Presentaciones");
 	return {};
+}
+
+QString ownerOfScene(obs_source_t *scene)
+{
+	return scene ? ownerOfName(QString::fromUtf8(obs_source_get_name(scene))) : QString();
 }
 } // namespace
 
@@ -71,7 +74,9 @@ void WorshipLive::invoke(const char *method)
 	 * first; otherwise the dock that owns the scene on screen is used. */
 	OBSSourceAutoRelease program = obs_frontend_get_current_scene();
 	QString source = ownerOfScene(program);
-	if (obs_frontend_preview_program_mode_active()) {
+	if (WorshipOutput::SeparateRoomScreen()) {
+		source = ownerOfName(WorshipOutput::OnAirSceneName());
+	} else if (obs_frontend_preview_program_mode_active()) {
 		OBSSourceAutoRelease preview = obs_frontend_get_current_preview_scene();
 		const QString waiting = ownerOfScene(preview);
 		if (!waiting.isEmpty() && waiting == current.source && preview != program)

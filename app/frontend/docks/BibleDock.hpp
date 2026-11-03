@@ -5,6 +5,7 @@
 
 #include <obs.hpp>
 
+#include <QSet>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -57,6 +58,9 @@ public:
 	QString lastRenderedImage() const { return lastRenderPath; }
 
 public slots:
+	/* Shows what is selected inside the panel's "en vivo" scene, without
+	 * changing the screen (dropped on the Sources panel). */
+	bool useAsSource();
 	/* Remote control (phone, stage, hotkeys through WorshipLive). */
 	void nextSlide() { moveSelection(1); }
 	void previousSlide() { moveSelection(-1); }
@@ -99,6 +103,16 @@ private:
 	QString lastRenderPath;
 	bool live = false;
 	bool searching = false;
+
+	/* Online Bible (OnlineBible.hpp): chapters arrive as they are needed. */
+	QString onlineId;
+	QString onlineCopyright;
+	QSet<int> onlineLoaded;
+	QSet<int> onlineLoading;
+	bool onlineCatalogAsked = false;
+	bool loadOnlineBible(const QString &id, QString *error);
+	void ensureOnlineChapter(int book, int chapter);
+	void addOnlineVersions();
 
 	void rebuildVersionCombo(const QString &selectFile);
 	void rebuildBackgroundCombo();

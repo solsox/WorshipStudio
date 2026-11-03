@@ -19,6 +19,7 @@
 #include "SongEditor.hpp"
 #include "WorshipLive.hpp"
 #include "WorshipOutput.hpp"
+#include "ScreensDialog.hpp"
 #include "WorshipRemote.hpp"
 #include "WorshipRender.hpp"
 
@@ -379,6 +380,19 @@ QString LiveToolsDock::describeScene(obs_source_t *sceneSource) const
 
 void LiveToolsDock::refreshOnAir()
 {
+	if (WorshipOutput::SeparateRoomScreen()) {
+		/* The room screen shows the content; the stream keeps its scene. */
+		const QString room = WorshipOutput::OnAirSceneName();
+		OBSSourceAutoRelease roomSource = room.isEmpty() ? nullptr : obs_get_source_by_name(QT_TO_UTF8(room));
+		OBSSourceAutoRelease stream = obs_frontend_get_current_scene();
+		programLabel->setText(QStringLiteral("<span style=\"color:#E5484D\">●</span> <b>%1</b> %2")
+					      .arg(tr("EN LA SALA:"), describeScene(roomSource).toHtmlEscaped()));
+		previewLabel->setText(QStringLiteral("<span style=\"color:#8A8276\">●</span> <b>%1</b> %2")
+					      .arg(tr("TRANSMISIÓN:"), describeScene(stream).toHtmlEscaped()));
+		previewLabel->setVisible(true);
+		goLiveButton->setVisible(false);
+		return;
+	}
 	const bool studio = obs_frontend_preview_program_mode_active();
 	OBSSourceAutoRelease program = obs_frontend_get_current_scene();
 	programLabel->setText(QStringLiteral("<span style=\"color:#E5484D\">●</span> <b>%1</b> %2")
@@ -450,17 +464,28 @@ void LiveToolsDock::goLive()
 
 void LiveToolsDock::openProgramProjector()
 {
-	/* The congregation sees the program: full screen on the chosen display. */
-	const char *type = obs_frontend_preview_program_mode_active() ? "StudioProgram" : "Preview";
+	/* The congregation sees the program (or the room screen when it is
+	 * separate from the stream): full screen on the chosen display. */
+	const bool separate = WorshipOutput::SeparateRoomScreen();
+	const char *type = separate ? "Scene"
+				    : obs_frontend_preview_program_mode_active() ? "StudioProgram" : "Preview";
+	const char *name = separate ? WorshipOutput::RoomScreenScene : nullptr;
 	QMenu menu(this);
 	const QList<QScreen *> screens = QGuiApplication::screens();
 	for (int i = 0; i < screens.size(); ++i) {
 		const QSize size = screens.at(i)->geometry().size();
 		menu.addAction(tr("Pantalla %1: %2 (%3x%4)").arg(i + 1).arg(screens.at(i)->name()).arg(size.width()).arg(size.height()),
-			       this, [i, type]() { obs_frontend_open_projector(type, i, "", nullptr); });
+			       this, [i, type, name]() { obs_frontend_open_projector(type, i, "", name); });
 	}
 	menu.addSeparator();
-	menu.addAction(tr("En una ventana"), this, [type]() { obs_frontend_open_projector(type, -1, "", nullptr); });
+	menu.addAction(tr("En una ventana"), this, [type, name]() { obs_frontend_open_projector(type, -1, "", name); });
+	menu.addSeparator();
+	menu.addAction(tr("Sala y transmisión por separado..."), this, [this]() {
+		auto *dialog = new ScreensDialog(window());
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		connect(dialog, &QDialog::finished, this, &LiveToolsDock::refreshOnAir);
+		dialog->open();
+	});
 	menu.exec(QCursor::pos());
 }
 

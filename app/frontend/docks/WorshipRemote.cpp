@@ -464,7 +464,7 @@ namespace {
  * driven by the content tabs). */
 bool userScene(const QString &name)
 {
-	return !name.startsWith(QStringLiteral("WS "));
+	return !WorshipOutput::IsInternalScene(name);
 }
 
 obs_source_t *programSource()

@@ -74,6 +74,9 @@ struct LyricsSlide {
 /* Draws song lyrics centered and auto-fitted over the background (or in a
  * band when shown as lower third over a camera). */
 QImage Lyrics(const LyricsSlide &slide, const QSize &canvas);
+/* Same, for thumbnails and previews: a video background is shown with its
+ * still (the real video only plays on screen, under the lyrics). */
+QImage LyricsPreview(const LyricsSlide &slide, const QSize &canvas);
 
 /* Full screen countdown: "El culto comienza en" + 04:59 over a background. */
 QImage Countdown(const QString &title, const QString &time, const QString &footer, const Background &background,
