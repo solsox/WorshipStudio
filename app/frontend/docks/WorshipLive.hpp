@@ -33,7 +33,11 @@ public:
 	void publish(const LiveState &state);
 	void clear(const QString &source);
 
-	LiveState state() const { return current; }
+	/* What is on screen for the panel people see (see activeSource). */
+	LiveState state() const;
+	/* "Biblia", "Cantos"...: the panel whose content is on the projector (or
+	 * on screen), also inside the user's scenes ("Biblia en vivo"). */
+	QString activeSource() const;
 
 	/* Operator message for the stage display ("2 minutos", "Alargar"). */
 	void setStageMessage(const QString &message);
@@ -71,6 +75,7 @@ private:
 	void invoke(const char *method);
 
 	LiveState current;
+	QHash<QString, LiveState> states;
 	QString message;
 	QStringList service;
 	int serviceIndex = -1;

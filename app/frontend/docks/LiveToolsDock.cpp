@@ -752,7 +752,8 @@ void LiveToolsDock::onFrontendEvent(enum obs_frontend_event event, void *data)
 	    event == OBS_FRONTEND_EVENT_STUDIO_MODE_ENABLED || event == OBS_FRONTEND_EVENT_STUDIO_MODE_DISABLED ||
 	    event == OBS_FRONTEND_EVENT_STREAMING_STARTED || event == OBS_FRONTEND_EVENT_STREAMING_STOPPED ||
 	    event == OBS_FRONTEND_EVENT_SCENE_LIST_CHANGED)
-		QMetaObject::invokeMethod(dock, [dock]() { dock->refreshOnAir(); }, Qt::QueuedConnection);
+		/* The panel on screen may have changed: show its slide. */
+		QMetaObject::invokeMethod(dock, [dock]() { dock->onLiveChanged(); }, Qt::QueuedConnection);
 }
 
 /* ------------------------------------------------------------------------ */

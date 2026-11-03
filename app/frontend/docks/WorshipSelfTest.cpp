@@ -632,6 +632,17 @@ struct SelfTest {
 				      .arg(WorshipOutput::OnAirSceneName()));
 			check(visibleIn("Cantos en vivo").startsWith(QStringLiteral("WS Cantos")),
 			      QStringLiteral("proyector: Cantos en vivo muestra el canto"));
+			/* A scene of the user with "Biblia en vivo" inside: next/previous
+			 * and the phone follow the Bible, not the song used last. */
+			OBSScene mine = WorshipOutput::EnsureScene("Biblia (prueba)");
+			OBSSourceAutoRelease bibleLive = obs_get_source_by_name("Biblia en vivo");
+			if (bibleLive && !obs_scene_find_source(mine, "Biblia en vivo"))
+				obs_scene_add(mine, bibleLive);
+			WorshipOutput::ShowOnProjector(obs_scene_get_source(mine));
+			check(WorshipLive::instance().activeSource() == QStringLiteral("Biblia") &&
+				      WorshipLive::instance().state().source == QStringLiteral("Biblia"),
+			      QStringLiteral("proyector: con una escena con Biblia en vivo se controla la Biblia (%1)")
+				      .arg(WorshipLive::instance().activeSource()));
 			check(bible->projectQuery(QStringLiteral("Salmos 23:1"), 0), QStringLiteral("proyector: Salmos 23:1"));
 		});
 		add(800, [=]() {
@@ -646,7 +657,7 @@ struct SelfTest {
 			check(programName().startsWith(QStringLiteral("WS Biblia")),
 			      QStringLiteral("proyector: al volver a una salida, la Biblia sale en pantalla (%1)").arg(programName()));
 			songs->deleteSong(title);
-			for (const char *name : {"Transmisión (prueba)", "Bienvenida (prueba)"}) {
+			for (const char *name : {"Transmisión (prueba)", "Bienvenida (prueba)", "Biblia (prueba)"}) {
 				OBSSourceAutoRelease scene = obs_get_source_by_name(name);
 				if (scene)
 					obs_source_remove(scene);
