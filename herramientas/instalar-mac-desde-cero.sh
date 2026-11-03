@@ -17,5 +17,8 @@ ditto "$BUILD" /Applications/WorshipStudio.app
 codesign --force --deep -s - /Applications/WorshipStudio.app 2>/dev/null
 rm -rf "$HOME/Library/Application Support/WorshipStudio"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f /Applications/WorshipStudio.app
-killall Dock 2>/dev/null || true
+# Without this the Dock and Finder keep showing the previous icon.
+touch /Applications/WorshipStudio.app
+rm -rf "$(getconf DARWIN_USER_CACHE_DIR)/com.apple.iconservices" 2>/dev/null || true
+killall Dock Finder 2>/dev/null || true
 echo "Listo: abrí WorshipStudio desde Aplicaciones."
