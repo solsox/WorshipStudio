@@ -412,17 +412,7 @@ QString LiveToolsDock::describeScene(obs_source_t *sceneSource) const
 void LiveToolsDock::rebuildProjectorScenes(const QString &onAir)
 {
 	/* "Contenido" (the panels), every scene of the user, and black. */
-	QStringList scenes;
-	obs_frontend_source_list list = {};
-	obs_frontend_get_scenes(&list);
-	for (size_t i = 0; i < list.sources.num; ++i) {
-		obs_source_t *scene = list.sources.array[i];
-		const QString name = QT_UTF8(obs_source_get_name(scene));
-		if (!WorshipOutput::IsInternalScene(name) && WorshipOutput::CanShowOnProjector(scene))
-			scenes << name;
-	}
-	obs_frontend_source_list_free(&list);
-
+	const QStringList scenes = WorshipOutput::ProjectorScenes();
 	const QString content = WorshipOutput::LastContentScene();
 	QStringList wanted{QStringLiteral("\x01content")};
 	wanted << scenes << QStringLiteral("\x01black");

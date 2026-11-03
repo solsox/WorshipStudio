@@ -597,6 +597,22 @@ struct SelfTest {
 			      QStringLiteral("proyector: no se proyecta a sí mismo"));
 			OBSSourceAutoRelease welcome = obs_get_source_by_name("Bienvenida (prueba)");
 			check(WorshipOutput::ShowOnProjector(welcome), QStringLiteral("proyector: escena normal"));
+			/* The phone sees both and can choose what the projector shows. */
+			WorshipRemote *remote = liveTools->remote();
+			const QJsonObject state = QJsonDocument::fromJson(remote->handleForTest(
+				"GET", QStringLiteral("/api/estado?pin=%1").arg(remote->pin()))).object();
+			check(state.value(QStringLiteral("sep")).toBool() &&
+				      state.value(QStringLiteral("proyector")).toString() == QStringLiteral("Bienvenida (prueba)") &&
+				      state.value(QStringLiteral("proyectables")).toArray().contains(QStringLiteral("Bienvenida (prueba)")) &&
+				      !state.value(QStringLiteral("proyectables")).toArray().contains(QStringLiteral("Transmisión (prueba)")),
+			      QStringLiteral("proyector: el celular ve proyector y transmisión"));
+			remote->handleForTest("POST", QStringLiteral("/api/accion?a=proyector&nombre=__contenido&pin=%1").arg(remote->pin()));
+			check(WorshipOutput::OnAirSceneName().startsWith(QStringLiteral("WS Biblia")),
+			      QStringLiteral("proyector: el celular vuelve a los cantos y la Biblia (%1)").arg(WorshipOutput::OnAirSceneName()));
+			remote->handleForTest("POST", QStringLiteral("/api/accion?a=proyector&nombre=Bienvenida%20(prueba)&pin=%1").arg(remote->pin()));
+			const QByteArray picture = remote->handleForTest(
+				"GET", QStringLiteral("/api/vista?cual=proyector&pin=%1").arg(remote->pin()));
+			check(picture.startsWith("\xFF\xD8"), QStringLiteral("proyector: imagen del proyector para el celular"));
 		});
 		add(800, [=]() {
 			check(WorshipOutput::OnAirSceneName() == QStringLiteral("Bienvenida (prueba)"),

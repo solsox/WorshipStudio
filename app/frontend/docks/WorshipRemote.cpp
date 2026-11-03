@@ -62,6 +62,15 @@ const char *const PhoneTexts[] = {
 	QT_TRANSLATE_NOOP("WorshipStudio", "EN ESPERA"),
 	QT_TRANSLATE_NOOP("WorshipStudio", "EN PANTALLA"),
 	QT_TRANSLATE_NOOP("WorshipStudio", "Pasar a pantalla ➜"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Pasar a la transmisión ➜"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "PROYECTOR"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "TRANSMISIÓN"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Proyector"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Cantos, Biblia..."),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Negro"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "negro"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "al aire"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Tocá una escena para cambiar la transmisión."),
 	QT_TRANSLATE_NOOP("WorshipStudio", "Contenido"),
 	QT_TRANSLATE_NOOP("WorshipStudio", "Nada en pantalla"),
 	QT_TRANSLATE_NOOP("WorshipStudio", "Deslizá ← → para cambiar de diapositiva"),
@@ -140,9 +149,9 @@ input{width:100%;font:600 20px/1 inherit;padding:14px;border-radius:12px;border:
 .tabs{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(14,15,20,.96);border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom));backdrop-filter:blur(12px)}
 .tabs a{text-align:center;color:var(--m);text-decoration:none;font-size:12px;font-weight:600;padding:6px 0;border-radius:10px}
 .tabs a.sel{color:#fff;background:var(--s2)}.tabs a i{display:block;font-style:normal;font-size:20px;line-height:1.2}
-.thumbs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.thumbs figure{margin:0}.thumbs img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;background:#000;display:block;border:2px solid var(--line)}.thumbs .p img{border-color:var(--red)}.thumbs .w img{border-color:var(--ok)}.thumbs figcaption{font-size:11px;font-weight:700;margin-top:4px;color:var(--m)}.swipe{touch-action:pan-y}.hintsw{font-size:12px;color:var(--m);margin-top:6px}
+.thumbs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.thumbs figure{margin:0}.thumbs img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;background:#000;display:block;border:2px solid var(--line)}.thumbs .p img{border-color:var(--red)}.thumbs .w img{border-color:var(--ok)}.thumbs .w.pj img{border-color:#F2A65A}.chips{display:grid;grid-template-columns:1fr 1fr;gap:6px}.chips button{margin:0;padding:10px 8px;font-size:14px}.chips button.on{background:#F2A65A;color:#1B1915;border-color:#F2A65A}.thumbs figcaption{font-size:11px;font-weight:700;margin-top:4px;color:var(--m)}.swipe{touch-action:pan-y}.hintsw{font-size:12px;color:var(--m);margin-top:6px}
 section[data-tab]{display:none}section[data-tab].show{display:block}
-@media(min-width:720px){body{max-width:1180px;margin:0 auto;padding-left:24px;padding-right:24px}main{display:block}section[data-tab].show{display:grid;gap:14px;align-items:start}section[data-tab="vivo"].show{grid-template-columns:1.3fr 1fr}section[data-tab="vivo"] .thumbs{grid-column:2;grid-row:1;margin:0}section[data-tab="vivo"] .thumbs img{border-radius:14px}.colA{grid-column:1;grid-row:1/span 2}.colB{grid-column:2;grid-row:2}.colB .card{margin:0 0 12px}section[data-tab="escenas"].show,section[data-tab="mas"].show{grid-template-columns:1fr 1fr}section[data-tab="contenido"].show{grid-template-columns:repeat(3,1fr)}section .card{margin:0}#current{font-size:26px}.tabs{left:50%;right:auto;transform:translateX(-50%);width:min(560px,92vw);bottom:12px;border:1px solid var(--line);border-radius:18px}}#login{display:none}.err{color:var(--red);font-size:14px;min-height:1.2em}
+@media(min-width:720px){body{max-width:1180px;margin:0 auto;padding-left:24px;padding-right:24px}main{display:block}section[data-tab].show{display:grid;gap:14px;align-items:start}section[data-tab="vivo"].show{grid-template-columns:1.3fr 1fr}section[data-tab="vivo"] .thumbs{grid-column:2;grid-row:1;margin:0}section[data-tab="vivo"] .thumbs img{border-radius:14px}.colA{grid-column:1;grid-row:1/span 3}#projCard{grid-column:2;grid-row:2;margin:0}.colB{grid-column:2;grid-row:3}.colB .card{margin:0 0 12px}section[data-tab="escenas"].show,section[data-tab="mas"].show{grid-template-columns:1fr 1fr}section[data-tab="contenido"].show{grid-template-columns:repeat(3,1fr)}section .card{margin:0}#current{font-size:26px}.tabs{left:50%;right:auto;transform:translateX(-50%);width:min(560px,92vw);bottom:12px;border:1px solid var(--line);border-radius:18px}}#login{display:none}.err{color:var(--red);font-size:14px;min-height:1.2em}
 </style></head><body>
 <header><div class="brand">WorshipStudio</div><div class="live" id="status"><b></b>Conectado</div></header>
 <div id="login" class="card"><div class="k">Código de acceso</div>
@@ -151,7 +160,8 @@ section[data-tab]{display:none}section[data-tab].show{display:block}
 <button class="primary" style="width:100%" onclick="savePin()">Entrar</button></div>
 <main id="app">
 <section data-tab="vivo" class="show">
-<div class="thumbs"><figure class="w" id="waitRow"><img id="imgW" alt=""><figcaption>EN ESPERA · <span id="prev"></span></figcaption></figure><figure class="p"><img id="imgP" alt=""><figcaption>EN PANTALLA · <span id="prog"></span></figcaption></figure></div>
+<div class="thumbs"><figure class="w" id="waitRow"><img id="imgW" alt=""><figcaption><span id="lw">EN ESPERA</span> · <span id="prev"></span></figcaption></figure><figure class="p"><img id="imgP" alt=""><figcaption><span id="lp">EN PANTALLA</span> · <span id="prog"></span></figcaption></figure></div>
+<div class="card" id="projCard" style="display:none"><div class="k">Proyector</div><div class="chips" id="proj"></div></div>
 <div class="colA"><button class="go" id="goBtn" onclick="act('aire')">Pasar a pantalla ➜</button>
 <div class="card swipe" id="cardNow"><div class="k" id="source">Contenido</div><div id="title">Nada en pantalla</div><div id="section"></div><div id="current"></div><div class="hintsw">Deslizá ← → para cambiar de diapositiva</div></div>
 <div class="nav"><button onclick="act('anterior')">◀ Anterior</button><button class="primary" onclick="act('siguiente')">Siguiente ▶</button></div>
@@ -160,7 +170,7 @@ section[data-tab]{display:none}section[data-tab].show{display:block}
 <div class="card" id="svc" style="display:none"><div class="k">Orden del culto</div><ol class="list" id="items"></ol></div></div>
 </section>
 <section data-tab="escenas">
-<div class="card"><div class="k">Escenas</div><ul class="list" id="scenes"></ul></div>
+<div class="card"><div class="k">Escenas</div><p id="scHint" style="display:none;margin:0 0 8px;color:var(--m);font-size:14px">Tocá una escena para cambiar la transmisión.</p><ul class="list" id="scenes"></ul></div>
 <div class="card"><div class="k">Fuentes en pantalla</div><p style="margin:0 0 8px;color:var(--m);font-size:14px">Tocá para mostrar u ocultar. 🔇 silencia el audio.</p><ul class="list" id="sources"></ul></div>
 </section>
 <section data-tab="contenido">
@@ -175,7 +185,9 @@ section[data-tab]{display:none}section[data-tab].show{display:block}
 </section>
 </main>
 <nav class="tabs"><a href="#" data-go="vivo" class="sel"><i>▶︎</i>En vivo</a><a href="#" data-go="escenas"><i>▦</i>Escenas</a><a href="#" data-go="contenido"><i>♪</i>Contenido</a><a href="#" data-go="mas"><i>•••</i>Más</a></nav>
-<script>
+)HTML"
+				      /* Two pieces: compilers limit the length of one literal. */
+				      R"HTML(<script>
 const T=/*T*/{},t=s=>T[s]||s;
 (function(){const w=document.createTreeWalker(document.body,4);let n;while(n=w.nextNode()){const k=n.nodeValue.trim();if(T[k])n.nodeValue=n.nodeValue.replace(k,T[k]);}document.querySelectorAll("[placeholder]").forEach(e=>e.placeholder=t(e.placeholder));})();
 let pin=localStorage.getItem('wsPin')||new URLSearchParams(location.search).get('pin')||'';
@@ -187,20 +199,21 @@ function showLogin(msg){$('login').style.display='block';$('app').style.display=
 function savePin(){pin=$('pin').value.trim();localStorage.setItem('wsPin',pin);$('login').style.display='none';$('app').style.display='block';poll();}
 async function call(path,opts){const r=await fetch(path+(path.includes('?')?'&':'?')+'pin='+encodeURIComponent(pin),opts);if(r.status===401){showLogin(t('Código incorrecto'));throw 0;}return r.json();}
 function friendly(n){if(!n)return t('nada');if(n.startsWith('WS ')){n=n.slice(3);if(n.endsWith(' B'))n=n.slice(0,-2);}return n;}
-let studio=false;
-function thumbs(){if(document.hidden||!pin||!$('imgP').offsetParent)return;const t=Date.now();$('imgP').src='/api/vista?cual=pantalla&t='+t+'&pin='+encodeURIComponent(pin);if(studio)$('imgW').src='/api/vista?cual=espera&t='+t+'&pin='+encodeURIComponent(pin);}
-setInterval(thumbs,1500);
+let studio=false,sep=false,busy=0;
+function thumbs(){if(busy||document.hidden||!pin||!$('imgP').offsetParent)return;busy=1;const q='&t='+Date.now()+'&pin='+encodeURIComponent(pin),two=studio||sep;let left=two?2:1;const done=()=>{if(--left<=0)busy=0;};const ld=(el,c)=>{const i=new Image();i.onload=()=>{el.src=i.src;done();};i.onerror=done;i.src='/api/vista?cual='+c+q;};ld($('imgP'),'pantalla');if(two)ld($('imgW'),sep?'proyector':'espera');}
+setInterval(thumbs,700);
 let x0=null;$('cardNow').addEventListener('touchstart',e=>{x0=e.touches[0].clientX},{passive:true});
 $('cardNow').addEventListener('touchend',e=>{if(x0===null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;if(Math.abs(dx)>50)act(dx<0?'siguiente':'anterior');});
 async function wake(){try{if('wakeLock' in navigator)await navigator.wakeLock.request('screen');}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake();});wake();
-function render(s){if(s.accent){const r=document.documentElement.style,n=parseInt(s.accent.slice(1),16);r.setProperty('--a',s.accent);r.setProperty('--on',((n>>16)*299+(n>>8&255)*587+(n&255)*114)/255000>.6?'#1B1915':'#fff');}if(studio!==!!s.studio){studio=!!s.studio;thumbs();}$('prog').textContent=friendly(s.program);$('waitRow').style.display=s.studio?'block':'none';$('waitRow').parentNode.style.gridTemplateColumns=s.studio?'1fr 1fr':'1fr';$('goBtn').style.display=s.studio?'block':'none';$('prev').textContent=friendly(s.preview);
+function render(s){if(s.accent){const r=document.documentElement.style,n=parseInt(s.accent.slice(1),16);r.setProperty('--a',s.accent);r.setProperty('--on',((n>>16)*299+(n>>8&255)*587+(n&255)*114)/255000>.6?'#1B1915':'#fff');}if(studio!==!!s.studio||sep!==!!s.sep){studio=!!s.studio;sep=!!s.sep;thumbs();}const two=studio||sep;$('prog').textContent=friendly(s.program)+(sep&&s.streaming?' · '+t('al aire'):'');$('waitRow').style.display=two?'block':'none';$('waitRow').classList.toggle('pj',sep);$('waitRow').parentNode.style.gridTemplateColumns=two?'1fr 1fr':'1fr';$('goBtn').style.display=s.studio?'block':'none';$('goBtn').textContent=t(sep?'Pasar a la transmisión ➜':'Pasar a pantalla ➜');$('lw').textContent=t(sep?'PROYECTOR':'EN ESPERA');$('lp').textContent=t(sep?'TRANSMISIÓN':'EN PANTALLA');$('prev').textContent=sep?(s.proyector?friendly(s.proyector):t('negro')):friendly(s.preview);$('projCard').style.display=sep?'block':'none';$('scHint').style.display=sep?'block':'none';
+if(sep){const p=s.proyector||'',b=(k,l,on,dis)=>'<button class="'+(on?'on':'')+'"'+(dis?' disabled':'')+' onclick="act(\'proyector\',{nombre:'+JSON.stringify(k).replace(/"/g,'&quot;')+'})">'+esc(l)+'</button>';$('proj').innerHTML=b('__contenido',t('Cantos, Biblia...'),p.startsWith('WS '),!s.contenido)+(s.proyectables||[]).map(n=>b(n,n,n===p)).join('')+b('',t('Negro'),!p);}
 $('source').textContent=t(s.source||'Contenido');$('title').textContent=s.title||t('Nada en pantalla');
 $('section').textContent=(s.section||'')+(s.count?'  ·  '+(s.index+1)+'/'+s.count:'');$('current').textContent=s.current||'';
 $('next').textContent=s.next||'—';$('hide').classList.toggle('on',!!s.hidden);$('hide').textContent=t(s.hidden?'Mostrar pantalla':'Ocultar pantalla');
 const it=s.service||[];$('svc').style.display=it.length?'block':'none';
 $('items').innerHTML=it.map((t,i)=>'<li class="'+(i===s.serviceIndex?'cur':'')+'" onclick="act(\'item\',{n:'+i+'})"><span class="n">'+(i+1)+'</span><span class="grow">'+esc(t)+'</span></li>').join('');
-$('scenes').innerHTML=(s.scenes||[]).map(n=>'<li class="'+(n===s.program?'cur':'')+'" onclick="act(\'escena\',{nombre:'+JSON.stringify(n).replace(/"/g,'&quot;')+'})"><span class="grow">'+esc(n)+'</span>'+(n===s.program?'<span class="tag p">'+t('EN PANTALLA')+'</span>':n===s.preview?'<span class="tag w">'+t('EN ESPERA')+'</span>':'')+'</li>').join('')||'<li>'+t('No hay escenas propias todavía')+'</li>';
+$('scenes').innerHTML=(s.scenes||[]).map(n=>'<li class="'+(n===s.program?'cur':'')+'" onclick="act(\'escena\',{nombre:'+JSON.stringify(n).replace(/"/g,'&quot;')+'})"><span class="grow">'+esc(n)+'</span>'+(n===s.program?'<span class="tag p">'+t(sep?'TRANSMISIÓN':'EN PANTALLA')+'</span>':n===s.preview?'<span class="tag w">'+t('EN ESPERA')+'</span>':'')+'</li>').join('')||'<li>'+t('No hay escenas propias todavía')+'</li>';
 $('sources').innerHTML=(s.sources||[]).map(f=>{const n=JSON.stringify(f.nombre).replace(/"/g,'&quot;');return '<li><span class="grow">'+esc(friendly(f.nombre))+'</span>'+(f.audio?'<button class="pill'+(f.silencio?' off':'')+'" onclick="act(\'silencio\',{nombre:'+n+'})">'+(f.silencio?'🔇':'🔊')+'</button>':'')+'<button class="pill'+(f.visible?'':' off')+'" onclick="act(\'fuente\',{nombre:'+n+'})">'+t(f.visible?'Visible':'Oculta')+'</button></li>';}).join('')||'<li>'+t('Sin fuentes')+'</li>';
 $('stream').classList.toggle('rec',!!s.streaming);$('stream').textContent=t(s.streaming?'Detener transmisión':'Transmitir');
 $('record').classList.toggle('rec',!!s.recording);$('record').textContent=t(s.recording?'Detener grabación':'Grabar');
@@ -412,6 +425,13 @@ QByteArray WorshipRemote::respond(const QByteArray &method, const QString &targe
 			obs_frontend_preview_program_trigger_transition();
 		else if (action == QStringLiteral("escena"))
 			showScene(name);
+		else if (action == QStringLiteral("proyector")) {
+			/* "__contenido": the last song, verse, hymn or presentation. */
+			const QString scene = name == QStringLiteral("__contenido") ? WorshipOutput::LastContentScene() : name;
+			OBSSourceAutoRelease source = scene.isEmpty() ? nullptr : obs_get_source_by_name(QT_TO_UTF8(scene));
+			if (scene.isEmpty() || source)
+				WorshipOutput::ShowOnProjector(source);
+		}
 		else if (action == QStringLiteral("fuente"))
 			toggleSource(name);
 		else if (action == QStringLiteral("silencio"))
@@ -437,8 +457,7 @@ QByteArray WorshipRemote::respond(const QByteArray &method, const QString &targe
 		OBSSourceAutoRelease scene = preview ? (obs_frontend_preview_program_mode_active()
 								? obs_frontend_get_current_preview_scene()
 								: nullptr)
-						     : WorshipOutput::SeparateRoomScreen()
-							       /* The phone shows what the church sees. */
+						     : query.queryItemValue(QStringLiteral("cual")) == QStringLiteral("proyector")
 							       ? obs_get_source_by_name(WorshipOutput::RoomScreenScene)
 							       : obs_frontend_get_current_scene();
 		QImage image = WorshipOutput::RenderSource(scene, 480, 270);
@@ -526,6 +545,14 @@ QByteArray WorshipRemote::stateJson() const
 	object.insert(QStringLiteral("program"), program ? QT_UTF8(obs_source_get_name(program)) : QString());
 	object.insert(QStringLiteral("preview"), preview ? QT_UTF8(obs_source_get_name(preview)) : QString());
 	object.insert(QStringLiteral("streaming"), obs_frontend_streaming_active());
+	/* Projector and stream separately: what the projector shows and what can go to it. */
+	const bool separate = WorshipOutput::SeparateRoomScreen();
+	object.insert(QStringLiteral("sep"), separate);
+	if (separate) {
+		object.insert(QStringLiteral("proyector"), WorshipOutput::OnAirSceneName());
+		object.insert(QStringLiteral("proyectables"), QJsonArray::fromStringList(WorshipOutput::ProjectorScenes()));
+		object.insert(QStringLiteral("contenido"), WorshipOutput::LastContentScene());
+	}
 	object.insert(QStringLiteral("recording"), obs_frontend_recording_active());
 
 	QJsonArray scenes;

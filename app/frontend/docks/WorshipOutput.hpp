@@ -4,6 +4,7 @@
 
 #include <QImage>
 #include <QString>
+#include <QStringList>
 
 #include <string>
 
@@ -67,6 +68,8 @@ bool ShowOnProjector(obs_source_t *scene);
 /* Scenes that can go to the projector: the user's, without the projector
  * inside them (that would show itself forever). */
 bool CanShowOnProjector(obs_source_t *scene);
+/* The user's scenes that can go to the projector, in the scene list order. */
+QStringList ProjectorScenes();
 /* The last song, verse, hymn or presentation scene shown. */
 QString LastContentScene();
 /* Renames the projector scene of older versions ("Pantalla de la sala"). */

@@ -462,20 +462,32 @@ void ScreensDialog::apply()
 }
 
 namespace {
-/* Live picture of the room screen, refreshed a few times per second. A
- * plain widget (not a native display) so it scrolls with the panel. */
+/* Live picture of the projector, refreshed a few times per second. A plain
+ * widget (not a native display) so it scrolls with the panel. Two staging
+ * surfaces take turns: the picture read now was copied on the previous tick,
+ * so the UI never waits for the GPU (no dropped frames). While visible the
+ * projector stays "showing", so its images are not unloaded between ticks. */
 class RoomMonitor : public QLabel {
 public:
 	explicit RoomMonitor(QWidget *parent) : QLabel(parent)
 	{
 		setMinimumHeight(90);
-		/* Small enough that the EN VIVO buttons stay in view. */
+		/* Small enough that the buttons below stay in view. */
 		setMaximumHeight(150);
 		setAlignment(Qt::AlignCenter);
 		setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
 		setStyleSheet(QStringLiteral("background:#000; border-radius:6px;"));
-		timer.setInterval(200);
-		connect(&timer, &QTimer::timeout, this, [this]() { refresh(); });
+		timer.setInterval(150);
+		connect(&timer, &QTimer::timeout, this, [this]() { tick(); });
+	}
+	~RoomMonitor() override
+	{
+		release();
+		obs_enter_graphics();
+		gs_texrender_destroy(texrender);
+		for (gs_stagesurf_t *surface : surfaces)
+			gs_stagesurface_destroy(surface);
+		obs_leave_graphics();
 	}
 	bool hasHeightForWidth() const override { return true; }
 	int heightForWidth(int width) const override { return qMin(150, width * 9 / 16); }
@@ -486,31 +498,103 @@ protected:
 	{
 		QLabel::showEvent(event);
 		timer.start();
-		refresh();
 	}
 	void hideEvent(QHideEvent *event) override
 	{
 		QLabel::hideEvent(event);
 		timer.stop();
+		release();
 	}
 
 private:
 	QTimer timer;
+	OBSSource shown;
+	gs_texrender_t *texrender = nullptr;
+	gs_stagesurf_t *surfaces[2] = {nullptr, nullptr};
+	QSize surfaceSize;
+	int next = 0;
+	bool pending[2] = {false, false};
+	int emptyFrames = 0;
 
-	void refresh()
+	void release()
 	{
-		if (!isVisible() || width() < 20)
+		if (shown)
+			obs_source_dec_showing(shown);
+		shown = nullptr;
+	}
+
+	void tick()
+	{
+		if (width() < 20)
 			return;
-		OBSSourceAutoRelease room = obs_get_source_by_name(WorshipOutput::RoomScreenScene);
+		OBSSourceAutoRelease projector = obs_get_source_by_name(WorshipOutput::RoomScreenScene);
+		if (projector.Get() != shown.Get()) {
+			release();
+			shown = projector.Get();
+			if (shown)
+				obs_source_inc_showing(shown);
+		}
 		const qreal ratio = devicePixelRatioF();
 		const QSize size = QSize(16, 9).scaled(QSize(width() - 2, height() - 2) * ratio, Qt::KeepAspectRatio);
-		QImage image = room ? WorshipOutput::RenderSource(room, (uint32_t)size.width(), (uint32_t)size.height())
-				    : QImage();
-		if (image.isNull()) {
-			image = QImage(size, QImage::Format_RGB32);
-			image.fill(Qt::black);
+		const uint32_t canvasW = WorshipOutput::CanvasWidth(), canvasH = WorshipOutput::CanvasHeight();
+
+		QImage image;
+		obs_enter_graphics();
+		if (size != surfaceSize) {
+			for (int i = 0; i < 2; ++i) {
+				gs_stagesurface_destroy(surfaces[i]);
+				surfaces[i] = gs_stagesurface_create(size.width(), size.height(), GS_RGBA);
+				pending[i] = false;
+			}
+			gs_texrender_destroy(texrender);
+			texrender = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
+			surfaceSize = size;
 		}
-		QPixmap pixmap = QPixmap::fromImage(image);
+		/* Read the copy made on the previous tick (already finished). */
+		const int ready = 1 - next;
+		uint8_t *data = nullptr;
+		uint32_t linesize = 0;
+		if (pending[ready] && gs_stagesurface_map(surfaces[ready], &data, &linesize)) {
+			image = QImage(data, size.width(), size.height(), linesize, QImage::Format_RGBA8888).copy();
+			gs_stagesurface_unmap(surfaces[ready]);
+		}
+		pending[ready] = false;
+		/* Draw the projector now; it is read on the next tick. */
+		gs_texrender_reset(texrender);
+		if (shown && texrender && surfaces[next] && gs_texrender_begin(texrender, size.width(), size.height())) {
+			vec4 clear;
+			vec4_zero(&clear);
+			gs_clear(GS_CLEAR_COLOR, &clear, 0.0f, 0);
+			gs_ortho(0.0f, (float)canvasW, 0.0f, (float)canvasH, -100.0f, 100.0f);
+			gs_blend_state_push();
+			gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
+			obs_source_video_render(shown);
+			gs_blend_state_pop();
+			gs_texrender_end(texrender);
+			gs_stage_texture(surfaces[next], gs_texrender_get_texture(texrender));
+			pending[next] = true;
+		}
+		next = 1 - next;
+		obs_leave_graphics();
+
+		if (image.isNull())
+			return;
+		/* An image source swapping its file (the countdown, every second)
+		 * can leave one empty frame: keep the last picture instead of
+		 * flashing black, unless the projector really is black. */
+		bool empty = true;
+		for (int y = 0; empty && y < image.height(); y += qMax(1, image.height() / 9))
+			for (int x = 0; empty && x < image.width(); x += qMax(1, image.width() / 16))
+				empty = qAlpha(image.pixel(x, y)) == 0;
+		if (empty && !WorshipOutput::OnAirSceneName().isEmpty() && ++emptyFrames < 8)
+			return;
+		emptyFrames = 0;
+		QImage frame(image.size(), QImage::Format_RGB32);
+		frame.fill(Qt::black);
+		QPainter painter(&frame);
+		painter.drawImage(0, 0, image);
+		painter.end();
+		QPixmap pixmap = QPixmap::fromImage(frame);
 		pixmap.setDevicePixelRatio(ratio);
 		setPixmap(pixmap);
 	}
