@@ -4,6 +4,8 @@
 #include <OBSApp.hpp>
 
 #include <obs-frontend-api.h>
+
+#include <QVector>
 #include <qt-wrappers.hpp>
 
 namespace WorshipOutput {
@@ -32,35 +34,65 @@ QString visibleIn(const char *followerName)
 	return name;
 }
 
+QVector<OBSSceneItem> itemsOf(obs_scene_t *scene)
+{
+	QVector<OBSSceneItem> items;
+	obs_scene_enum_items(
+		scene,
+		[](obs_scene_t *, obs_sceneitem_t *item, void *param) {
+			static_cast<QVector<OBSSceneItem> *>(param)->push_back(OBSSceneItem(item));
+			return true;
+		},
+		&items);
+	return items;
+}
+
 /* Shows `content` (a scene) in the follower scene, with a short fade, and
- * hides the rest. */
+ * hides the rest; nullptr hides everything. Items are changed after the
+ * enumeration: changing a scene while enumerating it can lock up OBS. */
 void follow(const char *followerName, obs_source_t *content)
 {
 	OBSScene follower = EnsureScene(followerName);
-	if (!follower || !content || obs_scene_get_source(follower) == content)
+	if (!follower || obs_scene_get_source(follower) == content)
 		return;
-	const char *contentName = obs_source_get_name(content);
-	obs_sceneitem_t *target = obs_scene_find_source(follower, contentName);
-	if (!target) {
-		target = obs_scene_add(follower, content);
-		if (!target)
-			return;
-		FitItem(follower, content, 0.0f, 0.0f, 1.0f, 1.0f);
-		for (bool show : {true, false}) {
-			OBSSourceAutoRelease fade = obs_source_create_private("fade_transition", "WS Fundido", nullptr);
-			obs_sceneitem_set_transition(target, show, fade);
-			obs_sceneitem_set_transition_duration(target, show, 350);
+	obs_sceneitem_t *target = nullptr;
+	if (content) {
+		target = obs_scene_find_source(follower, obs_source_get_name(content));
+		if (!target) {
+			target = obs_scene_add(follower, content);
+			if (!target)
+				return;
+			FitItem(follower, content, 0.0f, 0.0f, 1.0f, 1.0f);
+			for (bool show : {true, false}) {
+				OBSSourceAutoRelease fade =
+					obs_source_create_private("fade_transition", "WS Fundido", nullptr);
+				obs_sceneitem_set_transition(target, show, fade);
+				obs_sceneitem_set_transition_duration(target, show, 350);
+			}
 		}
+		obs_sceneitem_set_order(target, OBS_ORDER_MOVE_TOP);
 	}
-	obs_sceneitem_set_order(target, OBS_ORDER_MOVE_TOP);
-	obs_scene_enum_items(
-		follower,
-		[](obs_scene_t *, obs_sceneitem_t *item, void *param) {
-			obs_sceneitem_set_visible(item, item == static_cast<obs_sceneitem_t *>(param));
-			return true;
-		},
-		target);
+	for (const OBSSceneItem &item : itemsOf(follower))
+		obs_sceneitem_set_visible(item, item.Get() == target);
 }
+
+/* Whether `scene` shows `target` somewhere inside (nested scenes and groups). */
+bool contains(obs_source_t *scene, obs_source_t *target, int depth = 0)
+{
+	obs_scene_t *s = scene ? obs_scene_from_source(scene) : nullptr;
+	if (!s)
+		s = scene ? obs_group_from_source(scene) : nullptr;
+	if (!s || depth > 16)
+		return false;
+	for (const OBSSceneItem &item : itemsOf(s)) {
+		obs_source_t *source = obs_sceneitem_get_source(item);
+		if (source == target || contains(source, target, depth + 1))
+			return true;
+	}
+	return false;
+}
+
+QString lastContent;
 } // namespace
 
 OBSScene EnsureScene(const char *sceneName)
@@ -197,6 +229,36 @@ void SetSeparateRoomScreen(bool separate)
 	QMetaObject::invokeMethod(&WorshipLive::instance(), "changed", Qt::QueuedConnection);
 }
 
+bool CanShowOnProjector(obs_source_t *scene)
+{
+	if (!scene || !obs_scene_from_source(scene))
+		return false;
+	OBSSourceAutoRelease projector = obs_get_source_by_name(RoomScreenScene);
+	return scene != projector.Get() && !contains(scene, projector);
+}
+
+bool ShowOnProjector(obs_source_t *scene)
+{
+	if (scene && !CanShowOnProjector(scene))
+		return false;
+	follow(RoomScreenScene, scene);
+	QMetaObject::invokeMethod(&WorshipLive::instance(), "changed", Qt::QueuedConnection);
+	return true;
+}
+
+QString LastContentScene()
+{
+	return lastContent;
+}
+
+void MigrateProjectorScene()
+{
+	OBSSourceAutoRelease old = obs_get_source_by_name("Pantalla de la sala");
+	OBSSourceAutoRelease current = obs_get_source_by_name(RoomScreenScene);
+	if (old && !current && obs_scene_from_source(old))
+		obs_source_set_name(old, RoomScreenScene);
+}
+
 QString OnAirSceneName()
 {
 	if (SeparateRoomScreen())
@@ -218,10 +280,12 @@ void ShowScene(obs_scene_t *scene)
 	const QString follower = FollowerFor(name);
 	if (!follower.isEmpty())
 		follow(QT_TO_UTF8(follower), source);
+	if (name.startsWith(QStringLiteral("WS ")))
+		lastContent = name;
 	if (sourceOnlyDepth > 0)
 		return;
 	if (SeparateRoomScreen()) {
-		follow(RoomScreenScene, source);
+		ShowOnProjector(source);
 		return;
 	}
 

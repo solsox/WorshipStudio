@@ -535,12 +535,13 @@ struct SelfTest {
 		add(300, [=]() { songs->deleteSong(title); });
 	}
 
-	/* Room and stream separately: the room shows the content, EN VIVO keeps
-	 * its own scene, content dropped on Sources does not touch the room. */
+	/* Projector and stream separately: panels and any scene go to the
+	 * projector, the scene list keeps driving the stream, and nothing locks. */
 	void addScreensSteps()
 	{
 		auto wasSeparate = std::make_shared<bool>(false);
-		const QString title = QStringLiteral("Autoprueba sala y en vivo");
+		auto streamBefore = std::make_shared<QString>();
+		const QString title = QStringLiteral("Autoprueba proyector");
 		const auto programName = []() {
 			OBSSourceAutoRelease program = obs_frontend_get_current_scene();
 			return program ? QT_UTF8(obs_source_get_name(program)) : QString();
@@ -562,40 +563,63 @@ struct SelfTest {
 			return name;
 		};
 		add(300, [=]() {
-			log(QStringLiteral("--- Sala y en vivo ---"));
+			log(QStringLiteral("--- Proyector y transmisión ---"));
 			*wasSeparate = WorshipOutput::SeparateRoomScreen();
 			WorshipOutput::SetSeparateRoomScreen(true);
-			check(ScreensDialog::BuildStreamScene(ScreensDialog::StreamLayout::ScreenOnly, QString()),
-			      QStringLiteral("sala: escena Transmisión creada"));
-			check(programName() == QStringLiteral("Transmisión"),
-			      QStringLiteral("sala: en vivo muestra Transmisión (%1)").arg(programName()));
-			check(bible->projectQuery(QStringLiteral("Juan 3:16"), 0), QStringLiteral("sala: proyectar Juan 3:16"));
+			/* A stream scene that shows the projector, and a normal scene. */
+			OBSScene stream = WorshipOutput::EnsureScene("Transmisión (prueba)");
+			OBSScene projector = WorshipOutput::EnsureScene(WorshipOutput::RoomScreenScene);
+			if (!obs_scene_find_source(stream, WorshipOutput::RoomScreenScene))
+				obs_scene_add(stream, obs_scene_get_source(projector));
+			OBSScene welcome = WorshipOutput::EnsureScene("Bienvenida (prueba)");
+			OBSDataAutoRelease color = obs_data_create();
+			obs_data_set_int(color, "color", 0xFF7A4A2B);
+			WorshipOutput::EnsureSource(welcome, "Color (prueba)", "color_source_v3", color);
+			obs_frontend_set_current_scene(obs_scene_get_source(stream));
+		});
+		add(800, [=]() {
+			*streamBefore = programName();
+			check(*streamBefore == QStringLiteral("Transmisión (prueba)"),
+			      QStringLiteral("proyector: la transmisión muestra su escena (%1)").arg(*streamBefore));
+			check(bible->projectQuery(QStringLiteral("Juan 3:16"), 0), QStringLiteral("proyector: Juan 3:16"));
 		});
 		add(800, [=]() {
 			check(WorshipOutput::OnAirSceneName().startsWith(QStringLiteral("WS Biblia")),
-			      QStringLiteral("sala: la sala muestra la Biblia (%1)").arg(WorshipOutput::OnAirSceneName()));
-			check(programName() == QStringLiteral("Transmisión"),
-			      QStringLiteral("sala: en vivo sigue en Transmisión (%1)").arg(programName()));
-			OBSSourceAutoRelease room = obs_get_source_by_name(WorshipOutput::RoomScreenScene);
-			capture(room ? obs_scene_from_source(room) : nullptr, QStringLiteral("sala-pantalla"));
+			      QStringLiteral("proyector: muestra la Biblia (%1)").arg(WorshipOutput::OnAirSceneName()));
+			check(programName() == *streamBefore,
+			      QStringLiteral("proyector: la transmisión no cambió (%1)").arg(programName()));
+			OBSSourceAutoRelease projector = obs_get_source_by_name(WorshipOutput::RoomScreenScene);
+			capture(projector ? obs_scene_from_source(projector) : nullptr, QStringLiteral("proyector-biblia"));
 			OBSSourceAutoRelease stream = obs_frontend_get_current_scene();
-			capture(stream ? obs_scene_from_source(stream) : nullptr, QStringLiteral("sala-envivo"));
-			grabWithScreens(hymnal->window()).save(outDir.absoluteFilePath(QStringLiteral("sala-ventana.png")));
-			check(ScreensDialog::ShowShot(ScreensDialog::StreamShot::Camera) &&
-				      visibleIn("Transmisión") == QLatin1String(WorshipOutput::RoomScreenScene),
-			      QStringLiteral("sala: sin cámara, en vivo muestra la pantalla"));
+			capture(stream ? obs_scene_from_source(stream) : nullptr, QStringLiteral("proyector-transmision"));
+			/* A scene that contains the projector cannot go to it. */
+			check(!WorshipOutput::CanShowOnProjector(stream) && !WorshipOutput::ShowOnProjector(stream),
+			      QStringLiteral("proyector: no se proyecta a sí mismo"));
+			OBSSourceAutoRelease welcome = obs_get_source_by_name("Bienvenida (prueba)");
+			check(WorshipOutput::ShowOnProjector(welcome), QStringLiteral("proyector: escena normal"));
+		});
+		add(800, [=]() {
+			check(WorshipOutput::OnAirSceneName() == QStringLiteral("Bienvenida (prueba)"),
+			      QStringLiteral("proyector: muestra la escena (%1)").arg(WorshipOutput::OnAirSceneName()));
+			grabWithScreens(hymnal->window()).save(outDir.absoluteFilePath(QStringLiteral("proyector-ventana.png")));
+			check(WorshipOutput::ShowOnProjector(nullptr) && WorshipOutput::OnAirSceneName().isEmpty(),
+			      QStringLiteral("proyector: negro"));
 			/* A song dropped on Sources: only "Cantos en vivo" changes. */
 			songs->deleteSong(title);
 			WorshipOutput::SourceOnlyScope sourceOnly;
 			check(songs->projectNewSong(title, QStringLiteral("Primera linea\n\n[Coro]\nCoro"), 3),
-			      QStringLiteral("sala: canto como fuente"));
+			      QStringLiteral("proyector: canto como fuente"));
 		});
 		add(800, [=]() {
-			check(WorshipOutput::OnAirSceneName().startsWith(QStringLiteral("WS Biblia")),
-			      QStringLiteral("sala: la sala no cambió con el canto (%1)").arg(WorshipOutput::OnAirSceneName()));
+			check(WorshipOutput::OnAirSceneName().isEmpty(),
+			      QStringLiteral("proyector: sigue en negro con el canto como fuente (%1)")
+				      .arg(WorshipOutput::OnAirSceneName()));
 			check(visibleIn("Cantos en vivo").startsWith(QStringLiteral("WS Cantos")),
-			      QStringLiteral("sala: Cantos en vivo muestra el canto (%1)").arg(visibleIn("Cantos en vivo")));
-			/* Back to one output: what the room showed goes on screen. */
+			      QStringLiteral("proyector: Cantos en vivo muestra el canto"));
+			check(bible->projectQuery(QStringLiteral("Salmos 23:1"), 0), QStringLiteral("proyector: Salmos 23:1"));
+		});
+		add(800, [=]() {
+			/* Back to one output: what the projector showed goes on screen. */
 			const QString onAir = WorshipOutput::OnAirSceneName();
 			WorshipOutput::SetSeparateRoomScreen(false);
 			OBSSourceAutoRelease source = obs_get_source_by_name(QT_TO_UTF8(onAir));
@@ -604,9 +628,17 @@ struct SelfTest {
 		});
 		add(1200, [=]() {
 			check(programName().startsWith(QStringLiteral("WS Biblia")),
-			      QStringLiteral("sala: al volver a una salida, la Biblia sale en pantalla (%1)").arg(programName()));
+			      QStringLiteral("proyector: al volver a una salida, la Biblia sale en pantalla (%1)").arg(programName()));
 			songs->deleteSong(title);
+			for (const char *name : {"Transmisión (prueba)", "Bienvenida (prueba)"}) {
+				OBSSourceAutoRelease scene = obs_get_source_by_name(name);
+				if (scene)
+					obs_source_remove(scene);
+			}
 			WorshipOutput::SetSeparateRoomScreen(*wasSeparate);
+			OBSSourceAutoRelease practice = obs_get_source_by_name("Transmisión (recorrido)");
+			if (practice)
+				obs_source_remove(practice);
 		});
 	}
 
@@ -988,8 +1020,13 @@ struct SelfTest {
 		add(300, [=]() {
 			*wasSeparate = WorshipOutput::SeparateRoomScreen();
 			WorshipOutput::SetSeparateRoomScreen(separate);
-			if (separate)
-				ScreensDialog::BuildStreamScene(ScreensDialog::StreamLayout::ScreenOnly, QString());
+			if (separate) {
+				OBSScene stream = WorshipOutput::EnsureScene("Transmisión (recorrido)");
+				OBSScene projector = WorshipOutput::EnsureScene(WorshipOutput::RoomScreenScene);
+				if (!obs_scene_find_source(stream, WorshipOutput::RoomScreenScene))
+					obs_scene_add(stream, obs_scene_get_source(projector));
+				obs_frontend_set_current_scene(obs_scene_get_source(stream));
+			}
 		});
 		add(300, [=]() {
 			log(separate ? QStringLiteral("--- Recorrido de inicio (sala y en vivo por separado) ---")
@@ -1041,6 +1078,9 @@ struct SelfTest {
 			if (*tour)
 				(*tour)->goTo((*tour)->stepCount());
 			WorshipOutput::SetSeparateRoomScreen(*wasSeparate);
+			OBSSourceAutoRelease practice = obs_get_source_by_name("Transmisión (recorrido)");
+			if (practice)
+				obs_source_remove(practice);
 		});
 	}
 

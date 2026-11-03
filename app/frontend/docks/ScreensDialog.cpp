@@ -23,6 +23,7 @@
 #include <Idian/Utils.hpp>
 
 #include <QButtonGroup>
+#include <QCheckBox>
 #include <QFrame>
 #include <QRadioButton>
 #include <QComboBox>
@@ -37,15 +38,18 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 
+#include <functional>
+
 #include "moc_ScreensDialog.cpp"
 
 namespace {
-constexpr const char *StreamSceneName = "Transmisión";
+constexpr const char *CameraSceneName = "Solo cámara";
+constexpr const char *ComboSceneName = "Cámara + proyector";
+constexpr const char *ScreenSceneName = "Transmisión";
 constexpr const char *NewCameraName = "Cámara";
 constexpr const char *ConfigMonitor = "RoomScreenMonitor";
 constexpr const char *ConfigLayout = "StreamLayout";
 constexpr const char *ConfigCamera = "StreamCamera";
-constexpr const char *ConfigShot = "StreamShot";
 
 const char *const CameraIds[] = {"macos-avcapture", "macos-avcapture-fast", "av_capture_input", "dshow_input",
 				 "v4l2_input"};
@@ -202,53 +206,64 @@ QStringList ScreensDialog::Cameras()
 	return names;
 }
 
-bool ScreensDialog::BuildStreamScene(StreamLayout layout, const QString &cameraName, QString *error)
+bool ScreensDialog::CreateStreamScenes(StreamLayout layout, const QString &cameraName, QString *firstScene)
 {
-	OBSScene room = WorshipOutput::EnsureScene(WorshipOutput::RoomScreenScene);
-	OBSScene stream = WorshipOutput::EnsureScene(StreamSceneName);
-	if (!room || !stream)
+	OBSScene projector = WorshipOutput::EnsureScene(WorshipOutput::RoomScreenScene);
+	if (!projector)
 		return false;
+	obs_source_t *projectorSource = obs_scene_get_source(projector);
 
-	OBSSource camera;
-	if (layout != StreamLayout::ScreenOnly) {
-		OBSSourceAutoRelease existing = cameraName.isEmpty() ? nullptr : obs_get_source_by_name(QT_TO_UTF8(cameraName));
-		camera = existing ? OBSSource(existing.Get()) : createCamera();
-		if (!camera) {
-			if (error)
-				*error = tr("No se encontró ninguna cámara en esta computadora.");
-			return false;
-		}
+	OBSSourceAutoRelease existing = cameraName.isEmpty() ? nullptr : obs_get_source_by_name(QT_TO_UTF8(cameraName));
+	OBSSource camera = existing && isCamera(existing) ? OBSSource(existing.Get()) : OBSSource();
+	if (!camera) {
+		const QStringList cameras = Cameras();
+		OBSSourceAutoRelease first = cameras.isEmpty() ? nullptr : obs_get_source_by_name(QT_TO_UTF8(cameras.first()));
+		camera = first ? OBSSource(first.Get()) : createCamera();
 	}
 
-	/* Start clean: the scene only has the camera and the room screen. */
-	obs_scene_enum_items(
-		stream,
-		[](obs_scene_t *, obs_sceneitem_t *item, void *) {
-			obs_sceneitem_remove(item);
-			return true;
-		},
-		nullptr);
-
-	Box cameraBox, screenBox;
-	bool screenOnTop = true;
-	boxesFor(layout, &cameraBox, &screenBox, &screenOnTop);
-	obs_source_t *roomSource = obs_scene_get_source(room);
-	const auto place = [&](obs_source_t *source, const Box &box, obs_bounds_type bounds) {
-		obs_scene_add(stream, source);
-		WorshipOutput::FitItem(stream, source, box.x, box.y, box.w, box.h, OBS_ALIGN_CENTER, bounds);
+	/* Only scenes that do not exist yet are created: nothing is removed or
+	 * rearranged in the scenes people already have. */
+	const auto create = [](const char *name, std::function<void(obs_scene_t *)> fill) {
+		OBSSourceAutoRelease taken = obs_get_source_by_name(name);
+		if (taken)
+			return false;
+		OBSScene scene = WorshipOutput::EnsureScene(name);
+		if (scene)
+			fill(scene);
+		return true;
 	};
-	if (camera && !screenOnTop)
-		place(roomSource, screenBox, OBS_BOUNDS_SCALE_INNER);
-	if (camera)
-		place(camera, cameraBox,
-		      layout == StreamLayout::CameraWithCorner ? OBS_BOUNDS_SCALE_OUTER : OBS_BOUNDS_SCALE_INNER);
-	if (!camera || screenOnTop)
-		place(roomSource, screenBox, OBS_BOUNDS_SCALE_INNER);
+	const auto place = [](obs_scene_t *scene, obs_source_t *source, const Box &box, obs_bounds_type bounds) {
+		obs_scene_add(scene, source);
+		WorshipOutput::FitItem(scene, source, box.x, box.y, box.w, box.h, OBS_ALIGN_CENTER, bounds);
+	};
 
-	/* The stream goes to air with its own scene. */
-	obs_frontend_set_current_scene(obs_scene_get_source(stream));
-	if (obs_frontend_preview_program_mode_active())
-		obs_frontend_set_current_preview_scene(obs_scene_get_source(stream));
+	if (!camera) {
+		/* No camera: the stream shows what the church sees. */
+		create(ScreenSceneName, [&](obs_scene_t *scene) {
+			place(scene, projectorSource, {0.0f, 0.0f, 1.0f, 1.0f}, OBS_BOUNDS_SCALE_INNER);
+		});
+		if (firstScene)
+			*firstScene = QString::fromUtf8(ScreenSceneName);
+		return true;
+	}
+
+	create(CameraSceneName, [&](obs_scene_t *scene) {
+		place(scene, camera, {0.0f, 0.0f, 1.0f, 1.0f}, OBS_BOUNDS_SCALE_OUTER);
+	});
+	create(ComboSceneName, [&](obs_scene_t *scene) {
+		Box cameraBox, screenBox;
+		bool screenOnTop = true;
+		boxesFor(layout, &cameraBox, &screenBox, &screenOnTop);
+		const obs_bounds_type cameraBounds =
+			layout == StreamLayout::CameraWithCorner ? OBS_BOUNDS_SCALE_OUTER : OBS_BOUNDS_SCALE_INNER;
+		if (!screenOnTop)
+			place(scene, projectorSource, screenBox, OBS_BOUNDS_SCALE_INNER);
+		place(scene, camera, cameraBox, cameraBounds);
+		if (screenOnTop)
+			place(scene, projectorSource, screenBox, OBS_BOUNDS_SCALE_INNER);
+	});
+	if (firstScene)
+		*firstScene = QString::fromUtf8(ComboSceneName);
 	return true;
 }
 
@@ -298,37 +313,29 @@ QWidget *choiceCard(QRadioButton *radio, const QString &text, QWidget *parent)
 }
 } // namespace
 
-QString ScreensDialog::RoomChip(const QString &text)
+QString ScreensDialog::ProjectorChip(const QString &text)
 {
-	return chip(QStringLiteral("#F2A65A"), tr("SALA"), text);
+	return chip(QStringLiteral("#F2A65A"), tr("PROYECTOR"), text);
 }
 
-QString ScreensDialog::LiveChip(const QString &text)
+QString ScreensDialog::StreamChip(const QString &text)
 {
-	return chip(QStringLiteral("#E5484D"), tr("EN VIVO"), text);
+	return chip(QStringLiteral("#E5484D"), tr("TRANSMISIÓN"), text);
 }
 
 ScreensDialog::ScreensDialog(QWidget *parent) : QDialog(parent)
 {
-	setWindowTitle(tr("Sala y en vivo"));
+	setWindowTitle(tr("Proyector y transmisión"));
 	setMinimumWidth(640);
 	auto *layout = new QVBoxLayout(this);
 	layout->setSpacing(12);
 
-	auto *names = new QLabel(RoomChip(tr("lo que ve la iglesia en el proyector o la TV.")) + QStringLiteral("<br>") +
-					 LiveChip(tr("lo que ve internet (YouTube, Facebook) y la grabación.")),
-				 this);
-	names->setTextFormat(Qt::RichText);
-	names->setWordWrap(true);
-	layout->addWidget(names);
-
-	sameRadio = new QRadioButton(tr("Lo mismo en la sala y en vivo"));
-	separateRadio = new QRadioButton(tr("Sala y en vivo por separado · recomendado si transmitís"));
-	layout->addWidget(choiceCard(sameRadio,
-				     tr("Lo más simple: lo que mandás a la pantalla también sale por internet."), this));
+	sameRadio = new QRadioButton(tr("Proyector y transmisión iguales"));
+	separateRadio = new QRadioButton(tr("Proyector y transmisión por separado"));
+	layout->addWidget(choiceCard(sameRadio, tr("Lo que mandás al proyector también se transmite."), this));
 	layout->addWidget(choiceCard(separateRadio,
-				     tr("La sala ve la letra o la Biblia a pantalla completa. En vivo se ve la cámara "
-					"con eso mismo más chico, y lo cambiás con un botón."),
+				     tr("Las escenas manejan la transmisión, como siempre. El proyector de la iglesia "
+					"muestra los cantos y la Biblia, o la escena que elijas en el panel En vivo."),
 				     this));
 	(WorshipOutput::SeparateRoomScreen() ? separateRadio : sameRadio)->setChecked(true);
 
@@ -353,7 +360,11 @@ ScreensDialog::ScreensDialog(QWidget *parent) : QDialog(parent)
 	const int monitorIndex = savedMonitor.isEmpty() ? -1 : monitorCombo->findData(savedMonitor.toInt());
 	monitorCombo->setCurrentIndex(monitorIndex >= 0 ? monitorIndex
 							: (screens.size() > 1 ? 1 : monitorCombo->count() - 1));
-	form->addRow(tr("Proyector de la sala"), monitorCombo);
+	form->addRow(tr("Proyector"), monitorCombo);
+
+	createCheck = new QCheckBox(tr("Crear las escenas \"Solo cámara\" y \"Cámara + proyector\""), details);
+	createCheck->setChecked(true);
+	form->addRow(QString(), createCheck);
 
 	cameraCombo = new QComboBox(details);
 	for (const QString &camera : Cameras())
@@ -367,8 +378,7 @@ ScreensDialog::ScreensDialog(QWidget *parent) : QDialog(parent)
 	auto *layoutsRow = new QHBoxLayout(layouts);
 	layoutsRow->setContentsMargins(0, 0, 0, 0);
 	layoutGroup = new QButtonGroup(this);
-	const QStringList designs{tr("Cámara y pantalla en la esquina"), tr("Pantalla y cámara en la esquina"),
-				  tr("Lado a lado")};
+	const QStringList designs{tr("Proyector en la esquina"), tr("Cámara en la esquina"), tr("Lado a lado")};
 	for (int i = 0; i < designs.size(); ++i) {
 		auto *button = new QToolButton(layouts);
 		button->setCheckable(true);
@@ -383,15 +393,7 @@ ScreensDialog::ScreensDialog(QWidget *parent) : QDialog(parent)
 	const int savedLayout = WorshipOutput::ConfigString(ConfigLayout).toInt();
 	if (QAbstractButton *button = layoutGroup->button(qBound(0, savedLayout, 2)))
 		button->setChecked(true);
-	form->addRow(tr("Cámara + pantalla"), layouts);
-
-	auto *hint = new QLabel(tr("Durante la reunión, en el panel En vivo cambiás lo que ve internet con tres "
-				   "botones: Cámara, Cámara + pantalla y Pantalla. La escena \"Transmisión\" se "
-				   "puede retocar como cualquier escena."),
-				details);
-	hint->setWordWrap(true);
-	idian::Utils::addClass(hint, "text-muted");
-	form->addRow(hint);
+	form->addRow(tr("Cámara + proyector"), layouts);
 	layout->addWidget(details);
 
 	status = new QLabel(this);
@@ -403,8 +405,15 @@ ScreensDialog::ScreensDialog(QWidget *parent) : QDialog(parent)
 	idian::Utils::addClass(applyButton, "button-primary");
 	layout->addWidget(buttons);
 
-	const auto updateEnabled = [this]() { details->setVisible(separateRadio->isChecked()); adjustSize(); };
+	const auto updateEnabled = [this]() {
+		details->setVisible(separateRadio->isChecked());
+		cameraCombo->setEnabled(createCheck->isChecked());
+		for (QAbstractButton *button : layoutGroup->buttons())
+			button->setEnabled(createCheck->isChecked());
+		adjustSize();
+	};
 	connect(separateRadio, &QRadioButton::toggled, this, updateEnabled);
+	connect(createCheck, &QCheckBox::toggled, this, updateEnabled);
 	updateEnabled();
 	connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 	connect(applyButton, &QPushButton::clicked, this, &ScreensDialog::apply);
@@ -412,37 +421,35 @@ ScreensDialog::ScreensDialog(QWidget *parent) : QDialog(parent)
 
 void ScreensDialog::apply()
 {
-	/* What the congregation sees now stays on screen when switching. */
+	/* What the church sees now stays on screen when switching. */
 	const QString onAir = WorshipOutput::OnAirSceneName();
-	const auto keepOnScreen = [&onAir]() {
-		if (onAir.isEmpty() || !WorshipOutput::IsInternalScene(onAir))
-			return;
-		OBSSourceAutoRelease source = obs_get_source_by_name(QT_TO_UTF8(onAir));
-		if (obs_scene_t *scene = source ? obs_scene_from_source(source) : nullptr)
-			WorshipOutput::ShowScene(scene);
-	};
+	OBSSourceAutoRelease onAirSource = onAir.isEmpty() ? nullptr : obs_get_source_by_name(QT_TO_UTF8(onAir));
 
 	if (!separateRadio->isChecked()) {
 		WorshipOutput::SetSeparateRoomScreen(false);
 		/* Straight to the screen (also in Studio Mode): it was already on air. */
-		OBSSourceAutoRelease source = onAir.isEmpty() ? nullptr : obs_get_source_by_name(QT_TO_UTF8(onAir));
-		if (source && WorshipOutput::IsInternalScene(onAir))
-			obs_frontend_set_current_scene(source);
+		if (onAirSource)
+			obs_frontend_set_current_scene(onAirSource);
 		accept();
 		return;
 	}
 
 	WorshipOutput::SetSeparateRoomScreen(true);
-	keepOnScreen();
-	/* One big picture (EN VIVO) and the room monitor: no second preview. */
-	if (obs_frontend_preview_program_mode_active())
-		obs_frontend_set_preview_program_mode(false);
+	if (onAirSource)
+		WorshipOutput::ShowOnProjector(onAirSource);
 
 	const auto layout = static_cast<StreamLayout>(qMax(0, layoutGroup->checkedId()));
-	QString error;
-	if (!BuildStreamScene(layout, cameraCombo->currentData().toString(), &error)) {
-		status->setText(error);
-		return;
+	if (createCheck->isChecked()) {
+		QString first;
+		if (CreateStreamScenes(layout, cameraCombo->currentData().toString(), &first)) {
+			OBSSourceAutoRelease scene = obs_get_source_by_name(QT_TO_UTF8(first));
+			if (scene) {
+				if (obs_frontend_preview_program_mode_active())
+					obs_frontend_set_current_preview_scene(scene);
+				else
+					obs_frontend_set_current_scene(scene);
+			}
+		}
 	}
 	const int monitor = monitorCombo->currentData().toInt();
 	WorshipOutput::SetConfigString(ConfigMonitor, QString::number(monitor));
@@ -450,61 +457,11 @@ void ScreensDialog::apply()
 	WorshipOutput::SetConfigString(ConfigCamera, cameraCombo->currentData().toString().isEmpty()
 							     ? QString::fromUtf8(NewCameraName)
 							     : cameraCombo->currentData().toString());
-	ShowShot(StreamShot::CameraAndScreen);
 	OpenRoomScreen(monitor);
 	accept();
 }
 
 namespace {
-struct StreamItems {
-	obs_sceneitem_t *camera = nullptr;
-	obs_sceneitem_t *screen = nullptr;
-};
-
-StreamItems streamItems(obs_scene_t *stream)
-{
-	StreamItems items;
-	obs_scene_enum_items(
-		stream,
-		[](obs_scene_t *, obs_sceneitem_t *item, void *param) {
-			auto *found = static_cast<StreamItems *>(param);
-			obs_source_t *source = obs_sceneitem_get_source(item);
-			if (strcmp(obs_source_get_name(source), WorshipOutput::RoomScreenScene) == 0)
-				found->screen = item;
-			else if (isCamera(source) && !found->camera)
-				found->camera = item;
-			return true;
-		},
-		&items);
-	return items;
-}
-
-void fadeOn(obs_sceneitem_t *item)
-{
-	for (bool show : {true, false}) {
-		if (obs_sceneitem_get_transition(item, show))
-			continue;
-		OBSSourceAutoRelease fade = obs_source_create_private("fade_transition", "WS Fundido", nullptr);
-		obs_sceneitem_set_transition(item, show, fade);
-		obs_sceneitem_set_transition_duration(item, show, 400);
-	}
-}
-
-void placeItem(obs_sceneitem_t *item, const Box &box, obs_bounds_type bounds)
-{
-	const float W = (float)WorshipOutput::CanvasWidth(), H = (float)WorshipOutput::CanvasHeight();
-	vec2 pos, size;
-	vec2_set(&pos, W * box.x, H * box.y);
-	vec2_set(&size, W * box.w, H * box.h);
-	obs_sceneitem_defer_update_begin(item);
-	obs_sceneitem_set_alignment(item, OBS_ALIGN_LEFT | OBS_ALIGN_TOP);
-	obs_sceneitem_set_pos(item, &pos);
-	obs_sceneitem_set_bounds_type(item, bounds);
-	obs_sceneitem_set_bounds_alignment(item, OBS_ALIGN_CENTER);
-	obs_sceneitem_set_bounds(item, &size);
-	obs_sceneitem_defer_update_end(item);
-}
-
 /* Live picture of the room screen, refreshed a few times per second. A
  * plain widget (not a native display) so it scrolls with the panel. */
 class RoomMonitor : public QLabel {
@@ -563,57 +520,4 @@ private:
 QWidget *ScreensDialog::CreateRoomMonitor(QWidget *parent)
 {
 	return new RoomMonitor(parent);
-}
-
-ScreensDialog::StreamShot ScreensDialog::CurrentShot()
-{
-	return static_cast<StreamShot>(qBound(0, WorshipOutput::ConfigString(ConfigShot).isEmpty()
-							 ? 1
-							 : WorshipOutput::ConfigString(ConfigShot).toInt(),
-					      2));
-}
-
-bool ScreensDialog::ShowShot(StreamShot shot)
-{
-	OBSSourceAutoRelease source = obs_get_source_by_name(StreamSceneName);
-	obs_scene_t *stream = source ? obs_scene_from_source(source) : nullptr;
-	StreamItems items = stream ? streamItems(stream) : StreamItems();
-	if (!stream || !items.screen) {
-		/* No stream scene yet (or it was emptied): build it again. */
-		if (!BuildStreamScene(static_cast<StreamLayout>(WorshipOutput::ConfigString(ConfigLayout).toInt()),
-				      WorshipOutput::ConfigString(ConfigCamera)))
-			return false;
-		OBSSourceAutoRelease rebuilt = obs_get_source_by_name(StreamSceneName);
-		stream = rebuilt ? obs_scene_from_source(rebuilt) : nullptr;
-		items = stream ? streamItems(stream) : StreamItems();
-		if (!items.screen)
-			return false;
-	}
-
-	StreamLayout layout = static_cast<StreamLayout>(qBound(0, WorshipOutput::ConfigString(ConfigLayout).toInt(), 2));
-	/* Without a camera, EN VIVO always shows the screen. */
-	if (shot == StreamShot::Screen || !items.camera)
-		layout = StreamLayout::ScreenOnly;
-	else if (shot == StreamShot::Camera)
-		layout = StreamLayout::CameraOnly;
-
-	Box cameraBox, screenBox;
-	bool screenOnTop = true;
-	boxesFor(layout, &cameraBox, &screenBox, &screenOnTop);
-	fadeOn(items.screen);
-	if (screenBox.w > 0.0f)
-		placeItem(items.screen, screenBox, OBS_BOUNDS_SCALE_INNER);
-	obs_sceneitem_set_visible(items.screen, screenBox.w > 0.0f);
-	if (items.camera) {
-		fadeOn(items.camera);
-		if (cameraBox.w > 0.0f)
-			placeItem(items.camera, cameraBox,
-				  layout == StreamLayout::CameraWithCorner || layout == StreamLayout::CameraOnly
-					  ? OBS_BOUNDS_SCALE_OUTER
-					  : OBS_BOUNDS_SCALE_INNER);
-		obs_sceneitem_set_visible(items.camera, cameraBox.w > 0.0f);
-		obs_sceneitem_set_order(items.screen, screenOnTop ? OBS_ORDER_MOVE_TOP : OBS_ORDER_MOVE_BOTTOM);
-	}
-	WorshipOutput::SetConfigString(ConfigShot, QString::number((int)shot));
-	return true;
 }

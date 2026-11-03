@@ -65,8 +65,10 @@ private:
 	QPushButton *projectorButton = nullptr;
 	/* Room and stream separately: live room picture and EN VIVO shots. */
 	QWidget *roomMonitor = nullptr;
-	QWidget *shotRow = nullptr;
-	QButtonGroup *shotGroup = nullptr;
+	QWidget *projectorScenes = nullptr;
+	QButtonGroup *projectorGroup = nullptr;
+	QStringList projectorSceneKeys;
+	void rebuildProjectorScenes(const QString &onAir);
 	QPushButton *separateButton = nullptr;
 
 	/* Countdown */

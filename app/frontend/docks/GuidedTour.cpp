@@ -254,13 +254,13 @@ void GuidedTour::buildSteps()
 	if (WorshipOutput::SeparateRoomScreen()) {
 		/* Room and stream separately: the song goes straight to the room,
 		 * and the stream is switched with the three EN VIVO buttons. */
-		steps.push_back({tr("5. Mostralo en la sala"),
-				 tr("Hacé <b>doble clic</b> en el canto: aparece en la <b>SALA</b>, lo que ve la iglesia. "
-				    "Lo ves en el monitor de <b>En vivo</b>. Avanzá con <b>Siguiente ▶</b> o las flechas."),
+		steps.push_back({tr("5. Mostralo en el proyector"),
+				 tr("Hacé <b>doble clic</b> en el canto: aparece en el <b>proyector</b> de la iglesia. "
+				    "Lo ves en el monitor del panel <b>En vivo</b>. Avanzá con <b>Siguiente ▶</b> o las flechas."),
 				 byName("songsList"),
 				 [w]() {
 					 raiseDock(w, "songsDock");
-					 /* The room monitor is at the top of the En vivo panel. */
+					 /* The projector monitor is at the top of the En vivo panel. */
 					 if (QWidget *live = w->findChild<QWidget *>(QStringLiteral("liveToolsDock")))
 						 for (QScrollArea *area : live->findChildren<QScrollArea *>())
 							 area->verticalScrollBar()->setValue(0);
@@ -268,11 +268,11 @@ void GuidedTour::buildSteps()
 				 []() { return WorshipOutput::OnAirSceneName().startsWith(QStringLiteral("WS Cantos")); }});
 		steps.back().dock = "songsDock";
 
-		steps.push_back({tr("6. Elegí qué ve internet"),
-				 tr("<b>EN VIVO</b> es lo que sale por internet. Con estos botones lo cambiás al instante: "
-				    "<b>Cámara</b> para la predicación, <b>Cámara + pantalla</b> para los cantos y "
-				    "<b>Pantalla</b> para un anuncio."),
-				 byName("liveShots"), {}, {}});
+		steps.push_back({tr("6. Cada pantalla, lo suyo"),
+				 tr("Estos botones eligen qué ve el <b>proyector</b>: los cantos y la Biblia, cualquier "
+				    "escena tuya o <b>Negro</b>. La lista de <b>Escenas</b> cambia la <b>transmisión</b>, "
+				    "como siempre."),
+				 byName("liveProjectorScenes"), {}, {}});
 	} else {
 		steps.push_back({tr("5. Preparalo en espera"),
 				 tr("Hacé <b>doble clic</b> en el canto: aparece <b>EN ESPERA</b>. La congregación todavía no "
@@ -302,8 +302,8 @@ void GuidedTour::buildSteps()
 
 	steps.push_back({tr("9. Conectá el proyector"),
 			 tr("Tocá <b>Pantalla del proyector</b> y elegí el proyector o la TV: ahí se verá a pantalla "
-			    "completa lo que está EN PANTALLA.<br>¿Transmitís? Con <b>Separar sala y en vivo</b> la "
-			    "<b>SALA</b> ve la letra completa y <b>EN VIVO</b> internet ve la cámara con la letra."),
+			    "completa lo que está EN PANTALLA.<br>¿Transmitís? En <b>Proyector y transmisión</b> el "
+			    "proyector y la transmisión pueden mostrar cosas distintas."),
 			 byName("liveProjector"), {}, {}});
 
 	auto *customize = new QPushButton(tr("Personalizar ahora..."), extraSlot);

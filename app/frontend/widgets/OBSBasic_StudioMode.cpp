@@ -362,16 +362,16 @@ void OBSBasic::ResizeProgram(uint32_t cx, uint32_t cy)
 
 void OBSBasic::UpdatePreviewProgramIndicators()
 {
-	/* Room and stream separately: the big picture is always EN VIVO, what
-	 * internet sees; the room has its own monitor in the En vivo panel. */
+	/* Projector and stream separately: the big pictures are the stream, as
+	 * in any streaming program; the projector has its own monitor. */
 	if (WorshipOutput::SeparateRoomScreen()) {
 		const QString live = QStringLiteral("<span style=\"color:#E5484D\">●</span> ") +
-				     QCoreApplication::translate("WorshipStudio", "EN VIVO · lo que ve internet: %1");
+				     QCoreApplication::translate("WorshipStudio", "TRANSMISIÓN · %1");
 		ui->previewLabel->setTextFormat(Qt::RichText);
 		ui->previewLabel->setVisible(true);
 		const QString preview =
 			previewProgramMode
-				? QCoreApplication::translate("WorshipStudio", "Preparando para en vivo: %1")
+				? QCoreApplication::translate("WorshipStudio", "SIGUIENTE · %1")
 					  .arg(FriendlySceneName(GetCurrentSceneSource()).toHtmlEscaped())
 				: live.arg(FriendlySceneName(GetCurrentSceneSource()).toHtmlEscaped());
 		if (ui->previewLabel->text() != preview)

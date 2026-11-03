@@ -1441,7 +1441,7 @@ void OBSBasic::OBSInit()
 
 	/* Room screen and stream showing different things. */
 	auto *screensAction =
-		new QAction(QCoreApplication::translate("WorshipStudio", "Sala y en vivo..."), this);
+		new QAction(QCoreApplication::translate("WorshipStudio", "Proyector y transmisión..."), this);
 	ui->menuTools->insertAction(ui->menuTools->actions().value(0), screensAction);
 	ui->menuTools->insertSeparator(ui->menuTools->actions().value(1));
 	connect(screensAction, &QAction::triggered, this, [this]() {
@@ -1626,6 +1626,7 @@ void OBSBasic::OBSInit()
 void OBSBasic::OnFirstLoad()
 {
 	OnEvent(OBS_FRONTEND_EVENT_FINISHED_LOADING);
+	WorshipOutput::MigrateProjectorScene();
 	if (qEnvironmentVariableIsEmpty("WORSHIPSTUDIO_SELFTEST"))
 		ScreensDialog::RestoreRoomScreen();
 

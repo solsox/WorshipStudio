@@ -52,14 +52,25 @@ public:
 QString FollowerFor(const QString &contentSceneName);
 QStringList FollowerNames();
 
-/* The room screen ("Pantalla de la sala") shows the content alone while the
- * stream shows its own scene, for example the camera with the content
- * small in a corner. */
-constexpr const char *RoomScreenScene = "Pantalla de la sala";
+/* Projector and stream separately: the scene list drives the stream as
+ * usual, and the church projector shows "Proyector de la iglesia", a scene
+ * that shows the content of the panels or any scene chosen for it. Stream
+ * scenes can use it as a source (the camera with the lyrics, for example). */
+constexpr const char *RoomScreenScene = "Proyector de la iglesia";
 bool SeparateRoomScreen();
 void SetSeparateRoomScreen(bool separate);
-/* Name of the content scene the congregation sees right now. */
+/* Name of the scene the church projector shows right now ("" when black). */
 QString OnAirSceneName();
+/* Shows a scene on the church projector with a fade; nullptr leaves it
+ * black. Returns false for scenes that contain the projector itself. */
+bool ShowOnProjector(obs_source_t *scene);
+/* Scenes that can go to the projector: the user's, without the projector
+ * inside them (that would show itself forever). */
+bool CanShowOnProjector(obs_source_t *scene);
+/* The last song, verse, hymn or presentation scene shown. */
+QString LastContentScene();
+/* Renames the projector scene of older versions ("Pantalla de la sala"). */
+void MigrateProjectorScene();
 
 /* WorshipStudio's own scenes, hidden from the scene list. */
 bool IsInternalScene(const QString &name);
