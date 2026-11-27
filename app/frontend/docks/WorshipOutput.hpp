@@ -56,6 +56,10 @@ bool SourceOnlyActive();
 QString FollowerFor(const QString &contentSceneName);
 QStringList FollowerNames();
 
+/* Name lower third and urgent message, as a source to place in a scene (the
+ * En vivo panel otherwise puts them on top of whatever is on screen). */
+constexpr const char *GraphicsScene = "Gráficos en vivo";
+
 /* Projector and stream separately: the scene list drives the stream as
  * usual, and the church projector shows "Proyector de la iglesia", a scene
  * that shows the content of the panels or any scene chosen for it. Stream
@@ -80,6 +84,11 @@ void MigrateProjectorScene();
 
 /* WorshipStudio's own scenes, hidden from the scene list. */
 bool IsInternalScene(const QString &name);
+/* The user's scene seen last (program or preview), for when the screen shows
+ * a scene of a panel: content dropped on Sources goes there. Falls back to
+ * the first scene of the list; null when there is none. */
+void RememberUserScene(obs_source_t *scene);
+OBSSource LastUserScene();
 
 /* Picture of a source (usually a scene) at the given size, like OBS
  * screenshots. Must run on the UI thread. */

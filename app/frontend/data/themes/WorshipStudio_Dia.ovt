@@ -58,6 +58,8 @@
 
     --ws_button1: #2B2825;
     --ws_button2: #1B1915;
+    /* Faint accent light at the top of the window (glass background). */
+    --ws_glow: #F4EBDD;
     --ws_on_button: #F1EBE0;
 
     --primary: var(--ws_ember3);
@@ -66,9 +68,9 @@
     --primary_dark: var(--ws_ember4);
     --primary_darker: var(--ws_ember5);
 
-    --border_radius: 8px;
-    --border_radius_small: 6px;
-    --border_radius_large: 12px;
+    --border_radius: 12px;
+    --border_radius_small: 8px;
+    --border_radius_large: 18px;
 }
 
 /* --------------------- */
@@ -504,4 +506,162 @@ QTextEdit:focus,
 QSpinBox:focus,
 QComboBox:focus {
     border: 1px solid var(--ws_ember1);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Glass: the window glows faintly with the accent, panels are translucent
+ * cards with a lit edge, and every control is rounded. The layout is the
+ * same as OBS; only the surfaces change. Popups stay opaque (a top-level
+ * window cannot show what is behind it). */
+
+QMainWindow {
+    background: qradialgradient(cx: 0.1, cy: 0, radius: 1.3, fx: 0.1, fy: 0, stop: 0 var(--ws_glow), stop: 0.55 var(--grey6), stop: 1 var(--grey7));
+}
+
+QMainWindow::separator {
+    background: transparent;
+    width: 10px;
+    height: 10px;
+}
+
+QDockWidget > QWidget {
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-top: 1px solid rgba(255, 255, 255, 0.95);
+    border-radius: 18px;
+}
+
+QDockWidget::title {
+    background: transparent;
+    padding: 12px 16px 8px 16px;
+    border: none;
+}
+
+QDockWidget QAbstractItemView,
+QDockWidget QAbstractScrollArea {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 14px;
+}
+
+QDockWidget QScrollArea,
+QDockWidget QScrollArea > QWidget > QWidget {
+    background: transparent;
+    border: none;
+}
+
+QDockWidget QListView::item,
+QDockWidget QListWidget::item {
+    border-radius: 10px;
+}
+
+QDockWidget QListView::item:hover,
+QDockWidget QListWidget::item:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+QDockWidget QListView::item:selected,
+QDockWidget QListWidget::item:selected {
+    background: var(--primary);
+}
+
+QPushButton {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+}
+
+QPushButton:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.14);
+}
+
+QPushButton:pressed {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+QPushButton:checked {
+    background: var(--primary);
+    border: 1px solid var(--ws_ember1);
+}
+
+QPushButton:disabled {
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+QLineEdit,
+QPlainTextEdit,
+QTextEdit,
+QSpinBox,
+QDoubleSpinBox,
+QDateTimeEdit,
+QComboBox {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(0, 0, 0, 0.09);
+    border-radius: 12px;
+}
+
+QComboBox QAbstractItemView,
+QDockWidget QComboBox QAbstractItemView {
+    background: var(--grey3);
+    border: 1px solid rgba(0, 0, 0, 0.09);
+    border-radius: 0px;
+}
+
+QMainWindow > QTabBar::tab {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    padding: 6px 14px;
+    margin: 6px 3px;
+}
+
+QMainWindow > QTabBar::tab:hover {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+QMainWindow > QTabBar::tab:selected {
+    background: var(--primary);
+    border: 1px solid var(--ws_ember1);
+}
+
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    border: none;
+}
+
+QScrollBar:horizontal {
+    background: transparent;
+    height: 10px;
+    border: none;
+}
+
+QScrollBar::handle {
+    background: rgba(0, 0, 0, 0.16);
+    border: none;
+    border-radius: 4px;
+    margin: 2px;
+}
+
+QScrollBar::handle:hover {
+    background: rgba(0, 0, 0, 0.28);
+}
+
+QMenu {
+    border-radius: 12px;
+}
+
+/* The primary button keeps its accent over the glass. */
+.button-primary {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 var(--ws_button1), stop: 1 var(--ws_button2));
+    border: 1px solid var(--ws_button2);
+    color: var(--ws_on_button);
+}
+
+.button-primary:hover,
+.button-primary:focus {
+    background: var(--ws_button1);
+    border: 1px solid var(--ws_button1);
 }

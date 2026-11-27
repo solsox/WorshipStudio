@@ -43,6 +43,7 @@
 #include <QSpinBox>
 #include <QTimeEdit>
 #include <QTimer>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 #include "moc_LiveToolsDock.cpp"
@@ -73,6 +74,57 @@ QLabel *heading(const QString &text, QWidget *parent)
 	idian::Utils::addClass(label, "text-bold");
 	label->setContentsMargins(0, 10, 0, 2);
 	return label;
+}
+
+/* A heading that folds its section so the panel stays short; how the user
+ * left it is remembered. Returns the body to fill. */
+QWidget *foldable(const QString &title, const char *configKey, QVBoxLayout *layout, QWidget *parent,
+		  QToolButton **headerOut)
+{
+	auto *header = new QToolButton(parent);
+	header->setObjectName(QString::fromLatin1(configKey));
+	header->setProperty("foldTitle", title);
+	header->setText(title);
+	header->setCheckable(true);
+	header->setAutoRaise(true);
+	header->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+	header->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	header->setCursor(Qt::PointingHandCursor);
+	header->setToolTip(QCoreApplication::translate("WorshipStudio", "Mostrar u ocultar esta sección"));
+	idian::Utils::addClass(header, "text-bold");
+	header->setStyleSheet(QStringLiteral("QToolButton { text-align: left; padding: 10px 0 2px 0; border: none; }"));
+
+	auto *body = new QWidget(parent);
+	auto *bodyLayout = new QVBoxLayout(body);
+	bodyLayout->setContentsMargins(0, 0, 0, 0);
+	bodyLayout->setSpacing(6);
+
+	const QString key = QStringLiteral("LiveOpen_%1").arg(QString::fromLatin1(configKey));
+	const auto apply = [header, body, key](bool open) {
+		header->setArrowType(open ? Qt::DownArrow : Qt::RightArrow);
+		body->setVisible(open);
+		WorshipOutput::SetConfigString(QT_TO_UTF8(key), open ? QStringLiteral("1") : QStringLiteral("0"));
+	};
+	const bool open = WorshipOutput::ConfigString(QT_TO_UTF8(key)) == QStringLiteral("1");
+	header->setChecked(open);
+	header->setArrowType(open ? Qt::DownArrow : Qt::RightArrow);
+	body->setVisible(open);
+	QObject::connect(header, &QToolButton::toggled, header, apply);
+
+	layout->addWidget(header);
+	layout->addWidget(body);
+	if (headerOut)
+		*headerOut = header;
+	return body;
+}
+
+/* A folded section says when its content is on screen. */
+void markOnAir(QToolButton *header, bool onAir)
+{
+	if (!header)
+		return;
+	const QString title = header->property("foldTitle").toString();
+	header->setText(onAir ? title + QCoreApplication::translate("WorshipStudio", "  ·  en pantalla") : title);
 }
 
 QString formatSeconds(qint64 seconds)
@@ -189,7 +241,7 @@ LiveToolsDock::LiveToolsDock(const QString &objectName, const QString &title, QW
 	layout->addWidget(separateButton);
 
 	/* --- Countdown ---------------------------------------------------- */
-	layout->addWidget(heading(tr("Cuenta regresiva"), root));
+	auto *countdownBody = foldable(tr("Cuenta regresiva"), "liveCountdown", layout, root, &countdownHeader);
 	countdownMode = new QComboBox(root);
 	countdownMode->addItem(tr("Durante"));
 	countdownMode->addItem(tr("Hasta la hora"));
@@ -218,32 +270,40 @@ LiveToolsDock::LiveToolsDock(const QString &objectName, const QString &title, QW
 	countdownForm->addRow(tr("Titulo"), countdownTitle);
 	countdownForm->addRow(tr("Al final"), countdownEnd);
 	countdownForm->addRow(tr("Fondo"), countdownBackground);
-	layout->addLayout(countdownForm);
-	layout->addWidget(countdownButton);
+	auto *countdownLayout = static_cast<QVBoxLayout *>(countdownBody->layout());
+	countdownLayout->addLayout(countdownForm);
+	countdownLayout->addWidget(countdownButton);
 
 	/* --- Name lower third --------------------------------------------- */
-	layout->addWidget(heading(tr("Rotulo de nombre"), root));
+	QToolButton *nameHeader = nullptr;
+	auto *nameLayout =
+		static_cast<QVBoxLayout *>(foldable(tr("Rotulo de nombre"), "liveName", layout, root, &nameHeader)->layout());
 	nameEdit = new QLineEdit(root);
 	nameEdit->setPlaceholderText(tr("Nombre (p. ej. Pr. Juan Perez)"));
 	roleEdit = new QLineEdit(root);
 	roleEdit->setPlaceholderText(tr("Cargo o tema (opcional)"));
 	nameButton = new QPushButton(tr("Mostrar rotulo"), root);
 	nameButton->setCheckable(true);
-	layout->addWidget(nameEdit);
-	layout->addWidget(roleEdit);
-	layout->addWidget(nameButton);
+	nameLayout->addWidget(nameEdit);
+	nameLayout->addWidget(roleEdit);
+	nameLayout->addWidget(nameButton);
+	connect(nameButton, &QPushButton::toggled, this, [nameHeader](bool on) { markOnAir(nameHeader, on); });
 
 	/* --- Urgent message ----------------------------------------------- */
-	layout->addWidget(heading(tr("Mensaje urgente"), root));
+	QToolButton *messageHeader = nullptr;
+	auto *messageLayout = static_cast<QVBoxLayout *>(
+		foldable(tr("Mensaje urgente"), "liveMessage", layout, root, &messageHeader)->layout());
 	messageEdit = new QLineEdit(root);
 	messageEdit->setPlaceholderText(tr("Se muestra arriba de todo lo que este al aire"));
 	messageButton = new QPushButton(tr("Mostrar mensaje"), root);
 	messageButton->setCheckable(true);
-	layout->addWidget(messageEdit);
-	layout->addWidget(messageButton);
+	messageLayout->addWidget(messageEdit);
+	messageLayout->addWidget(messageButton);
+	connect(messageButton, &QPushButton::toggled, this, [messageHeader](bool on) { markOnAir(messageHeader, on); });
 
 	/* --- Stage display ------------------------------------------------ */
-	layout->addWidget(heading(tr("Monitor de escenario"), root));
+	auto *stageLayout = static_cast<QVBoxLayout *>(
+		foldable(tr("Monitor de escenario"), "liveStage", layout, root, nullptr)->layout());
 	auto *stageHelp = new QLabel(tr("Pantalla para cantantes y predicador: diapositiva actual, siguiente, reloj y "
 					"mensajes."),
 				     root);
@@ -263,9 +323,9 @@ LiveToolsDock::LiveToolsDock(const QString &objectName, const QString &title, QW
 	auto *stageButtons = new QHBoxLayout();
 	stageButtons->addWidget(openStage, 1);
 	stageButtons->addWidget(stopwatchButton, 1);
-	layout->addWidget(stageHelp);
-	layout->addLayout(stageRow);
-	layout->addLayout(stageButtons);
+	stageLayout->addWidget(stageHelp);
+	stageLayout->addLayout(stageRow);
+	stageLayout->addLayout(stageButtons);
 
 	/* --- Phone remote ------------------------------------------------- */
 	layout->addWidget(heading(tr("Control desde el celular"), root));
@@ -605,6 +665,7 @@ void LiveToolsDock::startCountdown(int minutes, const QString &title)
 	countdownTarget = QDateTime::currentDateTime().addSecs(qint64(minutes) * 60);
 	countdownActive = true;
 	countdownButton->setText(tr("Detener cuenta regresiva"));
+	markOnAir(countdownHeader, true);
 	renderCountdown();
 	WorshipOutput::ShowScene(countdownSceneRef);
 }
@@ -613,6 +674,7 @@ void LiveToolsDock::stopCountdown()
 {
 	countdownActive = false;
 	countdownButton->setText(tr("Proyectar cuenta regresiva"));
+	markOnAir(countdownHeader, false);
 	refreshStage();
 }
 
@@ -652,6 +714,13 @@ void LiveToolsDock::ensureOverlays()
 	messageSource = WorshipOutput::EnsureSource(overlaySceneRef, MessageSourceName, "image_source", settings, &created);
 	if (created && messageSource)
 		WorshipOutput::FitItem(overlaySceneRef, messageSource, 0.0f, 0.0f, 1.0f, 1.0f);
+
+	/* "Gráficos en vivo" shows them wherever the user placed it. */
+	OBSScene graphics = WorshipOutput::EnsureScene(WorshipOutput::GraphicsScene);
+	if (!obs_scene_find_source(graphics, OverlaySceneName)) {
+		obs_scene_add(graphics, obs_scene_get_source(overlaySceneRef));
+		WorshipOutput::FitItem(graphics, obs_scene_get_source(overlaySceneRef), 0.0f, 0.0f, 1.0f, 1.0f);
+	}
 }
 
 void LiveToolsDock::attachOverlays()
@@ -668,6 +737,9 @@ void LiveToolsDock::attachOverlays()
 	for (obs_source_t *target : {program.Get(), preview.Get()}) {
 		obs_scene_t *scene = target ? obs_scene_from_source(target) : nullptr;
 		if (!scene || target == overlay)
+			continue;
+		/* The user placed "Gráficos en vivo" in this scene: it already shows them. */
+		if (obs_scene_find_source_recursive(scene, WorshipOutput::GraphicsScene))
 			continue;
 		obs_sceneitem_t *item = obs_scene_find_source(scene, OverlaySceneName);
 		if (!item) {

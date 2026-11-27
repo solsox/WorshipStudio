@@ -70,6 +70,10 @@ if(NOT TARGET Qt6::CorePrivate)
   find_package(Qt6 REQUIRED COMPONENTS CorePrivate)
 endif()
 target_link_libraries(obs-studio PRIVATE Qt::CorePrivate)
+# In Qt 6.4 QZipReader is still part of QtGui.
+if(Qt6Gui_VERSION VERSION_LESS 6.5 AND TARGET Qt6::GuiPrivate)
+  target_link_libraries(obs-studio PRIVATE Qt6::GuiPrivate)
+endif()
 
 # App key of the YouVersion Platform (online Bibles), from the CI secret.
 if(DEFINED ENV{WORSHIPSTUDIO_YOUVERSION_KEY} AND NOT "$ENV{WORSHIPSTUDIO_YOUVERSION_KEY}" STREQUAL "")

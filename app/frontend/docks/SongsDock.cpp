@@ -136,7 +136,7 @@ SongsDock::SongsDock(const QString &objectName, const QString &title, QWidget *p
 	clearButton->setToolTip(tr("Deja solo el fondo en pantalla, sin la letra (tecla L)"));
 
 	auto *hint = new QLabel(tr("Doble clic en un canto o en una diapositiva para mostrarlo; ← → avanzan. "
-				   "Teclas: C coro, P puente, 1-9 estrofa. Arrastralo a Fuentes para ponerlo en tu escena."),
+				   "Teclas: C coro, P puente, 1-9 estrofa. Arrástralo a Fuentes para ponerlo en tu escena."),
 				root);
 	hint->setWordWrap(true);
 	idian::Utils::addClass(hint, "text-muted");

@@ -16,6 +16,7 @@ class QPushButton;
 class QSpinBox;
 class QTimeEdit;
 class QTimer;
+class QToolButton;
 class WorshipRemote;
 
 /* Everything that happens during the service besides the content itself:
@@ -79,6 +80,7 @@ private:
 	QLineEdit *countdownEnd = nullptr;
 	BackgroundPicker *countdownBackground = nullptr;
 	QPushButton *countdownButton = nullptr;
+	QToolButton *countdownHeader = nullptr;
 	QDateTime countdownTarget;
 	bool countdownActive = false;
 	int countdownCounter = 0;

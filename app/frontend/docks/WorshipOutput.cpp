@@ -120,6 +120,7 @@ bool followerOnScreen(const QString &followerName)
 }
 
 QString lastContent;
+OBSWeakSource lastUserScene;
 } // namespace
 
 OBSScene EnsureScene(const char *sceneName)
@@ -230,8 +231,9 @@ bool SourceOnlyActive()
 
 QStringList FollowerNames()
 {
-	return {QStringLiteral("Cantos en vivo"), QStringLiteral("Biblia en vivo"), QStringLiteral("Himnario en vivo"),
-		QStringLiteral("Presentación en vivo")};
+	return {QStringLiteral("Cantos en vivo"),       QStringLiteral("Biblia en vivo"),
+		QStringLiteral("Himnario en vivo"),     QStringLiteral("Presentación en vivo"),
+		QStringLiteral("Cuenta regresiva en vivo")};
 }
 
 QString FollowerFor(const QString &name)
@@ -244,6 +246,8 @@ QString FollowerFor(const QString &name)
 		return FollowerNames().at(2);
 	if (name.startsWith(QStringLiteral("WS Presentacion")))
 		return FollowerNames().at(3);
+	if (name == QLatin1String("WS Cuenta regresiva"))
+		return FollowerNames().at(4);
 	return {};
 }
 
@@ -317,7 +321,30 @@ QString OnAirSceneName()
 bool IsInternalScene(const QString &name)
 {
 	return name.startsWith(QStringLiteral("WS ")) || name == QLatin1String(RoomScreenScene) ||
-	       FollowerNames().contains(name);
+	       FollowerNames().contains(name) || name == QLatin1String(GraphicsScene);
+}
+
+void RememberUserScene(obs_source_t *scene)
+{
+	if (scene && obs_scene_from_source(scene) && !IsInternalScene(QT_UTF8(obs_source_get_name(scene))))
+		lastUserScene = OBSGetWeakRef(scene);
+}
+
+OBSSource LastUserScene()
+{
+	OBSSourceAutoRelease remembered = obs_weak_source_get_source(lastUserScene);
+	if (remembered)
+		return OBSSource(remembered.Get());
+	OBSSource first;
+	obs_frontend_source_list list = {};
+	obs_frontend_get_scenes(&list);
+	for (size_t i = 0; i < list.sources.num && !first; ++i) {
+		obs_source_t *scene = list.sources.array[i];
+		if (!IsInternalScene(QT_UTF8(obs_source_get_name(scene))))
+			first = scene;
+	}
+	obs_frontend_source_list_free(&list);
+	return first;
 }
 
 void ShowScene(obs_scene_t *scene)

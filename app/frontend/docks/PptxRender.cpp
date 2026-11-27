@@ -17,7 +17,12 @@
 
 #include "PptxRender.hpp"
 
+/* QZipReader moved from QtGui to QtCore in newer Qt (Ubuntu 24.04 has 6.4). */
+#if __has_include(<QtCore/private/qzipreader_p.h>)
 #include <QtCore/private/qzipreader_p.h>
+#else
+#include <QtGui/private/qzipreader_p.h>
+#endif
 
 #include <QAbstractTextDocumentLayout>
 #include <QBuffer>

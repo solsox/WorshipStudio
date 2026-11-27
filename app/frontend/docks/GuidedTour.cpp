@@ -111,6 +111,19 @@ void raiseDock(QMainWindow *window, const char *name)
 		dock->raise();
 	}
 }
+
+/* Raises the En vivo panel and scrolls it to `name` (it is a long panel). */
+void revealInLive(QMainWindow *window, const char *name)
+{
+	raiseDock(window, "liveToolsDock");
+	auto *widget = window->findChild<QWidget *>(QString::fromLatin1(name));
+	for (QWidget *parent = widget ? widget->parentWidget() : nullptr; parent; parent = parent->parentWidget()) {
+		if (auto *scroll = qobject_cast<QScrollArea *>(parent)) {
+			scroll->ensureWidgetVisible(widget);
+			break;
+		}
+	}
+}
 } // namespace
 
 /* The dimmed layer is a transparent window of its own over WorshipStudio's
@@ -272,7 +285,7 @@ void GuidedTour::buildSteps()
 				 tr("Estos botones eligen qué ve el <b>proyector</b>: los cantos y la Biblia, cualquier "
 				    "escena tuya o <b>Negro</b>. La lista de <b>Escenas</b> cambia la <b>transmisión</b>, "
 				    "como siempre."),
-				 byName("liveProjectorScenes"), {}, {}});
+				 byName("liveProjectorScenes"), [w]() { revealInLive(w, "liveProjectorScenes"); }, {}});
 	} else {
 		steps.push_back({tr("5. Preparalo en espera"),
 				 tr("Hacé <b>doble clic</b> en el canto: aparece <b>EN ESPERA</b>. La congregación todavía no "
@@ -284,7 +297,7 @@ void GuidedTour::buildSteps()
 		steps.push_back({tr("6. Pasalo a la pantalla"),
 				 tr("Tocá <b>Pasar a pantalla</b>: ahora lo ve la gente. Avanzá con <b>Siguiente ▶</b>, las "
 				    "flechas del teclado o el presentador inalámbrico."),
-				 byName("liveGo"), {},
+				 byName("liveGo"), [w]() { revealInLive(w, "liveGo"); },
 				 []() { return programName().startsWith(QStringLiteral("WS Cantos")); }});
 	}
 
@@ -304,7 +317,7 @@ void GuidedTour::buildSteps()
 			 tr("Tocá <b>Pantalla del proyector</b> y elegí el proyector o la TV: ahí se verá a pantalla "
 			    "completa lo que está EN PANTALLA.<br>¿Transmitís? En <b>Proyector y transmisión</b> el "
 			    "proyector y la transmisión pueden mostrar cosas distintas."),
-			 byName("liveProjector"), {}, {}});
+			 byName("liveProjector"), [w]() { revealInLive(w, "liveProjector"); }, {}});
 
 	auto *customize = new QPushButton(tr("Personalizar ahora..."), extraSlot);
 	customize->hide();
@@ -329,7 +342,7 @@ void GuidedTour::buildSteps()
 	steps.push_back({tr("11. Manejalo desde el celular"),
 			 tr("Tocá <b>Activar control desde el celular</b> y escaneá el código con la cámara del "
 			    "teléfono: pasás diapositivas, cambiás escenas y más, sin instalar nada."),
-			 byName("livePhone"), {}, {}});
+			 byName("livePhone"), [w]() { revealInLive(w, "livePhone"); }, {}});
 
 	steps.push_back({tr("¡Listo!"),
 			 tr("Ya sabés lo esencial. Podés volver a ver este recorrido cuando quieras en <b>Ayuda → Guía "

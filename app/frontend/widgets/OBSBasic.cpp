@@ -2390,6 +2390,14 @@ void OBSBasic::SetDisplayAffinity(QWindow *window)
 
 void OBSBasic::OnEvent(enum obs_frontend_event event)
 {
+	if (event == OBS_FRONTEND_EVENT_SCENE_CHANGED) {
+		OBSSourceAutoRelease scene = obs_frontend_get_current_scene();
+		WorshipOutput::RememberUserScene(scene);
+	} else if (event == OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED) {
+		OBSSourceAutoRelease scene = obs_frontend_get_current_preview_scene();
+		WorshipOutput::RememberUserScene(scene);
+	}
+
 	if (api) {
 		api->on_event(event);
 	}
@@ -2456,10 +2464,18 @@ void OBSBasic::AddPanelSource(const QString &panel, bool useSelection, const std
 		return;
 
 	const bool studio = obs_frontend_preview_program_mode_active();
-	OBSSourceAutoRelease target = studio ? obs_frontend_get_current_preview_scene() : obs_frontend_get_current_scene();
+	OBSSourceAutoRelease current = studio ? obs_frontend_get_current_preview_scene() : obs_frontend_get_current_scene();
+	OBSSource target = current.Get();
+	/* The screen shows a verse or a song full screen ("WS Biblia"): the
+	 * content goes into the user's scene, which comes back to the screen. */
+	bool backToUserScene = false;
+	if (target && WorshipOutput::IsInternalScene(QT_UTF8(obs_source_get_name(target)))) {
+		target = WorshipOutput::LastUserScene();
+		backToUserScene = true;
+	}
 	obs_scene_t *scene = target ? obs_scene_from_source(target) : nullptr;
-	if (!scene || WorshipOutput::IsInternalScene(QT_UTF8(obs_source_get_name(target)))) {
-		tell(QCoreApplication::translate("WorshipStudio", "Primero elegí una de tus escenas en el panel Escenas."));
+	if (!scene) {
+		tell(QCoreApplication::translate("WorshipStudio", "Primero crea una escena en el panel Escenas."));
 		return;
 	}
 
@@ -2474,15 +2490,61 @@ void OBSBasic::AddPanelSource(const QString &panel, bool useSelection, const std
 	/* Empty until the panel shows something; then it follows the panel. */
 	OBSScene follower = WorshipOutput::EnsureScene(QT_TO_UTF8(followerName));
 	if (useSelection && !shown) {
-		tell(QCoreApplication::translate("WorshipStudio", "Elegí primero qué mostrar en ese panel."));
+		tell(QCoreApplication::translate("WorshipStudio", "Elige primero qué mostrar en ese panel."));
 		return;
 	}
 	if (!obs_scene_find_source(scene, QT_TO_UTF8(followerName))) {
 		obs_scene_add(scene, obs_scene_get_source(follower));
 		WorshipOutput::FitItem(scene, obs_scene_get_source(follower), 0.0f, 0.0f, 1.0f, 1.0f);
 	}
+	if (backToUserScene) {
+		if (studio)
+			obs_frontend_set_current_preview_scene(target);
+		else
+			obs_frontend_set_current_scene(target);
+	}
 	tell(QCoreApplication::translate("WorshipStudio",
-					 "Listo: \"%1\" es una fuente de esta escena. Movela y agrandala "
+					 "Listo: \"%1\" es una fuente de esta escena. Muévela y agrándala "
 					 "como quieras; el panel la sigue controlando.")
 		     .arg(followerName));
+}
+
+/* The graphics of the En vivo panel as a source of the scene being edited,
+ * to place and resize like a camera; they show when the panel shows them. */
+void OBSBasic::AddGraphicsSource(bool countdown)
+{
+	const auto tell = [](const QString &text) { QToolTip::showText(QCursor::pos(), text); };
+	const bool studio = obs_frontend_preview_program_mode_active();
+	OBSSourceAutoRelease current = studio ? obs_frontend_get_current_preview_scene() : obs_frontend_get_current_scene();
+	OBSSource target = current.Get();
+	if (target && WorshipOutput::IsInternalScene(QT_UTF8(obs_source_get_name(target))))
+		target = WorshipOutput::LastUserScene();
+	obs_scene_t *scene = target ? obs_scene_from_source(target) : nullptr;
+	if (!scene) {
+		tell(QCoreApplication::translate("WorshipStudio", "Primero crea una escena en el panel Escenas."));
+		return;
+	}
+
+	OBSScene graphics;
+	if (countdown) {
+		graphics = WorshipOutput::EnsureScene(QT_TO_UTF8(WorshipOutput::FollowerNames().at(4)));
+	} else {
+		OBSScene overlays = WorshipOutput::EnsureScene("WS Superposiciones");
+		graphics = WorshipOutput::EnsureScene(WorshipOutput::GraphicsScene);
+		if (!obs_scene_find_source(graphics, "WS Superposiciones")) {
+			obs_scene_add(graphics, obs_scene_get_source(overlays));
+			WorshipOutput::FitItem(graphics, obs_scene_get_source(overlays), 0.0f, 0.0f, 1.0f, 1.0f);
+		}
+		/* Put there by the panel before: "Gráficos en vivo" replaces it. */
+		if (obs_sceneitem_t *old = obs_scene_find_source(scene, "WS Superposiciones"))
+			obs_sceneitem_remove(old);
+	}
+	obs_source_t *source = obs_scene_get_source(graphics);
+	if (!obs_scene_find_source(scene, obs_source_get_name(source))) {
+		obs_scene_add(scene, source);
+		WorshipOutput::FitItem(scene, source, 0.0f, 0.0f, 1.0f, 1.0f);
+	}
+	tell(QCoreApplication::translate("WorshipStudio", "Listo: \"%1\" es una fuente de esta escena. Muévela y agrándala "
+							  "como quieras; se ve cuando la actives en el panel En vivo.")
+		     .arg(QT_UTF8(obs_source_get_name(source))));
 }

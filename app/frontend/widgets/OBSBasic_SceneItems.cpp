@@ -853,6 +853,11 @@ void OBSBasic::on_actionAddSource_triggered()
 			       [this, panel]() { AddPanelSource(panel, false); });
 	}
 	menu.addSeparator();
+	menu.addAction(QCoreApplication::translate("WorshipStudio", "Rótulo de nombre y mensaje urgente"), this,
+		       [this]() { AddGraphicsSource(false); });
+	menu.addAction(QCoreApplication::translate("WorshipStudio", "Cuenta regresiva"), this,
+		       [this]() { AddGraphicsSource(true); });
+	menu.addSeparator();
 	QAction *other = menu.addAction(QCoreApplication::translate("WorshipStudio", "Otra fuente (cámara, imagen, video...)..."));
 	connect(other, &QAction::triggered, this, &OBSBasic::AddSourceDialog);
 	menu.exec(QCursor::pos());

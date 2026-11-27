@@ -181,7 +181,7 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 	styleRow->addWidget(layoutCombo);
 
 	auto *hint = new QLabel(tr("Doble clic o Enter en un versiculo para mostrarlo; las flechas ← → pasan al "
-				   "siguiente. Selecciona varios con Mayus. Arrastralo a Fuentes para ponerlo en tu escena."),
+				   "siguiente. Selecciona varios con Mayus. Arrástralo a Fuentes para ponerlo en tu escena."),
 				root);
 	hint->setWordWrap(true);
 	idian::Utils::addClass(hint, "text-muted");

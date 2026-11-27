@@ -1178,6 +1178,14 @@ bool OBSApp::SetWorshipAppearance(const QColor &accent, bool light, const QMap<Q
 		body.replace(QRegularExpression(QStringLiteral("--%1:[^;]*;").arg(button.first)),
 			     QStringLiteral("--%1: %2;").arg(button.first, button.second.name()));
 
+	/* The glass background glows faintly with the accent over the base. */
+	const QColor ground(base.value(QStringLiteral("grey7"), light ? QStringLiteral("#DCDCE0") : QStringLiteral("#0C0B0B")));
+	const float mix = light ? 0.22f : 0.16f;
+	const QColor glow = QColor::fromRgbF(ground.redF() + (accent.redF() - ground.redF()) * mix,
+					     ground.greenF() + (accent.greenF() - ground.greenF()) * mix,
+					     ground.blueF() + (accent.blueF() - ground.blueF()) * mix);
+	body.replace(QRegularExpression(QStringLiteral("--ws_glow:[^;]*;")), QStringLiteral("--ws_glow: %1;").arg(glow.name()));
+
 	for (auto it = base.cbegin(); it != base.cend(); ++it) {
 		const QRegularExpression variable(QStringLiteral("--%1:[^;]*;").arg(QRegularExpression::escape(it.key())));
 		body.replace(variable, QStringLiteral("--%1: %2;").arg(it.key(), it.value()));

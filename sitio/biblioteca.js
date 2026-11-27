@@ -21,7 +21,7 @@
       html.push("<li><b>" + t.name.replace(/</g, "&lt;") + "</b><span>" + (t.shortName || t.id) + " · " + (t.languageName || t.language) + " · " + books + " · " + license(t) + "</span></li>");
     });
     list.innerHTML = html.join("");
-    count.textContent = shown + (shown === 1 ? " traducción" : " traducciones") + (shown > 200 ? " (mostrando 200, refiná la búsqueda)" : "");
+    count.textContent = shown + (shown === 1 ? " traducción" : " traducciones") + (shown > 200 ? " (mostrando 200, refina la búsqueda)" : "");
   }
   fetch("https://bible.helloao.org/api/available_translations.json").then(function (r) { return r.json(); }).then(function (data) {
     all = data.translations || [];
@@ -35,7 +35,7 @@
     });
     lang.value = "";
     draw();
-  }).catch(function () { count.textContent = "No se pudo cargar el catálogo. Probá de nuevo más tarde."; });
+  }).catch(function () { count.textContent = "No se pudo cargar el catálogo. Prueba de nuevo más tarde."; });
   search.addEventListener("input", draw);
   lang.addEventListener("change", draw);
 
