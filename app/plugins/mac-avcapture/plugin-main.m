@@ -235,6 +235,80 @@ static UInt32 av_fast_capture_get_height(void *av_capture)
     return (UInt32) frameSize.height;
 }
 
+#pragma mark - Camera light
+
+struct av_capture_search {
+    obs_source_t *source;
+    bool found;
+};
+
+static bool av_capture_find_item(obs_scene_t *scene __unused, obs_sceneitem_t *item, void *param)
+{
+    struct av_capture_search *search = param;
+
+    if (obs_sceneitem_get_source(item) == search->source) {
+        search->found = true;
+    } else if (obs_sceneitem_is_group(item)) {
+        obs_scene_enum_items(obs_sceneitem_group_get_scene(item), av_capture_find_item, search);
+    }
+
+    return !search->found;
+}
+
+static bool av_capture_find_in_scene(void *param, obs_source_t *scene_source)
+{
+    struct av_capture_search *search = param;
+    obs_scene_t *scene = obs_scene_from_source(scene_source);
+
+    if (!scene) {
+        scene = obs_group_from_source(scene_source);
+    }
+
+    if (scene) {
+        obs_scene_enum_items(scene, av_capture_find_item, search);
+    }
+
+    return !search->found;
+}
+
+/// A camera removed from every scene can stay alive while something still holds the source; its light must not stay on.
+static void av_capture_hide(void *av_capture)
+{
+    OBSAVCapture *capture = (__bridge OBSAVCapture *) (av_capture);
+
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), capture.sessionQueue, ^{
+        if (capture.isClosed) {
+            return;
+        }
+
+        OBSAVCaptureInfo *capture_info = capture.captureInfo;
+
+        if (obs_source_showing(capture_info->source)) {
+            return;
+        }
+
+        struct av_capture_search search = {capture_info->source, false};
+        obs_enum_scenes(av_capture_find_in_scene, &search);
+
+        if (!search.found) {
+            capture.isParked = YES;
+            [capture stopCaptureSession];
+        }
+    });
+}
+
+static void av_capture_show(void *av_capture)
+{
+    OBSAVCapture *capture = (__bridge OBSAVCapture *) (av_capture);
+
+    dispatch_async(capture.sessionQueue, ^{
+        if (!capture.isClosed && capture.isParked) {
+            capture.isParked = NO;
+            [capture startCaptureSession];
+        }
+    });
+}
+
 static void av_capture_destroy(void *av_capture)
 {
     OBSAVCapture *capture = (__bridge OBSAVCapture *) (av_capture);
@@ -269,6 +343,7 @@ static void av_capture_destroy(void *av_capture)
         }
 
         bfree(capture_info);
+        capture.isClosed = YES;
 
         CFBridgingRelease((__bridge CFTypeRef _Nullable)(capture));
     });
@@ -296,6 +371,8 @@ bool obs_module_load(void)
         .get_properties = av_capture_properties,
         .update = av_capture_update,
         .destroy = av_capture_destroy,
+        .show = av_capture_show,
+        .hide = av_capture_hide,
         .icon_type = OBS_ICON_TYPE_CAMERA,
     };
 
@@ -312,6 +389,8 @@ bool obs_module_load(void)
         .get_properties = av_capture_properties,
         .update = av_capture_update,
         .destroy = av_capture_destroy,
+        .show = av_capture_show,
+        .hide = av_capture_hide,
         .video_tick = av_fast_capture_tick,
         .video_render = av_fast_capture_render,
         .get_width = av_fast_capture_get_width,

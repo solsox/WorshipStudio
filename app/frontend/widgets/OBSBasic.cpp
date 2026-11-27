@@ -1316,9 +1316,14 @@ void OBSBasic::OBSInit()
 	/* SALA / EN VIVO names on the big pictures follow the room mode. */
 	connect(&WorshipLive::instance(), &WorshipLive::changed, this, [this]() { UpdatePreviewProgramIndicators(); });
 
+	/* ← and → pass what is on screen from anywhere in the window. */
+	WorshipLive::InstallArrowKeys();
+
 	/* Songs, verses, hymns and presentations dropped on Sources become a
 	 * source of the scene: "Cantos en vivo" follows the Cantos panel. */
-	WorshipDrag::InstallDropTarget(ui->sources, [this](const QString &panel) { AddPanelSource(panel, true); });
+	WorshipDrag::InstallDropTarget(ui->sources, [this](const QString &panel, const std::function<void()> &selectDragged) {
+		AddPanelSource(panel, true, selectDragged);
+	});
 
 	const QString selfTestDir = qEnvironmentVariable("WORSHIPSTUDIO_SELFTEST");
 	if (!selfTestDir.isEmpty()) {
@@ -2437,8 +2442,9 @@ void OBSBasic::on_actionOpenPluginManager_triggered()
 }
 
 /* Adds "Cantos en vivo" (and the others) to the scene being edited. With
- * `useSelection`, what is selected in the panel is shown in it (a drop). */
-void OBSBasic::AddPanelSource(const QString &panel, bool useSelection)
+ * `useSelection`, what is selected in the panel is shown in it (a drop);
+ * `selectDragged` first selects the row that was dragged. */
+void OBSBasic::AddPanelSource(const QString &panel, bool useSelection, const std::function<void()> &selectDragged)
 {
 	static const QHash<QString, int> followers{{QStringLiteral("songsDock"), 0},
 						   {QStringLiteral("bibleDock"), 1},
@@ -2460,6 +2466,8 @@ void OBSBasic::AddPanelSource(const QString &panel, bool useSelection)
 	bool shown = false;
 	if (useSelection) {
 		WorshipOutput::SourceOnlyScope sourceOnly;
+		if (selectDragged)
+			selectDragged();
 		QMetaObject::invokeMethod(dock, "useAsSource", Qt::DirectConnection, Q_RETURN_ARG(bool, shown));
 	}
 	const QString followerName = WorshipOutput::FollowerNames().at(followers.value(panel));

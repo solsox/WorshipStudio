@@ -648,6 +648,11 @@ struct SelfTest {
 			      QStringLiteral("proyector: con una escena con Biblia en vivo se controla la Biblia (%1)")
 				      .arg(WorshipLive::instance().activeSource()));
 			check(bible->projectQuery(QStringLiteral("Salmos 23:1"), 0), QStringLiteral("proyector: Salmos 23:1"));
+			/* The scene already has the Bible inside: it stays on the projector. */
+			check(WorshipOutput::OnAirSceneName() == QStringLiteral("Biblia (prueba)") &&
+				      visibleIn("Biblia en vivo").startsWith(QStringLiteral("WS Biblia")),
+			      QStringLiteral("proyector: la escena con Biblia en vivo se queda y muestra el pasaje (%1)")
+				      .arg(WorshipOutput::OnAirSceneName()));
 		});
 		add(800, [=]() {
 			/* Back to one output: what the projector showed goes on screen. */
@@ -658,8 +663,9 @@ struct SelfTest {
 				obs_frontend_set_current_scene(source);
 		});
 		add(1200, [=]() {
-			check(programName().startsWith(QStringLiteral("WS Biblia")),
-			      QStringLiteral("proyector: al volver a una salida, la Biblia sale en pantalla (%1)").arg(programName()));
+			check(programName() == QStringLiteral("Biblia (prueba)"),
+			      QStringLiteral("proyector: al volver a una salida, la escena con la Biblia sale en pantalla (%1)")
+				      .arg(programName()));
 			songs->deleteSong(title);
 			for (const char *name : {"Transmisión (prueba)", "Bienvenida (prueba)", "Biblia (prueba)"}) {
 				OBSSourceAutoRelease scene = obs_get_source_by_name(name);

@@ -76,8 +76,9 @@ void follow(const char *followerName, obs_source_t *content)
 		obs_sceneitem_set_visible(item, item.Get() == target);
 }
 
-/* Whether `scene` shows `target` somewhere inside (nested scenes and groups). */
-bool contains(obs_source_t *scene, obs_source_t *target, int depth = 0)
+/* Whether `scene` has `target` somewhere inside (nested scenes and groups);
+ * with `visibleOnly`, only items whose eye is on count. */
+bool contains(obs_source_t *scene, obs_source_t *target, bool visibleOnly = false, int depth = 0)
 {
 	obs_scene_t *s = scene ? obs_scene_from_source(scene) : nullptr;
 	if (!s)
@@ -85,11 +86,37 @@ bool contains(obs_source_t *scene, obs_source_t *target, int depth = 0)
 	if (!s || depth > 16)
 		return false;
 	for (const OBSSceneItem &item : itemsOf(s)) {
+		if (visibleOnly && !obs_sceneitem_visible(item))
+			continue;
 		obs_source_t *source = obs_sceneitem_get_source(item);
-		if (source == target || contains(source, target, depth + 1))
+		if (source == target || contains(source, target, visibleOnly, depth + 1))
 			return true;
 	}
 	return false;
+}
+
+/* Whether the scene people see (or the one waiting in the Studio Mode
+ * preview) shows the follower scene `followerName`. */
+bool followerOnScreen(const QString &followerName)
+{
+	OBSSourceAutoRelease follower = obs_get_source_by_name(QT_TO_UTF8(followerName));
+	if (!follower)
+		return false;
+	const auto shows = [&follower](obs_source_t *scene) {
+		return scene && contains(scene, follower, true);
+	};
+	if (SeparateRoomScreen()) {
+		const QString onAir = visibleIn(RoomScreenScene);
+		OBSSourceAutoRelease scene = onAir.isEmpty() ? nullptr : obs_get_source_by_name(QT_TO_UTF8(onAir));
+		return shows(scene);
+	}
+	OBSSourceAutoRelease program = obs_frontend_get_current_scene();
+	if (shows(program))
+		return true;
+	if (!obs_frontend_preview_program_mode_active())
+		return false;
+	OBSSourceAutoRelease preview = obs_frontend_get_current_preview_scene();
+	return shows(preview);
 }
 
 QString lastContent;
@@ -196,6 +223,11 @@ SourceOnlyScope::~SourceOnlyScope()
 	--sourceOnlyDepth;
 }
 
+bool SourceOnlyActive()
+{
+	return sourceOnlyDepth > 0;
+}
+
 QStringList FollowerNames()
 {
 	return {QStringLiteral("Cantos en vivo"), QStringLiteral("Biblia en vivo"), QStringLiteral("Himnario en vivo"),
@@ -298,6 +330,10 @@ void ShowScene(obs_scene_t *scene)
 	if (name.startsWith(QStringLiteral("WS ")))
 		lastContent = name;
 	if (sourceOnlyDepth > 0)
+		return;
+	/* "Biblia en vivo" is already inside the scene on screen (the camera
+	 * with the verse, for example): replacing that scene would hide it. */
+	if (!follower.isEmpty() && followerOnScreen(follower))
 		return;
 	if (SeparateRoomScreen()) {
 		ShowOnProjector(source);

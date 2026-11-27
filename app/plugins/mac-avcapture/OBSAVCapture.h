@@ -357,6 +357,12 @@ typedef struct av_capture_info {
 /// `YES` if the device's configuration is based on a preset, `NO` otherwise
 @property BOOL isPresetBased;
 
+/// `YES` while the session is stopped because the source is in no scene (the camera light goes off)
+@property BOOL isParked;
+
+/// `YES` once the source is destroyed and ``captureInfo`` is freed
+@property BOOL isClosed;
+
 /// `YES` if the ``OBSAVCapture`` instance handles frame rendering by itself (used by the Capture Card variant), `NO` otherwise
 @property (readonly) BOOL isFastPath;
 

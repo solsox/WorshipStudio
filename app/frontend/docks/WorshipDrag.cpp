@@ -29,6 +29,8 @@
 #include <QPainterPath>
 #include <QPointer>
 
+#include <memory>
+
 namespace {
 /* A rounded label that follows the pointer while dragging. */
 QPixmap dragLabel(const QString &text, const QFont &font)
@@ -53,41 +55,70 @@ QPixmap dragLabel(const QString &text, const QFont &font)
 
 class DragStarter : public QObject {
 public:
-	DragStarter(QAbstractItemView *view_, const QString &panel_, bool onlySelected_)
-		: QObject(view_),
-		  view(view_),
-		  panel(panel_),
-		  onlySelected(onlySelected_)
-	{
-	}
+	DragStarter(QAbstractItemView *view_, const QString &panel_) : QObject(view_), view(view_), panel(panel_) {}
 
 protected:
 	bool eventFilter(QObject *, QEvent *event) override
 	{
-		if (event->type() == QEvent::MouseButtonPress) {
+		switch (event->type()) {
+		case QEvent::MouseButtonPress: {
+			if (replaying)
+				return false;
 			auto *mouse = static_cast<QMouseEvent *>(event);
 			pressed = view->indexAt(mouse->position().toPoint());
+			const Qt::KeyboardModifiers several = Qt::ShiftModifier | Qt::ControlModifier | Qt::MetaModifier;
+			armed = mouse->button() == Qt::LeftButton && pressed.isValid() && !(mouse->modifiers() & several);
+			if (!armed)
+				return false;
+			/* The click waits for the release: a drag must not select the
+			 * row first (a selected verse goes straight to the screen). */
 			pressPos = mouse->position().toPoint();
-			/* Checked before the view changes the selection. */
-			wasSelected = pressed.isValid() && view->selectionModel() &&
-				      view->selectionModel()->isSelected(pressed);
-			armed = mouse->button() == Qt::LeftButton && pressed.isValid() &&
-				(!onlySelected || wasSelected);
+			deferredPress.reset(mouse->clone());
+			return true;
+		}
+		case QEvent::MouseButtonDblClick:
+		case QEvent::MouseButtonRelease:
+			if (armed) {
+				armed = false;
+				replayPress();
+			}
+			return false;
+		case QEvent::MouseMove: {
+			if (!armed)
+				return false;
+			auto *mouse = static_cast<QMouseEvent *>(event);
+			if ((mouse->position().toPoint() - pressPos).manhattanLength() >= QApplication::startDragDistance()) {
+				armed = false;
+				deferredPress.reset();
+				startDrag();
+			}
+			return true;
+		}
+		default:
 			return false;
 		}
-		if (event->type() == QEvent::MouseButtonRelease) {
-			armed = false;
-			return false;
-		}
-		if (event->type() != QEvent::MouseMove || !armed)
-			return false;
-		auto *mouse = static_cast<QMouseEvent *>(event);
-		if ((mouse->position().toPoint() - pressPos).manhattanLength() < QApplication::startDragDistance() * 2)
-			return onlySelected;
-		armed = false;
+	}
 
+private:
+	void replayPress()
+	{
+		if (!deferredPress)
+			return;
+		std::unique_ptr<QMouseEvent> press = std::move(deferredPress);
+		replaying = true;
+		QCoreApplication::sendEvent(view->viewport(), press.get());
+		replaying = false;
+	}
+
+	void startDrag()
+	{
+		/* A row of the selection carries the whole selection (several
+		 * verses); any other row is selected when it is dropped. */
+		const bool selected = view->selectionModel() && view->selectionModel()->isSelected(pressed);
 		auto *mime = new QMimeData();
 		mime->setData(QString::fromLatin1(WorshipDrag::MimeType), panel.toUtf8());
+		mime->setData(QString::fromLatin1(WorshipDrag::RowMimeType),
+			      QByteArray::number(selected ? -1 : pressed.row()));
 		auto *drag = new QDrag(view);
 		drag->setMimeData(mime);
 		const QPixmap label = dragLabel(pressed.data(Qt::DisplayRole).toString().section(QLatin1Char('\n'), 0, 0),
@@ -95,24 +126,20 @@ protected:
 		drag->setPixmap(label);
 		drag->setHotSpot(QPoint(12, (int)(label.height() / label.devicePixelRatio() / 2)));
 		drag->exec(Qt::CopyAction);
-		return true;
 	}
 
-private:
 	QAbstractItemView *view;
 	QString panel;
-	bool onlySelected;
 	bool armed = false;
-	bool wasSelected = false;
+	bool replaying = false;
+	std::unique_ptr<QMouseEvent> deferredPress;
 	QPersistentModelIndex pressed;
 	QPoint pressPos;
 };
 
 class DropTarget : public QObject {
 public:
-	DropTarget(QObject *parent, std::function<void(const QString &)> drop_) : QObject(parent), drop(std::move(drop_))
-	{
-	}
+	DropTarget(QObject *parent, WorshipDrag::DropHandler drop_) : QObject(parent), drop(std::move(drop_)) {}
 
 protected:
 	bool eventFilter(QObject *, QEvent *event) override
@@ -135,8 +162,23 @@ protected:
 			dropEvent->setDropAction(Qt::CopyAction);
 			dropEvent->accept();
 			const QString panel = QString::fromUtf8(dropEvent->mimeData()->data(type));
+			bool ok = false;
+			const int row = dropEvent->mimeData()
+						->data(QString::fromLatin1(WorshipDrag::RowMimeType))
+						.toInt(&ok);
+			QPointer<QAbstractItemView> view = qobject_cast<QAbstractItemView *>(dropEvent->source());
+			const std::function<void()> selectDragged = [view, row, ok]() {
+				if (!ok || row < 0 || !view || !view->model())
+					return;
+				const QModelIndex index = view->model()->index(row, 0, view->rootIndex());
+				if (!index.isValid())
+					return;
+				view->setCurrentIndex(index);
+				view->scrollTo(index);
+			};
 			/* After the drag has finished, so dialogs or focus changes are safe. */
-			QMetaObject::invokeMethod(this, [this, panel]() { drop(panel); }, Qt::QueuedConnection);
+			QMetaObject::invokeMethod(
+				this, [this, panel, selectDragged]() { drop(panel, selectDragged); }, Qt::QueuedConnection);
 			return true;
 		}
 		default:
@@ -145,20 +187,20 @@ protected:
 	}
 
 private:
-	std::function<void(const QString &)> drop;
+	WorshipDrag::DropHandler drop;
 };
 } // namespace
 
 namespace WorshipDrag {
 
-void EnableDrag(QAbstractItemView *view, const QString &panelObjectName, bool onlySelected)
+void EnableDrag(QAbstractItemView *view, const QString &panelObjectName)
 {
 	if (!view)
 		return;
-	view->viewport()->installEventFilter(new DragStarter(view, panelObjectName, onlySelected));
+	view->viewport()->installEventFilter(new DragStarter(view, panelObjectName));
 }
 
-void InstallDropTarget(QAbstractItemView *sourcesView, std::function<void(const QString &)> drop)
+void InstallDropTarget(QAbstractItemView *sourcesView, DropHandler drop)
 {
 	if (!sourcesView)
 		return;

@@ -121,6 +121,8 @@ SongsDock::SongsDock(const QString &objectName, const QString &title, QWidget *p
 	slidesList->setUniformItemSizes(true);
 	slidesList->setSelectionMode(QAbstractItemView::SingleSelection);
 	slidesList->installEventFilter(this);
+	WorshipDrag::EnableDrag(slidesList, objectName);
+	slidesList->setProperty("worshipArrowKeys", true);
 	slidesList->setToolTip(tr("Flechas o espacio: avanzar  |  C coro, P puente, 1-9 estrofa  |  L sin texto  |  B ocultar"));
 
 	auto *splitter = new QSplitter(Qt::Vertical, root);
@@ -133,8 +135,8 @@ SongsDock::SongsDock(const QString &objectName, const QString &title, QWidget *p
 	clearButton->setCheckable(true);
 	clearButton->setToolTip(tr("Deja solo el fondo en pantalla, sin la letra (tecla L)"));
 
-	auto *hint = new QLabel(tr("Doble clic en un canto o en una diapositiva para mostrarlo. "
-				   "Teclas: C coro, P puente, 1-9 estrofa."),
+	auto *hint = new QLabel(tr("Doble clic en un canto o en una diapositiva para mostrarlo; ← → avanzan. "
+				   "Teclas: C coro, P puente, 1-9 estrofa. Arrastralo a Fuentes para ponerlo en tu escena."),
 				root);
 	hint->setWordWrap(true);
 	idian::Utils::addClass(hint, "text-muted");

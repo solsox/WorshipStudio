@@ -1438,7 +1438,7 @@ private:
 
 	void UpdatePreviewProgramIndicators();
 	/* WorshipStudio: "Cantos en vivo" and the others as a source of the scene. */
-	void AddPanelSource(const QString &panel, bool useSelection);
+	void AddPanelSource(const QString &panel, bool useSelection, const std::function<void()> &selectDragged = {});
 
 private slots:
 	void EnablePreviewProgram();

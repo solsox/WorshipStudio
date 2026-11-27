@@ -38,6 +38,13 @@ public:
 	/* "Biblia", "Cantos"...: the panel whose content is on the projector (or
 	 * on screen), also inside the user's scenes ("Biblia en vivo"). */
 	QString activeSource() const;
+	/* Whether next/previous have a panel to drive. */
+	bool canDrive() const { return driven() != nullptr; }
+
+	/* The right and left arrows (and Page Down / Page Up of clickers) pass
+	 * the slide, verse or stanza on screen from anywhere in the window,
+	 * except while typing or moving sources in the preview. */
+	static void InstallArrowKeys();
 
 	/* Operator message for the stage display ("2 minutos", "Alargar"). */
 	void setStageMessage(const QString &message);
@@ -73,6 +80,7 @@ signals:
 private:
 	WorshipLive() = default;
 	void invoke(const char *method);
+	QObject *driven() const;
 
 	LiveState current;
 	QHash<QString, LiveState> states;

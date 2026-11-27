@@ -156,6 +156,8 @@ PresentationDock::PresentationDock(const QString &objectName, const QString &tit
 	slidesList->setUniformItemSizes(true);
 	slidesList->setSelectionMode(QAbstractItemView::SingleSelection);
 	slidesList->installEventFilter(this);
+	WorshipDrag::EnableDrag(slidesList, objectName);
+	slidesList->setProperty("worshipArrowKeys", true);
 
 	auto *splitter = new QSplitter(Qt::Vertical, root);
 	splitter->addWidget(decksList);
@@ -181,7 +183,7 @@ PresentationDock::PresentationDock(const QString &objectName, const QString &tit
 
 	auto *hint = new QLabel(tr("<b>1.</b> Elegí el archivo de la lista.  <b>2.</b> Doble clic en la diapositiva "
 				   "con la que empezás.  <b>3.</b> Avanzá con <b>Siguiente ▶</b> del Control en vivo, "
-				   "las flechas o el presentador inalámbrico."),
+				   "las flechas ← → o el presentador inalámbrico. Arrastrala a Fuentes para ponerla en tu escena."),
 				root);
 	hint->setTextFormat(Qt::RichText);
 	hint->setWordWrap(true);

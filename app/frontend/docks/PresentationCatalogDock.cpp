@@ -130,7 +130,8 @@ PresentationCatalogDock::PresentationCatalogDock(const QString &objectName, cons
 
 	stopButton = new QPushButton(tr("Detener audio"), root);
 
-	auto *hint = new QLabel(tr("Doble clic en un himno para mostrarlo. Con audio, la letra avanza sola."), root);
+	auto *hint = new QLabel(tr("Doble clic en un himno para mostrarlo; ← → avanzan. Con audio, la letra avanza sola. "
+				   "Arrastralo a Fuentes para ponerlo en tu escena."), root);
 	hint->setWordWrap(true);
 	idian::Utils::addClass(hint, "text-muted");
 

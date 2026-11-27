@@ -4,6 +4,18 @@
 #include <obs-frontend-api.h>
 #include <obs.hpp>
 
+#include <QAbstractSlider>
+#include <QAbstractSpinBox>
+#include <QApplication>
+#include <QComboBox>
+#include <QDialog>
+#include <QKeyEvent>
+#include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QTabBar>
+#include <QTableView>
+#include <QTextEdit>
+#include <QTreeView>
 #include <QVector>
 
 #include "moc_WorshipLive.cpp"
@@ -131,17 +143,95 @@ void WorshipLive::setService(const QStringList &items, int currentItem)
 	emit serviceChanged();
 }
 
-void WorshipLive::invoke(const char *method)
+QObject *WorshipLive::driven() const
 {
 	/* Next/previous drive the panel whose content people see; when nothing
 	 * of a panel is on screen, the last one used. */
 	QString source = activeSource();
 	if (source.isEmpty())
 		source = current.source;
+	return source.isEmpty() ? nullptr : targets.value(source).data();
+}
 
-	QObject *target = targets.value(source);
-	if (target)
+void WorshipLive::invoke(const char *method)
+{
+	if (QObject *target = driven())
 		QMetaObject::invokeMethod(target, method, Qt::QueuedConnection);
+}
+
+namespace {
+class ArrowKeys : public QObject {
+public:
+	using QObject::QObject;
+
+protected:
+	bool eventFilter(QObject *watched, QEvent *event) override
+	{
+		if (event->type() != QEvent::KeyPress)
+			return false;
+		/* Once per key press: the application sees it again for every
+		 * parent it is passed to. */
+		QWidget *focus = QApplication::focusWidget();
+		if (watched != (focus ? static_cast<QObject *>(focus) : QApplication::activeWindow()))
+			return false;
+		auto *key = static_cast<QKeyEvent *>(event);
+		if (key->modifiers() & ~Qt::KeypadModifier)
+			return false;
+		bool next;
+		switch (key->key()) {
+		case Qt::Key_Right:
+		case Qt::Key_PageDown:
+			next = true;
+			break;
+		case Qt::Key_Left:
+		case Qt::Key_PageUp:
+			next = false;
+			break;
+		default:
+			return false;
+		}
+		if (focus && !arrowsAreFree(focus))
+			return false;
+		WorshipLive &live = WorshipLive::instance();
+		if (!live.canDrive())
+			return false;
+		if (next)
+			live.next();
+		else
+			live.previous();
+		return true;
+	}
+
+private:
+	static bool arrowsAreFree(QWidget *focus)
+	{
+		/* Lists of slides that handle the arrows themselves (they also
+		 * start the selected song or presentation). */
+		if (focus->property("worshipArrowKeys").toBool())
+			return false;
+		/* Typing, numbers, sliders, tabs and trees use the arrows. */
+		if (qobject_cast<QLineEdit *>(focus) || qobject_cast<QTextEdit *>(focus) ||
+		    qobject_cast<QPlainTextEdit *>(focus) || qobject_cast<QAbstractSpinBox *>(focus) ||
+		    qobject_cast<QComboBox *>(focus) || qobject_cast<QAbstractSlider *>(focus) ||
+		    qobject_cast<QTabBar *>(focus) || qobject_cast<QTreeView *>(focus) ||
+		    qobject_cast<QTableView *>(focus))
+			return false;
+		/* The preview moves the selected sources with the arrows. */
+		if (focus->inherits("OBSBasicPreview"))
+			return false;
+		/* Settings, the song editor and other dialogs keep their keys. */
+		return !qobject_cast<QDialog *>(focus->window());
+	}
+};
+} // namespace
+
+void WorshipLive::InstallArrowKeys()
+{
+	static ArrowKeys *filter = nullptr;
+	if (filter || !qApp)
+		return;
+	filter = new ArrowKeys(qApp);
+	qApp->installEventFilter(filter);
 }
 
 void WorshipLive::next()

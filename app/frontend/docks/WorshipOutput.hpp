@@ -37,7 +37,9 @@ std::string Named(const char *baseName, const QString &slot);
 
 /* Shows the scene: in Studio Mode it goes to preview, otherwise to program.
  * With a separate room screen it goes to the room screen and the stream
- * keeps its own scene. The panel's "en vivo" scene always follows. */
+ * keeps its own scene. The panel's "en vivo" scene always follows; when the
+ * scene on screen already has it inside (dropped on Sources), that scene
+ * stays and the content changes inside it. */
 void ShowScene(obs_scene_t *scene);
 
 /* While alive, ShowScene only updates the "en vivo" scenes: content dropped
@@ -47,6 +49,7 @@ public:
 	SourceOnlyScope();
 	~SourceOnlyScope();
 };
+bool SourceOnlyActive();
 
 /* Scenes that always show what a panel is showing ("Cantos en vivo"), to
  * use as sources inside any scene. Empty for scenes of no panel. */

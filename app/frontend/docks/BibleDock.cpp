@@ -132,7 +132,7 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 	searchEdit->setClearButtonEnabled(true);
 
 	resultsList = new QListWidget(root);
-	WorshipDrag::EnableDrag(resultsList, objectName, true);
+	WorshipDrag::EnableDrag(resultsList, objectName);
 	resultsList->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	resultsList->setWordWrap(true);
 
@@ -180,8 +180,8 @@ BibleDock::BibleDock(const QString &objectName, const QString &title, const QStr
 	styleRow->addWidget(backgroundCombo, 1);
 	styleRow->addWidget(layoutCombo);
 
-	auto *hint = new QLabel(tr("Doble clic o Enter en un versiculo para mostrarlo. Selecciona varios con "
-				   "Mayus para mostrarlos juntos."),
+	auto *hint = new QLabel(tr("Doble clic o Enter en un versiculo para mostrarlo; las flechas ← → pasan al "
+				   "siguiente. Selecciona varios con Mayus. Arrastralo a Fuentes para ponerlo en tu escena."),
 				root);
 	hint->setWordWrap(true);
 	idian::Utils::addClass(hint, "text-muted");
@@ -941,8 +941,9 @@ void BibleDock::onSelectionChanged()
 	if (verses.isEmpty())
 		return;
 
-	/* While live, moving through the verses updates the screen immediately. */
-	if (live && !searching)
+	/* While live, moving through the verses updates the screen immediately
+	 * (not while a dropped verse is selected: it gets a copy of its own). */
+	if (live && !searching && !WorshipOutput::SourceOnlyActive())
 		project(verses);
 }
 
