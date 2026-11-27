@@ -1441,6 +1441,8 @@ private:
 	void AddPanelSource(const QString &panel, bool useSelection, const std::function<void()> &selectDragged = {});
 	/* "Gráficos en vivo" (name and urgent message) or "Cuenta regresiva en vivo". */
 	void AddGraphicsSource(bool countdown);
+	/* An image or looping video of Mis fondos at the back of the scene. */
+	void AddBackgroundSource(const QString &path, const QString &name);
 
 private slots:
 	void EnablePreviewProgram();

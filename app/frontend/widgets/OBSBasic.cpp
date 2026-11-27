@@ -2509,6 +2509,54 @@ void OBSBasic::AddPanelSource(const QString &panel, bool useSelection, const std
 		     .arg(followerName));
 }
 
+/* An image or looping video of Mis fondos, full screen at the back of the
+ * scene being edited (or of the user's last scene). */
+void OBSBasic::AddBackgroundSource(const QString &path, const QString &name)
+{
+	const auto tell = [](const QString &text) { QToolTip::showText(QCursor::pos(), text); };
+	const bool studio = obs_frontend_preview_program_mode_active();
+	OBSSourceAutoRelease current = studio ? obs_frontend_get_current_preview_scene() : obs_frontend_get_current_scene();
+	OBSSource target = current.Get();
+	if (target && WorshipOutput::IsInternalScene(QT_UTF8(obs_source_get_name(target))))
+		target = WorshipOutput::LastUserScene();
+	obs_scene_t *scene = target ? obs_scene_from_source(target) : nullptr;
+	if (!scene || path.isEmpty()) {
+		tell(QCoreApplication::translate("WorshipStudio", "Primero crea una escena en el panel Escenas."));
+		return;
+	}
+
+	const bool video = BackgroundLibrary::IsVideo(path);
+	OBSDataAutoRelease settings = obs_data_create();
+	if (video) {
+		obs_data_set_bool(settings, "is_local_file", true);
+		obs_data_set_string(settings, "local_file", QT_TO_UTF8(path));
+		obs_data_set_bool(settings, "looping", true);
+		obs_data_set_bool(settings, "restart_on_activate", false);
+	} else {
+		obs_data_set_string(settings, "file", QT_TO_UTF8(path));
+	}
+	/* A free name: "Fondo - Aurora viva", "Fondo - Aurora viva 2"... */
+	const QString base = QCoreApplication::translate("WorshipStudio", "Fondo - %1").arg(name);
+	QString sourceName = base;
+	for (int i = 2;; ++i) {
+		OBSSourceAutoRelease taken = obs_get_source_by_name(QT_TO_UTF8(sourceName));
+		if (!taken)
+			break;
+		sourceName = QStringLiteral("%1 %2").arg(base).arg(i);
+	}
+	OBSSourceAutoRelease source =
+		obs_source_create(video ? "ffmpeg_source" : "image_source", QT_TO_UTF8(sourceName), settings, nullptr);
+	if (!source)
+		return;
+	if (video)
+		obs_source_set_muted(source, true);
+	obs_sceneitem_t *item = obs_scene_add(scene, source);
+	WorshipOutput::FitItem(scene, source, 0.0f, 0.0f, 1.0f, 1.0f, OBS_ALIGN_CENTER, OBS_BOUNDS_SCALE_OUTER);
+	if (item)
+		obs_sceneitem_set_order(item, OBS_ORDER_MOVE_BOTTOM);
+	tell(QCoreApplication::translate("WorshipStudio", "Listo: \"%1\" quedó detrás de todo en esta escena.").arg(sourceName));
+}
+
 /* The graphics of the En vivo panel as a source of the scene being edited,
  * to place and resize like a camera; they show when the panel shows them. */
 void OBSBasic::AddGraphicsSource(bool countdown)

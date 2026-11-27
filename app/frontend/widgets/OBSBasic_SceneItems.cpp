@@ -29,6 +29,9 @@
 
 #include <qt-wrappers.hpp>
 
+#include <docks/BackgroundLibrary.hpp>
+
+#include <QFileInfo>
 #include <QWidgetAction>
 
 #include <sstream>
@@ -853,6 +856,20 @@ void OBSBasic::on_actionAddSource_triggered()
 			       [this, panel]() { AddPanelSource(panel, false); });
 	}
 	menu.addSeparator();
+	/* Backgrounds of Mis fondos, still or moving, behind everything. */
+	QMenu *backgrounds = menu.addMenu(QCoreApplication::translate("WorshipStudio", "Fondo (imagen o en movimiento)"));
+	for (const BackgroundLibrary::Item &item : BackgroundLibrary::Items(true)) {
+		const QString path = item.path;
+		const QString name = item.name;
+		backgrounds->addAction(BackgroundLibrary::Thumbnail(path), item.video ? name + QStringLiteral("  ▶") : name, this,
+				       [this, path, name]() { AddBackgroundSource(path, name); });
+	}
+	backgrounds->addSeparator();
+	backgrounds->addAction(QCoreApplication::translate("WorshipStudio", "Agregar mis imágenes o videos..."), this, [this]() {
+		const QStringList added = BackgroundLibrary::AddWithDialog(this, true);
+		if (!added.isEmpty())
+			AddBackgroundSource(added.first(), QFileInfo(added.first()).completeBaseName());
+	});
 	menu.addAction(QCoreApplication::translate("WorshipStudio", "Rótulo de nombre y mensaje urgente"), this,
 		       [this]() { AddGraphicsSource(false); });
 	menu.addAction(QCoreApplication::translate("WorshipStudio", "Cuenta regresiva"), this,

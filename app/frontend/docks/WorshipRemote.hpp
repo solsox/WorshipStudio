@@ -44,5 +44,7 @@ private:
 	QByteArray stateJson() const;
 	void showScene(const QString &name);
 	void toggleSource(const QString &name);
+	/* One step up or down in the scene, like the arrows of Sources. */
+	void moveSource(const QString &name, bool up);
 	void toggleMute(const QString &name);
 };

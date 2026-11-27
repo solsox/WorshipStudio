@@ -288,10 +288,19 @@ LiveToolsDock::LiveToolsDock(const QString &objectName, const QString &title, QW
 	previewLabel = new QLabel(root);
 	previewLabel->setWordWrap(true);
 	previewLabel->setTextFormat(Qt::RichText);
+	/* Fixed heights: the buttons must not move as the slide text changes. */
+	for (QLabel *label : {programLabel, previewLabel}) {
+		label->setWordWrap(false);
+		label->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
+	}
 	nowText = new QLabel(root);
 	nowText->setWordWrap(true);
+	nowText->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+	nowText->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
+	nowText->setFixedHeight(nowText->fontMetrics().lineSpacing() * 3 + 4);
 	nextText = new QLabel(root);
-	nextText->setWordWrap(true);
+	nextText->setWordWrap(false);
+	nextText->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
 	idian::Utils::addClass(nextText, "text-muted");
 
 	goLiveButton = new QPushButton(tr("Pasar a pantalla  ➜"), root);
@@ -303,10 +312,13 @@ LiveToolsDock::LiveToolsDock(const QString &objectName, const QString &title, QW
 	auto *nextButton = new QPushButton(tr("Siguiente  ▶"), root);
 	hideButton = new QPushButton(tr("Ocultar"), root);
 	hideButton->setToolTip(tr("Deja la pantalla sin contenido sin perder el lugar"));
+	/* Fixed shares of the row: "Ocultar" / "Mostrar" must not push the others. */
 	auto *nowRow = new QHBoxLayout();
-	nowRow->addWidget(previousButton);
-	nowRow->addWidget(nextButton, 1);
-	nowRow->addWidget(hideButton);
+	for (QPushButton *button : {previousButton, nextButton, hideButton})
+		button->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
+	nowRow->addWidget(previousButton, 2);
+	nowRow->addWidget(nextButton, 3);
+	nowRow->addWidget(hideButton, 2);
 	/* Projector and stream separately (Herramientas > Proyector y transmisión). */
 	roomMonitor = ScreensDialog::CreateRoomMonitor(root);
 	roomMonitor->setToolTip(tr("Lo que ve la iglesia en el proyector"));
@@ -552,6 +564,7 @@ void LiveToolsDock::onLiveChanged()
 {
 	const LiveState state = WorshipLive::instance().state();
 	nowText->setText(state.current);
+	nowText->setToolTip(state.current);
 	nextText->setText(state.next.isEmpty()
 				  ? QString()
 				  : tr("Sigue: %1").arg(QString(state.next).replace(QLatin1Char('\n'), QStringLiteral(" / "))));

@@ -114,6 +114,8 @@ const char *const PhoneTexts[] = {
 	QT_TRANSLATE_NOOP("WorshipStudio", "Más"),
 	QT_TRANSLATE_NOOP("WorshipStudio", "No hay escenas propias todavía"),
 	QT_TRANSLATE_NOOP("WorshipStudio", "Visible"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Subir"),
+	QT_TRANSLATE_NOOP("WorshipStudio", "Bajar"),
 	QT_TRANSLATE_NOOP("WorshipStudio", "Oculta"),
 	QT_TRANSLATE_NOOP("WorshipStudio", "Sin fuentes"),
 	QT_TRANSLATE_NOOP("WorshipStudio", "No hay cantos"),
@@ -139,6 +141,9 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 #current{font-size:21px;font-weight:600;white-space:pre-line;margin-top:8px;min-height:2.4em}
 #next{color:var(--m);white-space:pre-line}
 .nav{display:grid;grid-template-columns:1fr 1.6fr;gap:10px;margin-bottom:10px}
+#title,#section{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:1.3em}
+#current{height:5.4em;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4}
+.pill.ord{padding:9px 10px;min-width:38px}
 button{font:600 17px/1.1 inherit;font-family:inherit;border:1px solid var(--line);border-radius:14px;padding:18px 10px;color:var(--t);background:var(--s2)}
 button:active{transform:scale(.98)}.primary{background:var(--a);border-color:var(--a);color:var(--on);font-size:20px}
 .go{width:100%;background:var(--ok);border-color:var(--ok);color:#fff;margin-bottom:10px}
@@ -224,7 +229,7 @@ $('next').textContent=s.next||'—';$('hide').classList.toggle('on',!!s.hidden);
 const it=s.service||[];$('svc').style.display=it.length?'block':'none';
 $('items').innerHTML=it.map((t,i)=>'<li class="'+(i===s.serviceIndex?'cur':'')+'" onclick="act(\'item\',{n:'+i+'})"><span class="n">'+(i+1)+'</span><span class="grow">'+esc(t)+'</span></li>').join('');
 $('scenes').innerHTML=(s.scenes||[]).map(n=>'<li class="'+(n===s.program?'cur':'')+'" onclick="act(\'escena\',{nombre:'+JSON.stringify(n).replace(/"/g,'&quot;')+'})"><span class="grow">'+esc(n)+'</span>'+(n===s.program?'<span class="tag p">'+t(sep?'AL AIRE':'EN PANTALLA')+'</span>':n===s.preview?'<span class="tag w">'+t('EN ESPERA')+'</span>':'')+'</li>').join('')||'<li>'+t('No hay escenas propias todavía')+'</li>';
-$('sources').innerHTML=(s.sources||[]).map(f=>{const n=JSON.stringify(f.nombre).replace(/"/g,'&quot;');return '<li><span class="grow">'+esc(friendly(f.nombre))+'</span>'+(f.audio?'<button class="pill'+(f.silencio?' off':'')+'" onclick="act(\'silencio\',{nombre:'+n+'})">'+(f.silencio?'🔇':'🔊')+'</button>':'')+'<button class="pill'+(f.visible?'':' off')+'" onclick="act(\'fuente\',{nombre:'+n+'})">'+t(f.visible?'Visible':'Oculta')+'</button></li>';}).join('')||'<li>'+t('Sin fuentes')+'</li>';
+$('sources').innerHTML=(s.sources||[]).map(f=>{const n=JSON.stringify(f.nombre).replace(/"/g,'&quot;');return '<li><span class="grow">'+esc(friendly(f.nombre))+'</span>'+(f.audio?'<button class="pill'+(f.silencio?' off':'')+'" onclick="act(\'silencio\',{nombre:'+n+'})">'+(f.silencio?'🔇':'🔊')+'</button>':'')+'<button class="pill'+(f.visible?'':' off')+'" onclick="act(\'fuente\',{nombre:'+n+'})">'+t(f.visible?'Visible':'Oculta')+'</button><button class="pill ord" aria-label="'+t('Subir')+'" onclick="act(\'subir\',{nombre:'+n+'})">▲</button><button class="pill ord" aria-label="'+t('Bajar')+'" onclick="act(\'bajar\',{nombre:'+n+'})">▼</button></li>';}).join('')||'<li>'+t('Sin fuentes')+'</li>';
 $('stream').classList.toggle('rec',!!s.streaming);$('stream').textContent=t(s.streaming?'Detener transmisión':'Transmitir');
 $('record').classList.toggle('rec',!!s.recording);$('record').textContent=t(s.recording?'Detener grabación':'Grabar');
 $('status').innerHTML='<b></b>'+t('Conectado');}
@@ -444,6 +449,8 @@ QByteArray WorshipRemote::respond(const QByteArray &method, const QString &targe
 		}
 		else if (action == QStringLiteral("fuente"))
 			toggleSource(name);
+		else if (action == QStringLiteral("subir") || action == QStringLiteral("bajar"))
+			moveSource(name, action == QStringLiteral("subir"));
 		else if (action == QStringLiteral("silencio"))
 			toggleMute(name);
 		else if (action == QStringLiteral("himno"))
@@ -469,7 +476,7 @@ QByteArray WorshipRemote::respond(const QByteArray &method, const QString &targe
 								: nullptr)
 						     : query.queryItemValue(QStringLiteral("cual")) == QStringLiteral("proyector")
 							       ? obs_get_source_by_name(WorshipOutput::RoomScreenScene)
-							       : obs_frontend_get_current_scene();
+							       : obs_get_output_source(0);
 		QImage image = WorshipOutput::RenderSource(scene, 480, 270);
 		if (image.isNull()) {
 			image = QImage(480, 270, QImage::Format_RGB32);
@@ -503,6 +510,34 @@ obs_source_t *programSource()
 {
 	return obs_frontend_get_current_scene();
 }
+
+/* The scene really on air. In Studio Mode OBS puts a copy of the scene on
+ * air (the original waits in the preview); the transition knows which. */
+obs_source_t *onAirSource()
+{
+	OBSSourceAutoRelease output = obs_get_output_source(0);
+	if (output && obs_source_get_type(output) == OBS_SOURCE_TYPE_TRANSITION) {
+		obs_source_t *active = obs_transition_get_active_source(output);
+		if (active && obs_scene_from_source(active))
+			return active;
+		obs_source_release(active);
+	}
+	return obs_frontend_get_current_scene();
+}
+
+/* The item of `name` on air and in the original scene, so the phone, the
+ * screen and the PC agree. */
+QVector<obs_sceneitem_t *> itemsNamed(const QString &name, obs_source_t *onAir, obs_source_t *program)
+{
+	QVector<obs_sceneitem_t *> found;
+	for (obs_source_t *source : {onAir, program}) {
+		obs_scene_t *scene = source ? obs_scene_from_source(source) : nullptr;
+		obs_sceneitem_t *item = scene ? obs_scene_find_source(scene, QT_TO_UTF8(name)) : nullptr;
+		if (item && !found.contains(item))
+			found << item;
+	}
+	return found;
+}
 } // namespace
 
 void WorshipRemote::showScene(const QString &name)
@@ -518,10 +553,22 @@ void WorshipRemote::showScene(const QString &name)
 
 void WorshipRemote::toggleSource(const QString &name)
 {
+	OBSSourceAutoRelease onAir = onAirSource();
 	OBSSourceAutoRelease program = programSource();
-	obs_scene_t *scene = program ? obs_scene_from_source(program) : nullptr;
-	if (obs_sceneitem_t *item = scene ? obs_scene_find_source(scene, QT_TO_UTF8(name)) : nullptr)
-		obs_sceneitem_set_visible(item, !obs_sceneitem_visible(item));
+	const QVector<obs_sceneitem_t *> items = itemsNamed(name, onAir, program);
+	if (items.isEmpty())
+		return;
+	const bool visible = !obs_sceneitem_visible(items.first());
+	for (obs_sceneitem_t *item : items)
+		obs_sceneitem_set_visible(item, visible);
+}
+
+void WorshipRemote::moveSource(const QString &name, bool up)
+{
+	OBSSourceAutoRelease onAir = onAirSource();
+	OBSSourceAutoRelease program = programSource();
+	for (obs_sceneitem_t *item : itemsNamed(name, onAir, program))
+		obs_sceneitem_set_order(item, up ? OBS_ORDER_MOVE_UP : OBS_ORDER_MOVE_DOWN);
 }
 
 void WorshipRemote::toggleMute(const QString &name)
@@ -577,7 +624,8 @@ QByteArray WorshipRemote::stateJson() const
 
 	/* Sources of what is on screen, to show/hide them or mute them. */
 	QJsonArray sources;
-	if (obs_scene_t *scene = program ? obs_scene_from_source(program) : nullptr) {
+	OBSSourceAutoRelease onAir = onAirSource();
+	if (obs_scene_t *scene = onAir ? obs_scene_from_source(onAir) : nullptr) {
 		obs_scene_enum_items(
 			scene,
 			[](obs_scene_t *, obs_sceneitem_t *item, void *data) {
