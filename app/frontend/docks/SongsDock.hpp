@@ -21,6 +21,10 @@ class SongsDock : public OBSDock {
 public:
 	SongsDock(const QString &objectName, const QString &title, QWidget *parent = nullptr);
 
+	/* The song chosen in the list (for the service order); empty if none. */
+	QString selectedSongId() const { return selectedSong >= 0 && selectedSong < songs.size() ? songs.at(selectedSong).id : QString(); }
+	QString selectedSongTitle() const { return selectedSong >= 0 && selectedSong < songs.size() ? songs.at(selectedSong).title : QString(); }
+
 	/* Used by the self test: saves a song, selects and projects it. */
 	bool projectNewSong(const QString &title, const QString &text, int preset);
 	void deleteSong(const QString &title);

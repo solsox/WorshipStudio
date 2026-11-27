@@ -87,8 +87,14 @@ public:
 		auto result = std::make_shared<Part>();
 		result->path = path;
 		const QByteArray bytes = zip.fileData(path);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
 		if (bytes.isEmpty() || !result->xml.setContent(bytes, QDomDocument::ParseOption::UseNamespaceProcessing))
 			return nullptr;
+#else
+		/* Ubuntu 24.04 ships Qt 6.4, before ParseOption. */
+		if (bytes.isEmpty() || !result->xml.setContent(bytes, true))
+			return nullptr;
+#endif
 		const QString relsPath = path.section(QLatin1Char('/'), 0, -2) + QStringLiteral("/_rels/") +
 					 path.section(QLatin1Char('/'), -1) + QStringLiteral(".rels");
 		QDomDocument rels;

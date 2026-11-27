@@ -842,6 +842,12 @@ QString PresentationDock::titleFor(const QString &key)
 	return QFileInfo(key).fileName();
 }
 
+QString PresentationDock::selectedDeckKey() const
+{
+	const QListWidgetItem *item = decksList->currentItem();
+	return item ? item->data(Qt::UserRole).toString() : deck.key;
+}
+
 bool PresentationDock::useAsSource()
 {
 	if (decksList->currentItem())

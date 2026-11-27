@@ -89,7 +89,12 @@ void WorshipLayout::filterSources()
 
 void WorshipLayout::restore()
 {
-	if (WorshipOutput::ConfigString(ConfigLayoutVersion) != QString::fromLatin1(LayoutVersion)) {
+	/* A panel left floating (Orden del culto or En vivo over the window)
+	 * is easy to lose: the app always opens with them in their column. */
+	bool floating = liveTools && liveTools->isFloating();
+	for (const QPointer<QDockWidget> &dock : content)
+		floating = floating || (dock && dock->isFloating());
+	if (floating || WorshipOutput::ConfigString(ConfigLayoutVersion) != QString::fromLatin1(LayoutVersion)) {
 		applyLayout();
 		WorshipOutput::SetConfigString(ConfigLayoutVersion, QString::fromLatin1(LayoutVersion));
 	}

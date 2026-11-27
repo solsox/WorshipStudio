@@ -321,7 +321,7 @@ QString OnAirSceneName()
 bool IsInternalScene(const QString &name)
 {
 	return name.startsWith(QStringLiteral("WS ")) || name == QLatin1String(RoomScreenScene) ||
-	       FollowerNames().contains(name) || name == QLatin1String(GraphicsScene);
+	       FollowerNames().contains(name) || name == QString::fromUtf8(GraphicsScene);
 }
 
 void RememberUserScene(obs_source_t *scene)

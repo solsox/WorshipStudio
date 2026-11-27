@@ -31,6 +31,9 @@ class PresentationDock : public OBSDock {
 public:
 	PresentationDock(const QString &objectName, const QString &title, QWidget *parent = nullptr);
 
+	/* File of the presentation chosen in the list (for the service order). */
+	QString selectedDeckKey() const;
+
 	/* Used by the self test. */
 	void openFiles(const QStringList &paths);
 	bool isConverting() const;

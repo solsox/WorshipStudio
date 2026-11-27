@@ -43,6 +43,8 @@ public:
 
 	/* Searches and projects in one step (used by the self test). */
 	bool projectQuery(const QString &query, int layout);
+	/* "Juan 3:16-18" for the selected verses (for the service order). */
+	QString selectedReference() const { return referenceLabel(selectedVerses()); }
 	/* 0 full screen, 1 lower third (as chosen in the dock). */
 	int layoutIndex() const;
 	bool selectVersion(const QString &abbrev);

@@ -906,6 +906,33 @@ struct SelfTest {
 		add(800, [=]() {
 			check(service->currentItem() == 2, QStringLiteral("orden del culto: anuncio pedido desde el celular"));
 			capture(songs->outputScene(), QStringLiteral("envivo-orden-anuncio"));
+
+			/* Planner: files of earlier versions, and the new fields and kinds. */
+			const ServiceItem old = ServiceItem::fromJson(QJsonObject{{QStringLiteral("kind"), 1},
+										  {QStringLiteral("title"), QStringLiteral("Viejo")},
+										  {QStringLiteral("value"), QStringLiteral("x")}});
+			check(old.kind == ServiceItem::Song && old.minutes == ServiceItem::defaultMinutes(ServiceItem::Song) &&
+				      old.person.isEmpty(),
+			      QStringLiteral("planificador: un archivo anterior abre con duración por defecto"));
+			ServiceItem prayer;
+			prayer.kind = ServiceItem::Prayer;
+			prayer.title = QStringLiteral("Oración");
+			prayer.value = QStringLiteral("Oremos juntos");
+			prayer.minutes = 7;
+			prayer.person = QStringLiteral("Ana");
+			prayer.notes = QStringLiteral("Pedir por los enfermos");
+			const ServiceItem back = ServiceItem::fromJson(prayer.toJson());
+			check(back.kind == ServiceItem::Prayer && back.minutes == 7 && back.person == prayer.person &&
+				      back.notes == prayer.notes,
+			      QStringLiteral("planificador: guarda duración, responsable y notas"));
+			ServiceItem video;
+			video.kind = ServiceItem::Video;
+			video.value = QStringLiteral("/no/existe/video.mp4");
+			service->setItems({prayer, video});
+			check(service->activate(0) && WorshipLive::instance().state().current.contains(QStringLiteral("Oremos")),
+			      QStringLiteral("planificador: la oración muestra su texto"));
+			check(!service->activate(1), QStringLiteral("planificador: un video que no existe no se muestra"));
+			service->setItems({});
 			liveTools->stopCountdown();
 			WorshipLive::instance().setStageMessage(QString());
 			WorshipRemote *remote = liveTools->remote();
@@ -1440,6 +1467,22 @@ struct SelfTest {
 				check(window && grabWithScreens(window).save(path), QStringLiteral("captura de la interfaz %1").arg(path));
 			});
 		}
+		/* The folding sections of En vivo, one of them on air. */
+		add(300, [=]() {
+			liveTools->showName(QStringLiteral("Pr. Daniel Gómez"), QStringLiteral("Mensaje"));
+			QWidget *header = liveTools->findChild<QWidget *>(QStringLiteral("liveCountdown"));
+			for (QWidget *parent = header ? header->parentWidget() : nullptr; parent; parent = parent->parentWidget()) {
+				if (auto *scroll = qobject_cast<QScrollArea *>(parent)) {
+					scroll->ensureWidgetVisible(header, 0, 200);
+					break;
+				}
+			}
+		});
+		add(500, [=]() {
+			const QString path = outDir.absoluteFilePath(QStringLiteral("interfaz-envivo-secciones.png"));
+			check(liveTools->grab().save(path), QStringLiteral("captura de las secciones de En vivo"));
+			liveTools->hideName();
+		});
 		add(200, [=]() {
 			songs->deleteSong(QStringLiteral("Cantad al Señor"));
 			obs_frontend_set_preview_program_mode(*studioWas);

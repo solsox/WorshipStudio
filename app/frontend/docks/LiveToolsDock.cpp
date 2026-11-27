@@ -43,7 +43,10 @@
 #include <QSpinBox>
 #include <QTimeEdit>
 #include <QTimer>
-#include <QToolButton>
+#include <QAbstractButton>
+#include <QPainter>
+#include <QPainterPath>
+#include <QVariantAnimation>
 #include <QVBoxLayout>
 
 #include "moc_LiveToolsDock.cpp"
@@ -76,40 +79,147 @@ QLabel *heading(const QString &text, QWidget *parent)
 	return label;
 }
 
+/* Heading of a section that folds: a thin chevron that turns as it opens, the
+ * title, a soft hover and an "En pantalla" tag while its content is on air. */
+class FoldHeader : public QAbstractButton {
+public:
+	explicit FoldHeader(const QString &title, QWidget *parent) : QAbstractButton(parent)
+	{
+		setText(title);
+		setCheckable(true);
+		setCursor(Qt::PointingHandCursor);
+		setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+		setAttribute(Qt::WA_Hover);
+		turn.setDuration(180);
+		turn.setEasingCurve(QEasingCurve::OutCubic);
+		QObject::connect(&turn, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+			angle = value.toReal();
+			update();
+		});
+		QObject::connect(this, &QAbstractButton::toggled, this, [this](bool open) {
+			turn.stop();
+			turn.setStartValue(angle);
+			turn.setEndValue(open ? 90.0 : 0.0);
+			turn.start();
+		});
+	}
+
+	void setOpenNow(bool open)
+	{
+		QSignalBlocker blocker(this);
+		setChecked(open);
+		angle = open ? 90.0 : 0.0;
+		update();
+	}
+
+	void setOnAir(bool on)
+	{
+		onAir = on;
+		update();
+	}
+
+	QSize sizeHint() const override { return QSize(200, fontMetrics().height() + 22); }
+
+protected:
+	void paintEvent(QPaintEvent *) override
+	{
+		QPainter painter(this);
+		painter.setRenderHint(QPainter::Antialiasing);
+		const QColor ink = palette().color(QPalette::WindowText);
+		const QRectF area = QRectF(rect()).adjusted(0.5, 6.5, -0.5, -1.5);
+
+		/* Divider above every section. */
+		QColor line = ink;
+		line.setAlphaF(0.10);
+		painter.setPen(QPen(line, 1.0));
+		painter.drawLine(QPointF(area.left() + 4, 1.5), QPointF(area.right() - 4, 1.5));
+
+		if (underMouse() || hasFocus()) {
+			QColor hover = ink;
+			hover.setAlphaF(isDown() ? 0.10 : 0.06);
+			painter.setPen(Qt::NoPen);
+			painter.setBrush(hover);
+			painter.drawRoundedRect(area, 10, 10);
+		}
+
+		/* Chevron: points right when folded, down when open. */
+		const QPointF center(area.left() + 16, area.center().y());
+		QColor stroke = ink;
+		stroke.setAlphaF(0.65);
+		painter.save();
+		painter.translate(center);
+		painter.rotate(angle);
+		painter.setPen(QPen(stroke, 1.7, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+		painter.setBrush(Qt::NoBrush);
+		QPainterPath chevron;
+		chevron.moveTo(-2.0, -4.5);
+		chevron.lineTo(2.5, 0.0);
+		chevron.lineTo(-2.0, 4.5);
+		painter.drawPath(chevron);
+		painter.restore();
+
+		QFont titleFont = font();
+		titleFont.setWeight(QFont::DemiBold);
+		painter.setFont(titleFont);
+		painter.setPen(ink);
+		QRectF textArea = area.adjusted(32, 0, -10, 0);
+
+		if (onAir) {
+			QFont tagFont = font();
+			tagFont.setPointSizeF(tagFont.pointSizeF() * 0.82);
+			tagFont.setWeight(QFont::DemiBold);
+			const QString tag = QCoreApplication::translate("WorshipStudio", "En pantalla");
+			const QFontMetricsF metrics(tagFont);
+			const qreal width = metrics.horizontalAdvance(tag) + 26;
+			const QRectF pill(area.right() - width - 6, area.center().y() - metrics.height() / 2 - 3, width,
+					  metrics.height() + 6);
+			const QColor green(0x34, 0xC7, 0x59);
+			QColor fill = green;
+			fill.setAlphaF(0.16);
+			painter.setPen(Qt::NoPen);
+			painter.setBrush(fill);
+			painter.drawRoundedRect(pill, pill.height() / 2, pill.height() / 2);
+			painter.setBrush(green);
+			painter.drawEllipse(QPointF(pill.left() + 10, pill.center().y()), 3, 3);
+			painter.setPen(green);
+			painter.setFont(tagFont);
+			painter.drawText(pill.adjusted(17, 0, -6, 0), Qt::AlignVCenter | Qt::AlignLeft, tag);
+			painter.setFont(titleFont);
+			painter.setPen(ink);
+			textArea.setRight(pill.left() - 8);
+		}
+		painter.drawText(textArea, Qt::AlignVCenter | Qt::AlignLeft,
+				 QFontMetricsF(titleFont).elidedText(text(), Qt::ElideRight, textArea.width()));
+	}
+
+private:
+	QVariantAnimation turn;
+	qreal angle = 0.0;
+	bool onAir = false;
+};
+
 /* A heading that folds its section so the panel stays short; how the user
  * left it is remembered. Returns the body to fill. */
 QWidget *foldable(const QString &title, const char *configKey, QVBoxLayout *layout, QWidget *parent,
-		  QToolButton **headerOut)
+		  QAbstractButton **headerOut)
 {
-	auto *header = new QToolButton(parent);
+	auto *header = new FoldHeader(title, parent);
 	header->setObjectName(QString::fromLatin1(configKey));
-	header->setProperty("foldTitle", title);
-	header->setText(title);
-	header->setCheckable(true);
-	header->setAutoRaise(true);
-	header->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-	header->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-	header->setCursor(Qt::PointingHandCursor);
 	header->setToolTip(QCoreApplication::translate("WorshipStudio", "Mostrar u ocultar esta sección"));
-	idian::Utils::addClass(header, "text-bold");
-	header->setStyleSheet(QStringLiteral("QToolButton { text-align: left; padding: 10px 0 2px 0; border: none; }"));
 
 	auto *body = new QWidget(parent);
 	auto *bodyLayout = new QVBoxLayout(body);
-	bodyLayout->setContentsMargins(0, 0, 0, 0);
+	bodyLayout->setContentsMargins(4, 2, 4, 8);
 	bodyLayout->setSpacing(6);
 
 	const QString key = QStringLiteral("LiveOpen_%1").arg(QString::fromLatin1(configKey));
-	const auto apply = [header, body, key](bool open) {
-		header->setArrowType(open ? Qt::DownArrow : Qt::RightArrow);
-		body->setVisible(open);
-		WorshipOutput::SetConfigString(QT_TO_UTF8(key), open ? QStringLiteral("1") : QStringLiteral("0"));
-	};
 	const bool open = WorshipOutput::ConfigString(QT_TO_UTF8(key)) == QStringLiteral("1");
-	header->setChecked(open);
-	header->setArrowType(open ? Qt::DownArrow : Qt::RightArrow);
+	header->setOpenNow(open);
 	body->setVisible(open);
-	QObject::connect(header, &QToolButton::toggled, header, apply);
+	QObject::connect(header, &QAbstractButton::toggled, body, [body, key](bool nowOpen) {
+		body->setVisible(nowOpen);
+		WorshipOutput::SetConfigString(QT_TO_UTF8(key), nowOpen ? QStringLiteral("1") : QStringLiteral("0"));
+	});
 
 	layout->addWidget(header);
 	layout->addWidget(body);
@@ -119,12 +229,10 @@ QWidget *foldable(const QString &title, const char *configKey, QVBoxLayout *layo
 }
 
 /* A folded section says when its content is on screen. */
-void markOnAir(QToolButton *header, bool onAir)
+void markOnAir(QAbstractButton *header, bool onAir)
 {
-	if (!header)
-		return;
-	const QString title = header->property("foldTitle").toString();
-	header->setText(onAir ? title + QCoreApplication::translate("WorshipStudio", "  ·  en pantalla") : title);
+	if (auto *fold = dynamic_cast<FoldHeader *>(header))
+		fold->setOnAir(onAir);
 }
 
 QString formatSeconds(qint64 seconds)
@@ -275,7 +383,7 @@ LiveToolsDock::LiveToolsDock(const QString &objectName, const QString &title, QW
 	countdownLayout->addWidget(countdownButton);
 
 	/* --- Name lower third --------------------------------------------- */
-	QToolButton *nameHeader = nullptr;
+	QAbstractButton *nameHeader = nullptr;
 	auto *nameLayout =
 		static_cast<QVBoxLayout *>(foldable(tr("Rotulo de nombre"), "liveName", layout, root, &nameHeader)->layout());
 	nameEdit = new QLineEdit(root);
@@ -290,7 +398,7 @@ LiveToolsDock::LiveToolsDock(const QString &objectName, const QString &title, QW
 	connect(nameButton, &QPushButton::toggled, this, [nameHeader](bool on) { markOnAir(nameHeader, on); });
 
 	/* --- Urgent message ----------------------------------------------- */
-	QToolButton *messageHeader = nullptr;
+	QAbstractButton *messageHeader = nullptr;
 	auto *messageLayout = static_cast<QVBoxLayout *>(
 		foldable(tr("Mensaje urgente"), "liveMessage", layout, root, &messageHeader)->layout());
 	messageEdit = new QLineEdit(root);

@@ -37,6 +37,8 @@ public:
 	obs_scene_t *outputScene() const { return scene; }
 	void stop() { onStopClicked(); }
 	int hymnCount() const { return (int)allEntries.size(); }
+	/* Number of the hymn chosen in the list (for the service order); 0 if none. */
+	int selectedHymnNumber() const { return selectedEntry >= 0 && selectedEntry < allEntries.size() ? allEntries.at(selectedEntry).number : 0; }
 	/* Switches edition and, if given, points it at a folder. Returns the previous folder. */
 	QString useEdition(int editionIndex, const QString &root);
 
