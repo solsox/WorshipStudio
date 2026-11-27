@@ -11,6 +11,10 @@
 #ifndef OutputDir
   #define OutputDir "..\..\dist"
 #endif
+; Microsoft Visual C++ runtime installer, downloaded by the build (https://aka.ms/vc14/vc_redist.x64.exe).
+#ifndef VCRedist
+  #define VCRedist "vc_redist.x64.exe"
+#endif
 
 [Setup]
 AppId={{6E7C3B1A-2F4D-4B8E-9C1A-57D2E0A9B3F4}
@@ -73,6 +77,7 @@ Name: "desktopicon"; Description: "{cm:Desktop}"
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#VCRedist}"; DestDir: "{tmp}"; DestName: "vc_redist.x64.exe"; Flags: deleteafterinstall; Check: VCRedistNeeded
 
 [Icons]
 Name: "{autoprograms}\WorshipStudio"; Filename: "{app}\bin\64bit\WorshipStudio.exe"; WorkingDir: "{app}\bin\64bit"
@@ -96,7 +101,30 @@ begin
   Result := True;
 end;
 
+function VCRedistNeeded(): Boolean;
+var
+  Installed: Cardinal;
+begin
+  Result := not (RegQueryDWordValue(HKLM64, 'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64', 'Installed', Installed)
+    and (Installed = 1));
+end;
+
 function IsFirstInstall(): Boolean;
 begin
   Result := FirstInstall;
+end;
+
+// The app also carries its own copy of the runtime; this installs the system one when it is missing.
+// runas: vc_redist needs administrator rights even when WorshipStudio is installed only for this user.
+// A refused or failed install is ignored, the app still opens with its own copy.
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+begin
+  if (CurStep = ssPostInstall) and VCRedistNeeded() then
+  begin
+    WizardForm.StatusLabel.Caption := 'Microsoft Visual C++ Runtime...';
+    ShellExec('runas', ExpandConstant('{tmp}\vc_redist.x64.exe'), '/install /quiet /norestart', '',
+      SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  end;
 end;
