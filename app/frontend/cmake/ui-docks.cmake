@@ -63,7 +63,12 @@ target_sources(
 )
 
 # PowerPoint files are read inside the app (QZipReader is private API).
-find_package(Qt6 REQUIRED COMPONENTS CorePrivate)
+# Qt 6.9+ has a CorePrivate package; older Qt (Ubuntu 24.04) defines the
+# target together with Core.
+find_package(Qt6 REQUIRED COMPONENTS Core)
+if(NOT TARGET Qt6::CorePrivate)
+  find_package(Qt6 REQUIRED COMPONENTS CorePrivate)
+endif()
 target_link_libraries(obs-studio PRIVATE Qt::CorePrivate)
 
 # App key of the YouVersion Platform (online Bibles), from the CI secret.
