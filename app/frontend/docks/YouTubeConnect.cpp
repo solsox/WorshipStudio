@@ -25,6 +25,7 @@
 #include <cstring>
 #include <vector>
 
+#include <QCoreApplication>
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QIcon>
