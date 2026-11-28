@@ -51,6 +51,8 @@ jobs:
           mkdir -p ../dist
           # Third-party plugins (submodules) also say WorshipStudio
           python3 ../herramientas/limpiar-marca.py build_macos/frontend/RelWithDebInfo/WorshipStudio.app
+          # Chromium busca sus ayudantes por el nombre de la app
+          python3 ../herramientas/renombrar-ayudantes-mac.py build_macos/frontend/RelWithDebInfo/WorshipStudio.app
           ditto -c -k --keepParent build_macos/frontend/RelWithDebInfo/WorshipStudio.app ../dist/WorshipStudio-macOS-arm64.zip
           # Disk image: drag WorshipStudio onto Applications
           mkdir -p dmg && ditto build_macos/frontend/RelWithDebInfo/WorshipStudio.app dmg/WorshipStudio.app

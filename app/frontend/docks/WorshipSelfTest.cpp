@@ -1291,6 +1291,12 @@ struct SelfTest {
 			if (source)
 				obs_source_remove(source);
 		});
+		/* It must not stay in the scenes of the user: OBS lets go of the
+		 * source a moment after taking it out. */
+		waitFor(8000, []() {
+			OBSSourceAutoRelease left = obs_get_source_by_name("YouTube - Autoprueba");
+			return left == nullptr;
+		});
 		add(400, [=]() {
 			OBSSourceAutoRelease gone = obs_get_source_by_name("YouTube - Autoprueba");
 			check(gone == nullptr, QStringLiteral("el video se quita de las escenas"));
