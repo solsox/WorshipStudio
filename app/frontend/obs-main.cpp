@@ -653,11 +653,21 @@ static int run_program(fstream &logFile, int argc, char *argv[])
 		int permissionsDialogLastShown =
 			config_get_int(App()->GetAppConfig(), "General", "MacOSPermissionsDialogLastShown");
 		/* The automatic self-test runs unattended: no modal permissions review. */
+		/* With everything granted there is nothing to review: the window
+		 * does not open and it is not asked for again either. */
+		const bool allGranted = screen_permission == kPermissionAuthorized &&
+					video_permission == kPermissionAuthorized &&
+					audio_permission == kPermissionAuthorized &&
+					input_monitoring_permission == kPermissionAuthorized;
 		if (permissionsDialogLastShown < MACOS_PERMISSIONS_DIALOG_VERSION &&
 		    qEnvironmentVariableIsEmpty("WORSHIPSTUDIO_SELFTEST")) {
-			OBSPermissions check(nullptr, screen_permission, video_permission, audio_permission,
-					     input_monitoring_permission);
-			check.exec();
+			if (allGranted) {
+				OBSPermissions::MarkAsShown();
+			} else {
+				OBSPermissions check(nullptr, screen_permission, video_permission, audio_permission,
+						     input_monitoring_permission);
+				check.exec();
+			}
 		}
 #endif
 

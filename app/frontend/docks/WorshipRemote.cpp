@@ -16,6 +16,7 @@
 ******************************************************************************/
 
 #include "WorshipRemote.hpp"
+#include "YouTubeConnect.hpp"
 #include "WorshipLive.hpp"
 #include "WorshipOutput.hpp"
 #include "SongLibrary.hpp"
@@ -41,6 +42,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QPointer>
 #include <QNetworkInterface>
 #include <QPainter>
 #include <QRandomGenerator>
@@ -201,7 +203,15 @@ input{width:100%;font:600 var(--f-xl)/1 inherit;padding:14px;border-radius:12px;
 .tabs a.sel{color:var(--on);background:var(--a)}.tabs a i{display:block;font-style:normal;font-size:var(--f-xl);line-height:1.2}
 .thumbs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.thumbs figure{margin:0}.thumbs img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;background:#000;display:block;border:2px solid var(--line)}.thumbs .p img{border-color:var(--red)}.thumbs .w img{border-color:var(--ok)}.thumbs .w.pj img{border-color:#F2A65A}.chips{display:grid;grid-template-columns:1fr 1fr;gap:6px}.chips button{margin:0;padding:10px 8px;font-size:var(--f-md)}.chips button.on{background:#F2A65A;color:#1B1915;border-color:#F2A65A}.thumbs figcaption{font-size:var(--f-xs);font-weight:700;margin-top:4px;color:var(--m)}.swipe{touch-action:pan-y}.hintsw{font-size:var(--f-xs);color:var(--m);margin-top:6px}
 section[data-tab]{display:none}section[data-tab].show{display:block}
-@media(min-width:720px){body{max-width:1180px;margin:0 auto;padding-left:24px;padding-right:24px}main{display:block}section[data-tab].show{display:grid;gap:14px;align-items:start}section[data-tab="vivo"].show{grid-template-columns:1.3fr 1fr}section[data-tab="vivo"] .thumbs{grid-column:2;grid-row:1;margin:0}section[data-tab="vivo"] .thumbs img{border-radius:14px}.colA{grid-column:1;grid-row:1/span 3}#projCard{grid-column:2;grid-row:2;margin:0}#stThumbs,#goBtn2{grid-column:1/-1}#stThumbs{margin:0}.colB{grid-column:2;grid-row:3}.colB .card{margin:0 0 12px}section[data-tab="escenas"].show,section[data-tab="mas"].show{grid-template-columns:1fr 1fr}section[data-tab="contenido"].show{grid-template-columns:repeat(3,1fr)}section .card{margin:0}#current{font-size:var(--f-2xl)}.tabs{width:min(560px,70vw);bottom:16px}}#login{display:none}.err{color:var(--red);font-size:var(--f-md);min-height:1.2em}
+/* YouTube: resultados con miniatura y botones de 10 en 10 segundos. */
+.yt{display:flex;gap:10px;align-items:center;padding:10px 6px}.yt+.yt{border-top:1px solid var(--line)}
+.yt img{width:clamp(96px,26vw,140px);aspect-ratio:16/9;object-fit:cover;border-radius:10px;background:#000;flex:none}
+.yt .d{min-width:0}.yt .n{font-weight:600;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:var(--f-md)}
+.yt .c{color:var(--m);font-size:var(--f-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ytrow{display:grid;grid-template-columns:1fr 1fr 1.4fr 1fr;gap:8px}.ytrow button{margin:0;padding:16px 6px}
+@media(min-width:720px){body{max-width:1180px;margin:0 auto;padding-left:24px;padding-right:24px}main{display:block}section[data-tab].show{display:grid;gap:14px;align-items:start}section[data-tab="vivo"].show{grid-template-columns:1.3fr 1fr}section[data-tab="vivo"] .thumbs{grid-column:2;grid-row:1;margin:0}section[data-tab="vivo"] .thumbs img{border-radius:14px}.colA{grid-column:1;grid-row:1/span 3}#projCard{grid-column:2;grid-row:2;margin:0}#stThumbs,#goBtn2{grid-column:1/-1}#stThumbs{margin:0}.colB{grid-column:2;grid-row:3}.colB .card{margin:0 0 12px}section[data-tab="escenas"].show,section[data-tab="mas"].show{grid-template-columns:1fr 1fr}section[data-tab="contenido"].show{grid-template-columns:repeat(3,1fr)}section .card{margin:0}#current{font-size:var(--f-2xl)}.tabs{width:min(560px,70vw);bottom:16px}}
+/* En tablet, dos columnas: tres aprietan demasiado los botones. */
+@media(min-width:720px) and (max-width:1040px){section[data-tab="contenido"].show{grid-template-columns:1fr 1fr}}#login{display:none}.err{color:var(--red);font-size:var(--f-md);min-height:1.2em}
 </style></head><body>
 <header><div class="brand">WorshipStudio</div><div class="live" id="status"><b></b>Conectado</div></header>
 <div id="login" class="card"><div class="k">Código de acceso</div>
@@ -229,6 +239,15 @@ section[data-tab]{display:none}section[data-tab].show{display:block}
 <div class="card"><div class="k">Himno</div><input id="hymn" inputmode="numeric" placeholder="Número, ej. 100"><button class="primary" style="width:100%" onclick="act('himno',{n:val('hymn')})">Mostrar himno</button></div>
 <div class="card"><div class="k">Biblia</div><input id="bible" placeholder="Ej. Juan 3:16 o Sal 23"><button class="primary" style="width:100%" onclick="act('biblia',{cita:val('bible')})">Mostrar pasaje</button></div>
 <div class="card"><div class="k">Cantos</div><input id="songFilter" placeholder="Buscar canto" oninput="drawSongs()"><ul class="list" id="songs"></ul></div>
+<div class="card"><div class="k">YouTube</div>
+<input id="ytq" placeholder="Buscar un video o pegar el enlace" onkeydown="if(event.key==='Enter')ytSearch()">
+<button class="primary" style="width:100%" onclick="ytSearch()">Buscar en YouTube</button>
+<div id="ytr"></div>
+<div id="ytnow" style="display:none;margin-top:12px">
+<div class="k" style="margin-bottom:8px">En pantalla</div>
+<div id="ytTitle" style="font-weight:600;margin-bottom:8px"></div>
+<div class="ytrow"><button onclick="yt('restart')">↺</button><button onclick="ytSeek(-10)">− 10 s</button><button class="primary" id="ytPlay" onclick="ytPlayPause()">▶</button><button onclick="ytSeek(10)">+ 10 s</button></div>
+<div class="hintsw" id="ytTime"></div></div></div>
 </section>
 <section data-tab="mas">
 <div class="card"><div class="k">Transmisión y grabación</div><div class="row2"><button id="stream" onclick="confirmAct('transmision','¿Iniciar o detener la transmisión?')">Transmitir</button><button id="record" onclick="confirmAct('grabacion','¿Iniciar o detener la grabación?')">Grabar</button></div></div>
@@ -277,6 +296,9 @@ $('sources').innerHTML=(s.sources||[]).map(f=>{const n=JSON.stringify(f.nombre).
 $('srcK').textContent=t(studio?'Fuentes en espera':'Fuentes en pantalla');$('srcHint').textContent=t(studio?'Los cambios quedan EN ESPERA hasta que tocas Pasar a pantalla.':'Toca para mostrar u ocultar; ▲ ▼ cambian el orden.');
 $('stream').classList.toggle('rec',!!s.streaming);$('stream').textContent=t(s.streaming?'Detener transmisión':'Transmitir');
 $('record').classList.toggle('rec',!!s.recording);$('record').textContent=t(s.recording?'Detener grabación':'Grabar');
+const y=s.youtube;$('ytnow').style.display=y?'block':'none';
+if(y){$('ytTitle').textContent=y.titulo||'YouTube';ytPlaying=y.estado===1;$('ytPlay').textContent=ytPlaying?'⏸':'▶';
+$('ytTime').textContent=y.duracion?ytClock(y.tiempo)+' / '+ytClock(y.duracion):t('Listo para reproducir');}
 $('status').innerHTML='<b></b>'+t('Conectado');}
 async function act(a,params){if(navigator.vibrate)navigator.vibrate(12);const q=Object.entries(params||{}).map(([k,v])=>'&'+k+'='+encodeURIComponent(v)).join('');try{render(await call('/api/accion?a='+a+q,{method:'POST'}));}catch(e){}}
 let lib=null;
@@ -289,6 +311,18 @@ const q='&pin='+encodeURIComponent(pin);$('libBg').innerHTML=(lib.fondos||[]).ma
 $('libEx').innerHTML=(lib.existentes||[]).map(n=>'<li onclick="addSrc(\'existente\','+JSON.stringify(n).replace(/"/g,'&quot;')+')"><span class="grow">'+esc(n)+'</span><span class="pill">+</span></li>').join('')||'<li>'+esc(t('Nada todavía'))+'</li>';}
 function newScene(){const n=prompt(t('Nombre de la escena nueva'),'');if(n&&n.trim())act('nuevaescena',{nombre:n.trim()});}
 function confirmAct(a,text){if(confirm(t(text)))act(a);}
+let ytPlaying=false;
+async function ytSearch(){const q=val('ytq');if(!q)return;const link=(q.match(/(?:v=|youtu\.be\/|\/embed\/|\/live\/|\/shorts\/)([A-Za-z0-9_-]{11})/)||(q.match(/^[A-Za-z0-9_-]{11}$/)?[0,q]:null));
+if(link){ytShow(link[1],t('Video de YouTube'));$('ytr').innerHTML='';return;}
+$('ytr').innerHTML='<p style="color:var(--m)">'+t('Buscando en YouTube...')+'</p>';
+try{const r=await call('/api/youtube?q='+encodeURIComponent(q));const v=r.videos||[];
+$('ytr').innerHTML=v.length?v.map(x=>'<div class="yt" onclick=\'ytShow('+JSON.stringify(x.id)+','+JSON.stringify(x.titulo)+')\'><img loading="lazy" alt="" src="https://i.ytimg.com/vi/'+esc(x.id)+'/mqdefault.jpg"><div class="d"><div class="n">'+esc(x.titulo)+'</div><div class="c">'+esc(x.canal||'')+(x.duracion?' · '+esc(x.duracion):'')+'</div></div></div>').join(''):'<p style="color:var(--m)">'+t('Sin resultados. Prueba con otras palabras o pega el enlace del video.')+'</p>';}
+catch(e){$('ytr').innerHTML='<p style="color:var(--red)">'+t('No se pudo buscar. Revisa la conexión a internet.')+'</p>';}}
+function ytShow(id,titulo){act('youtube',{v:id,titulo:titulo});ytPlaying=false;}
+function yt(cmd){act('ytcontrol',{cmd:cmd});if(cmd==='play'||cmd==='restart')ytPlaying=true;if(cmd==='pause')ytPlaying=false;}
+function ytSeek(seg){act('ytcontrol',{cmd:'seek',seg:seg});}
+function ytPlayPause(){yt(ytPlaying?'pause':'play');}
+function ytClock(s){s=Math.max(0,Math.round(s||0));const h=Math.floor(s/3600),m=Math.floor(s/60)%60,x=s%60;const p=n=>(n<10?'0':'')+n;return h?h+':'+p(m)+':'+p(x):m+':'+p(x);}
 async function loadSongs(){try{songs=await call('/api/cantos');drawSongs();}catch(e){}}
 function drawSongs(){const f=val('songFilter').toLowerCase();$('songs').innerHTML=songs.filter(s=>s.titulo.toLowerCase().includes(f)).map(s=>'<li onclick="act(\'canto\',{id:\''+s.id+'\'})"><span class="grow">'+esc(s.titulo)+'</span><span class="n">▶︎</span></li>').join('')||'<li>'+t('No hay cantos')+'</li>';}
 async function poll(){try{render(await call('/api/estado'));}catch(e){if(e!==0)$('status').innerHTML='<b style="background:var(--red)"></b>'+t('Sin conexión');}}
@@ -426,9 +460,19 @@ void WorshipRemote::onReadyRead(QTcpSocket *socket)
 		return;
 	}
 
+	const QString target = QString::fromUtf8(requestLine.at(1));
+	/* Searching on YouTube takes a moment: that answer leaves later. */
+	if (deferYouTubeSearch(socket, target))
+		return;
+
 	int status = 200;
 	QByteArray contentType;
-	const QByteArray body = respond(requestLine.at(0), QString::fromUtf8(requestLine.at(1)), &status, &contentType);
+	const QByteArray body = respond(requestLine.at(0), target, &status, &contentType);
+	send(socket, status, contentType, body);
+}
+
+void WorshipRemote::send(QTcpSocket *socket, int status, const QByteArray &contentType, const QByteArray &body)
+{
 	const QByteArray reason = status == 200 ? "OK" : status == 401 ? "Unauthorized" : "Not Found";
 	QByteArray response = "HTTP/1.1 " + QByteArray::number(status) + ' ' + reason + "\r\n";
 	response += "Content-Type: " + contentType + "\r\n";
@@ -437,6 +481,31 @@ void WorshipRemote::onReadyRead(QTcpSocket *socket)
 	response += body;
 	socket->write(response);
 	socket->disconnectFromHost();
+}
+
+/* The search on YouTube goes out to the internet: the page asks, the app
+ * answers when the results come back. */
+bool WorshipRemote::deferYouTubeSearch(QTcpSocket *socket, const QString &target)
+{
+	const QUrl url(target);
+	if (url.path() != QStringLiteral("/api/youtube"))
+		return false;
+	const QUrlQuery query(url);
+	const QByteArray json = "application/json; charset=utf-8";
+	if (query.queryItemValue(QStringLiteral("pin")) != accessPin) {
+		send(socket, 401, json, R"({"error":"pin"})");
+		return true;
+	}
+	QPointer<QTcpSocket> alive(socket);
+	YouTubeConnect::SearchVideos(this, query.queryItemValue(QStringLiteral("q"), QUrl::FullyDecoded),
+				     [this, alive, json](const QJsonArray &videos) {
+					     if (!alive)
+						     return;
+					     send(alive, 200, json,
+						  QJsonDocument(QJsonObject{{QStringLiteral("videos"), videos}})
+							  .toJson(QJsonDocument::Compact));
+				     });
+	return true;
 }
 
 namespace {
@@ -523,6 +592,18 @@ QByteArray WorshipRemote::respond(const QByteArray &method, const QString &targe
 			live.requestHymn(query.queryItemValue(QStringLiteral("n")).toInt());
 		else if (action == QStringLiteral("biblia"))
 			live.requestBible(query.queryItemValue(QStringLiteral("cita"), QUrl::FullyDecoded));
+		else if (action == QStringLiteral("youtube"))
+			YouTubeConnect::Show(query.queryItemValue(QStringLiteral("v")),
+					     query.queryItemValue(QStringLiteral("titulo"), QUrl::FullyDecoded));
+		else if (action == QStringLiteral("ytcontrol")) {
+			const QString cmd = query.queryItemValue(QStringLiteral("cmd"));
+			if (cmd == QStringLiteral("play") || cmd == QStringLiteral("pause") ||
+			    cmd == QStringLiteral("restart"))
+				YouTubeConnect::Command(cmd);
+			else if (cmd == QStringLiteral("seek"))
+				YouTubeConnect::Command(cmd,
+							qBound(-600, query.queryItemValue(QStringLiteral("seg")).toInt(), 600));
+		}
 		else if (action == QStringLiteral("canto"))
 			live.requestSong(query.queryItemValue(QStringLiteral("id")));
 		else if (action == QStringLiteral("mensaje"))
@@ -799,6 +880,11 @@ QByteArray WorshipRemote::stateJson() const
 			&sources);
 	}
 	object.insert(QStringLiteral("sources"), sources);
+
+	/* The YouTube video on screen, to drive it from the phone. */
+	const QJsonObject youtube = YouTubeConnect::Status();
+	if (!youtube.isEmpty())
+		object.insert(QStringLiteral("youtube"), youtube);
 
 	return QJsonDocument(object).toJson(QJsonDocument::Compact);
 }

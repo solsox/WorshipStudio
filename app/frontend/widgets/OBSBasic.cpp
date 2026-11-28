@@ -59,6 +59,7 @@
 #include <docks/WorshipDrag.hpp>
 #include <docks/WorshipOutput.hpp>
 #include <docks/WorshipLive.hpp>
+#include <docks/YouTubeConnect.hpp>
 #include <docks/WorshipLayout.hpp>
 #include <docks/WorshipRender.hpp>
 #include <docks/WorshipSelfTest.hpp>
@@ -1318,6 +1319,10 @@ void OBSBasic::OBSInit()
 
 	/* ← and → pass what is on screen from anywhere in the window. */
 	WorshipLive::InstallArrowKeys();
+
+	/* Videos of YouTube saved in the scenes point at the player page of
+	 * this run (the address changes with the port). */
+	YouTubeConnect::Install();
 
 	/* Songs, verses, hymns and presentations dropped on Sources become a
 	 * source of the scene: "Cantos en vivo" follows the Cantos panel. */

@@ -17,6 +17,7 @@
 #include "MigrationDialog.hpp"
 #include "ScreensDialog.hpp"
 #include "WorshipTranslator.hpp"
+#include "YouTubeConnect.hpp"
 #include <OBSApp.hpp>
 #include <utility/platform.hpp>
 #include <QStackedWidget>
@@ -1239,6 +1240,52 @@ struct SelfTest {
 	}
 
 	/* Every translation loads complete, and windows built afterwards use it. */
+	/* Conexión con YouTube: the player page, the mark in the scene and the
+	 * commands the window sends to the video. */
+	void addYouTubeSteps()
+	{
+		add(300, [=]() {
+			log(QStringLiteral("--- Conexión con YouTube ---"));
+			check(YouTubeConnect::VideoId(QStringLiteral("https://www.youtube.com/watch?v=6BAv9sIQ6BU&t=5s")) ==
+					      QStringLiteral("6BAv9sIQ6BU") &&
+				      YouTubeConnect::VideoId(QStringLiteral("https://youtu.be/6BAv9sIQ6BU")) ==
+					      QStringLiteral("6BAv9sIQ6BU") &&
+				      YouTubeConnect::VideoId(QStringLiteral("un canto cualquiera")).isEmpty(),
+			      QStringLiteral("enlaces de YouTube reconocidos"));
+			check(YouTubeConnect::Show(QStringLiteral("6BAv9sIQ6BU"), QStringLiteral("Autoprueba")),
+			      QStringLiteral("video puesto en la escena"));
+		});
+		add(1500, [=]() {
+			OBSSourceAutoRelease source = obs_get_source_by_name("YouTube - Autoprueba");
+			check(source != nullptr, QStringLiteral("fuente \"YouTube - Autoprueba\" creada"));
+			if (!source)
+				return;
+			OBSDataAutoRelease settings = obs_source_get_settings(source);
+			const QString url = QString::fromUtf8(obs_data_get_string(settings, "url"));
+			check(url.startsWith(QStringLiteral("http://127.0.0.1:")) &&
+				      url.endsWith(QStringLiteral("6BAv9sIQ6BU")),
+			      QStringLiteral("la fuente apunta al reproductor local: %1").arg(url));
+			check(obs_data_get_bool(settings, "reroute_audio"),
+			      QStringLiteral("el audio del video pasa por la mesa de sonido"));
+
+			const QByteArray page = YouTubePlayerServer::instance().handleForTest(
+				QStringLiteral("/reproductor?v=6BAv9sIQ6BU"));
+			check(page.contains("6BAv9sIQ6BU") && page.contains("ws_youtube"),
+			      QStringLiteral("la página del reproductor trae el video y escucha los controles"));
+			check(YouTubePlayerServer::instance().handleForTest(QStringLiteral("/estado?v=6BAv9sIQ6BU&t=3&d=9&s=1")) ==
+				      QByteArray("ok"),
+			      QStringLiteral("la página puede avisar en qué va el video"));
+
+			OBSSourceAutoRelease program = obs_frontend_get_current_scene();
+			capture(obs_scene_from_source(program), QStringLiteral("youtube-en-la-escena"));
+			obs_source_remove(source);
+		});
+		add(400, [=]() {
+			OBSSourceAutoRelease gone = obs_get_source_by_name("YouTube - Autoprueba");
+			check(gone == nullptr, QStringLiteral("el video se quita de las escenas"));
+		});
+	}
+
 	void addLanguageSteps()
 	{
 		add(100, [this]() {
@@ -1694,6 +1741,10 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Songs
 		test->addAppearanceSteps();
 	if (wanted("envivo"))
 		test->addLiveSteps();
+	/* Only when asked for: it starts a browser source, and two copies of the
+	 * app at the same time fight for the browser cache. */
+	if (only.contains(QStringLiteral("youtube")))
+		test->addYouTubeSteps();
 	if (wanted("sala"))
 		test->addScreensSteps();
 	if (only.contains(QStringLiteral("vitrina")))

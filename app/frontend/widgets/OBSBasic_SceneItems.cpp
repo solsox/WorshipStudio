@@ -30,6 +30,7 @@
 #include <qt-wrappers.hpp>
 
 #include <docks/BackgroundLibrary.hpp>
+#include <docks/YouTubeConnect.hpp>
 
 #include <QFileInfo>
 #include <QWidgetAction>
@@ -874,6 +875,8 @@ void OBSBasic::on_actionAddSource_triggered()
 		       [this]() { AddGraphicsSource(false); });
 	menu.addAction(QCoreApplication::translate("WorshipStudio", "Cuenta regresiva"), this,
 		       [this]() { AddGraphicsSource(true); });
+	menu.addAction(QCoreApplication::translate("WorshipStudio", "Conexión con YouTube"), this,
+		       [this]() { YouTubeConnect::Run(this); });
 	menu.addSeparator();
 	QAction *other = menu.addAction(QCoreApplication::translate("WorshipStudio", "Otra fuente (cámara, imagen, video...)..."));
 	connect(other, &QAction::triggered, this, &OBSBasic::AddSourceDialog);

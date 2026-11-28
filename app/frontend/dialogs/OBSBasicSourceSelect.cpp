@@ -26,6 +26,7 @@
 #include "qt-wrappers.hpp"
 
 #include <docks/BackgroundLibrary.hpp>
+#include <docks/YouTubeConnect.hpp>
 
 #include <QCursor>
 #include <QFileInfo>
@@ -287,6 +288,8 @@ OBSBasicSourceSelect::OBSBasicSourceSelect(OBSBasic *parent, undo_stack &undo_s)
 			return;
 		if (action.startsWith(QStringLiteral("panel:"))) {
 			main->AddPanelSource(action.mid(6), false);
+		} else if (action == QStringLiteral("youtube")) {
+			YouTubeConnect::Run(main);
 		} else if (action == QStringLiteral("graficos") || action == QStringLiteral("cuenta")) {
 			main->AddGraphicsSource(action == QStringLiteral("cuenta"));
 		} else if (action == QStringLiteral("fondos")) {
@@ -622,7 +625,8 @@ void OBSBasicSourceSelect::rebuildSourceTypeList()
 		       {QT_TRANSLATE_NOOP("WorshipStudio", "Presentaciones (PDF, PowerPoint...)"), "panel:presentationDock"},
 		       {QT_TRANSLATE_NOOP("WorshipStudio", "Rótulo de nombre y mensaje urgente"), "graficos"},
 		       {QT_TRANSLATE_NOOP("WorshipStudio", "Cuenta regresiva"), "cuenta"},
-		       {QT_TRANSLATE_NOOP("WorshipStudio", "Fondo (imagen o en movimiento)"), "fondos"}};
+		       {QT_TRANSLATE_NOOP("WorshipStudio", "Fondo (imagen o en movimiento)"), "fondos"},
+		       {QT_TRANSLATE_NOOP("WorshipStudio", "Conexión con YouTube"), "youtube"}};
 	int row = 0;
 	auto *heading = new QListWidgetItem(translate("WORSHIPSTUDIO"));
 	heading->setFlags(Qt::NoItemFlags);

@@ -32,9 +32,16 @@ private:
 	std::unique_ptr<Ui::OBSPermissions> ui;
 	void SetStatus(QPushButton *btn, MacPermissionStatus status, const QString &preference);
 
+protected:
+	/* However it is closed, it does not come back on the next start. */
+	void closeEvent(QCloseEvent *event) override;
+
 public:
 	OBSPermissions(QWidget *parent, MacPermissionStatus capture, MacPermissionStatus video,
 		       MacPermissionStatus audio, MacPermissionStatus accessibility);
+
+	/* Remembers that the review was already shown. */
+	static void MarkAsShown();
 
 private slots:
 	void on_capturePermissionButton_clicked();

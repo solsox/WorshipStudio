@@ -60,6 +60,8 @@ target_sources(
     docks/WorshipRender.hpp
     docks/WorshipSelfTest.cpp
     docks/WorshipSelfTest.hpp
+    docks/YouTubeConnect.cpp
+    docks/YouTubeConnect.hpp
 )
 
 # PowerPoint files are read inside the app (QZipReader is private API).

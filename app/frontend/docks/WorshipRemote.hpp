@@ -41,6 +41,9 @@ private:
 	void onConnection();
 	void onReadyRead(QTcpSocket *socket);
 	QByteArray respond(const QByteArray &method, const QString &target, int *status, QByteArray *contentType);
+	void send(QTcpSocket *socket, int status, const QByteArray &contentType, const QByteArray &body);
+	/* true when the answer is sent later (the search on YouTube). */
+	bool deferYouTubeSearch(QTcpSocket *socket, const QString &target);
 	QByteArray stateJson() const;
 	void showScene(const QString &name);
 	void toggleSource(const QString &name);

@@ -19,6 +19,8 @@
 
 #include <OBSApp.hpp>
 
+#include <QCloseEvent>
+
 #include "moc_OBSPermissions.cpp"
 
 OBSPermissions::OBSPermissions(QWidget *parent, MacPermissionStatus capture, MacPermissionStatus video,
@@ -90,9 +92,23 @@ void OBSPermissions::on_accessibilityPermissionButton_clicked()
 	OpenMacOSPrivacyPreferences("Accessibility");
 }
 
-void OBSPermissions::on_continueButton_clicked()
+void OBSPermissions::MarkAsShown()
 {
 	config_set_int(App()->GetAppConfig(), "General", "MacOSPermissionsDialogLastShown",
 		       MACOS_PERMISSIONS_DIALOG_VERSION);
+	config_save_safe(App()->GetAppConfig(), "tmp", nullptr);
+}
+
+/* Closing it with the X or with Esc also counts as seen: the review only
+ * comes back when the app is installed from scratch. */
+void OBSPermissions::closeEvent(QCloseEvent *event)
+{
+	MarkAsShown();
+	QDialog::closeEvent(event);
+}
+
+void OBSPermissions::on_continueButton_clicked()
+{
+	MarkAsShown();
 	close();
 }
