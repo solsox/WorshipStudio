@@ -25,6 +25,7 @@
 #include <QListWidget>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QUrl>
 #include "WorshipOutput.hpp"
 #include "WorshipRender.hpp"
 
@@ -252,6 +253,47 @@ struct SelfTest {
 		add(100, [=]() { hymnal->stop(); });
 	}
 
+	/* Clicking a thumbnail of a hymn that is not on air starts that hymn
+	 * there. It used to close the app: projecting rebuilds the thumbnails
+	 * and deletes the item the click still pointed at. */
+	void addHymnClickSteps()
+	{
+		add(300, [this]() {
+			log(QStringLiteral("--- Clic en miniatura de otro himno ---"));
+			check(hymnal->projectHymn(1, 0), QStringLiteral("himno 1 al aire"));
+		});
+		add(1200, [this]() {
+			check(hymnal->selectHymn(100), QStringLiteral("elegir el himno 100 sin proyectarlo"));
+		});
+		add(800, [this]() {
+			check(hymnal->clickSlide(2), QStringLiteral("clic en la miniatura 3 del himno 100"));
+		});
+		add(1500, [this]() {
+			check(hymnal->currentSlide() == 2,
+			      QStringLiteral("el himno 100 arranca en la diapositiva 3 (actual %1) sin cerrarse")
+				      .arg(hymnal->currentSlide() + 1));
+			check(hymnal->slideCount() > 0,
+			      QStringLiteral("sigue vivo con %1 diapositivas").arg(hymnal->slideCount()));
+			capture(hymnal->outputScene(), QStringLiteral("himno100-clic-miniatura"));
+		});
+		/* The same click while nothing is on air, and again on the live hymn. */
+		add(300, [this]() { hymnal->stop(); });
+		add(300, [this]() {
+			check(hymnal->selectHymn(1), QStringLiteral("elegir el himno 1 sin nada al aire"));
+		});
+		add(600, [this]() { check(hymnal->clickSlide(1), QStringLiteral("clic en la miniatura 2")); });
+		add(1200, [this]() {
+			check(hymnal->currentSlide() == 1,
+			      QStringLiteral("arranca en la diapositiva 2 (actual %1)").arg(hymnal->currentSlide() + 1));
+			check(hymnal->clickSlide(0), QStringLiteral("clic en la miniatura 1 del himno ya al aire"));
+		});
+		add(1000, [this]() {
+			check(hymnal->currentSlide() == 0,
+			      QStringLiteral("vuelve a la diapositiva 1 (actual %1)").arg(hymnal->currentSlide() + 1));
+			hymnal->stop();
+		});
+	}
+
 	void addBibleStep(const QString &query, int layout, const QString &name)
 	{
 		add(300, [=]() {
@@ -411,8 +453,12 @@ struct SelfTest {
 			check(verses == 2 && c3.size() == 3 && c3.at(1).toString().isEmpty() &&
 				      c3.at(2).toString() == QStringLiteral("Tres sigue"),
 			      QStringLiteral("catalogo: versiculos por numero, sin titulos ni apocrifos (%1)").arg(verses));
-			check(root.value(QStringLiteral("license")).toString().startsWith(QStringLiteral("Dominio")),
-			      QStringLiteral("catalogo: licencia guardada"));
+			/* The license text is translated, so comparing it with the
+			 * Spanish words failed whenever the app ran in another
+			 * language. Ask the same function instead. */
+			const QString licenseText = root.value(QStringLiteral("license")).toString();
+			check(!licenseText.isEmpty() && licenseText.startsWith(BibleCatalog::LicenseText(info)),
+			      QStringLiteral("catalogo: licencia guardada (%1)").arg(licenseText));
 		});
 
 		/* The catalog window with the live list (needs internet). */
@@ -952,15 +998,55 @@ struct SelfTest {
 			OBSSourceAutoRelease program = obs_frontend_get_current_scene();
 			check(program && QT_UTF8(obs_source_get_name(program)) == QStringLiteral("Camara (prueba)"),
 			      QStringLiteral("cambio de escena desde el celular"));
-			obs_source_remove(obs_scene_get_source(camera));
 			const QByteArray jpeg = remote->handleForTest("GET", QStringLiteral("/api/vista?cual=pantalla&pin=%1").arg(pin));
 			check(jpeg.startsWith("\xFF\xD8"), QStringLiteral("miniatura en vivo para el celular (%1 bytes)").arg(jpeg.size()));
 			QFile shot(outDir.absoluteFilePath(QStringLiteral("envivo-miniatura.jpg")));
 			if (shot.open(QIODevice::WriteOnly))
 				shot.write(jpeg);
+
+			/* "+ Fuente" and "+ Escena" from the phone. */
+			const QJsonObject library =
+				QJsonDocument::fromJson(remote->handleForTest("GET", QStringLiteral("/api/biblioteca?pin=%1").arg(pin))).object();
+			check(!library.value(QStringLiteral("fondos")).toArray().isEmpty(),
+			      QStringLiteral("biblioteca del celular con fondos"));
+			check(remote->handleForTest("GET", QStringLiteral("/api/miniatura?n=0&pin=%1").arg(pin)).startsWith("\xFF\xD8"),
+			      QStringLiteral("miniatura de un fondo para el celular"));
+			remote->handleForTest("POST", QStringLiteral("/api/accion?a=agregar&tipo=fondo&valor=0&pin=%1").arg(pin));
+			QString added;
+			obs_scene_enum_items(
+				camera,
+				[](obs_scene_t *, obs_sceneitem_t *item, void *data) {
+					const QString name = QT_UTF8(obs_source_get_name(obs_sceneitem_get_source(item)));
+					if (name.startsWith(QStringLiteral("Fondo - ")))
+						*static_cast<QString *>(data) = name;
+					return true;
+				},
+				&added);
+			check(!added.isEmpty(), QStringLiteral("fondo agregado desde el celular (%1)").arg(added));
+			remote->handleForTest("POST", QStringLiteral("/api/accion?a=fuente&nombre=%1&pin=%2")
+							      .arg(QString::fromUtf8(QUrl::toPercentEncoding(added)), pin));
+			obs_sceneitem_t *addedItem = obs_scene_find_source(camera, QT_TO_UTF8(added));
+			check(addedItem && !obs_sceneitem_visible(addedItem), QStringLiteral("ocultar una fuente desde el celular"));
+			remote->handleForTest("POST", QStringLiteral("/api/accion?a=nuevaescena&nombre=Desde%20el%20celular&pin=%1").arg(pin));
+			OBSSourceAutoRelease phoneScene = obs_get_source_by_name("Desde el celular");
+			check(phoneScene && obs_scene_from_source(phoneScene), QStringLiteral("escena creada desde el celular"));
+			if (phoneScene)
+				obs_source_remove(phoneScene);
+
+			/* The countdown takes the screen and gives it back when it stops. */
 			remote->handleForTest("POST", QStringLiteral("/api/accion?a=cuenta&min=3&pin=%1").arg(pin));
 			check(liveTools->countdownRunning(), QStringLiteral("cuenta regresiva desde el celular"));
-			liveTools->stopCountdown();
+			remote->handleForTest("POST", QStringLiteral("/api/accion?a=detenercuenta&pin=%1").arg(pin));
+		});
+		add(800, [=]() {
+			OBSSourceAutoRelease program = obs_frontend_get_current_scene();
+			check(!liveTools->countdownRunning() && program &&
+				      QT_UTF8(obs_source_get_name(program)) == QStringLiteral("Camara (prueba)"),
+			      QStringLiteral("al detener la cuenta vuelve la escena (%1)")
+				      .arg(program ? QT_UTF8(obs_source_get_name(program)) : QString()));
+			OBSSourceAutoRelease camera = obs_get_source_by_name("Camara (prueba)");
+			if (camera)
+				obs_source_remove(camera);
 		});
 	}
 
@@ -1635,6 +1721,8 @@ void RunWorshipSelfTest(PresentationCatalogDock *hymnal, BibleDock *bible, Songs
 	test->addHymnSteps(1, 1);
 	test->addHymnSteps(1, 2);
 	test->addHymnSteps(100, 0);
+
+	test->addHymnClickSteps();
 
 	/* Old hymnal: a plain folder of hymns (NNN - Titulo with images and mp3). */
 	const QString oldFolder = qEnvironmentVariable("WORSHIPSTUDIO_SELFTEST_OLD_HYMNAL");

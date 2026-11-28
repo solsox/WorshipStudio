@@ -21,4 +21,10 @@ rm -rf "$HOME/Library/Application Support/WorshipStudio"
 touch /Applications/WorshipStudio.app
 rm -rf "$(getconf DARWIN_USER_CACHE_DIR)/com.apple.iconservices" 2>/dev/null || true
 killall Dock Finder 2>/dev/null || true
+
+# El himnario vive en Documentos/WorshipStudio, fuera del programa, así que
+# sobrevive a esto. Lo dejamos enlazado para que aparezca sin importar nada.
+sh "$HERE/preparar-himnario-mac.sh" 2>/dev/null || \
+  echo "Sin himnario: corre herramientas/preparar-himnario-mac.sh \"/ruta/Himnario Adventista\" cuando lo tengas."
+
 echo "Listo: abrí WorshipStudio desde Aplicaciones."

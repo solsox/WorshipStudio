@@ -81,6 +81,10 @@ private:
 	BackgroundPicker *countdownBackground = nullptr;
 	QPushButton *countdownButton = nullptr;
 	QAbstractButton *countdownHeader = nullptr;
+	/* What the countdown replaced, to bring it back when it stops. */
+	QString countdownReturnProgram;
+	QString countdownReturnPreview;
+	QString countdownReturnProjector;
 	QDateTime countdownTarget;
 	bool countdownActive = false;
 	int countdownCounter = 0;

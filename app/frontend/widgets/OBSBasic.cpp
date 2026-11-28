@@ -1380,6 +1380,7 @@ void OBSBasic::OBSInit()
 	connect(&live, &WorshipLive::songRequested, songsDock, &SongsDock::projectSongById);
 	connect(&live, &WorshipLive::countdownRequested, liveToolsDock,
 		[liveToolsDock](int minutes) { liveToolsDock->startCountdown(minutes, QString()); });
+	connect(&live, &WorshipLive::countdownStopRequested, liveToolsDock, &LiveToolsDock::stopCountdown);
 
 	auto *layout = new WorshipLayout(this, ui->viewMenu, liveToolsDock,
 					 {serviceDock, songsDock, hymnalDock, bibleDock, presentationDock},

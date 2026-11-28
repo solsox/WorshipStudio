@@ -61,6 +61,7 @@ public:
 	void requestBible(const QString &reference) { emit bibleRequested(reference); }
 	void requestSong(const QString &id) { emit songRequested(id); }
 	void requestCountdown(int minutes) { emit countdownRequested(minutes); }
+	void requestCountdownStop() { emit countdownStopRequested(); }
 
 public slots:
 	void next();
@@ -76,6 +77,7 @@ signals:
 	void bibleRequested(const QString &reference);
 	void songRequested(const QString &id);
 	void countdownRequested(int minutes);
+	void countdownStopRequested();
 
 private:
 	WorshipLive() = default;

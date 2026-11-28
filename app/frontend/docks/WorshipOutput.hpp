@@ -54,6 +54,8 @@ bool SourceOnlyActive();
 /* Scenes that always show what a panel is showing ("Cantos en vivo"), to
  * use as sources inside any scene. Empty for scenes of no panel. */
 QString FollowerFor(const QString &contentSceneName);
+/* Empties the "… en vivo" scene that shows `contentSceneName`. */
+void ClearFollower(const QString &contentSceneName);
 QStringList FollowerNames();
 
 /* Name lower third and urgent message, as a source to place in a scene (the

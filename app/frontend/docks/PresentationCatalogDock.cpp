@@ -317,6 +317,8 @@ void PresentationCatalogDock::onSearchChanged(const QString &text)
 void PresentationCatalogDock::onCurrentHymnChanged(QListWidgetItem *current, QListWidgetItem *)
 {
 	selectedEntry = current ? current->data(Qt::UserRole).toInt() : -1;
+	if (selectedEntry >= allEntries.size())
+		selectedEntry = -1;
 	loadSlideThumbnails(selectedEntry);
 	updateControls();
 }
@@ -400,6 +402,7 @@ void PresentationCatalogDock::onProjectClicked()
 
 	liveEntry = selectedEntry;
 	liveSlide = -1;
+	pendingSlide = -1;
 
 	const QString audioPath = audioPathFor(entry);
 	liveWithAudio = !audioPath.isEmpty();
@@ -430,10 +433,12 @@ void PresentationCatalogDock::onProjectClicked()
 
 void PresentationCatalogDock::showSlide(int slide, bool seekAudio)
 {
-	if (liveEntry < 0 || !slideSource)
+	if (liveEntry < 0 || liveEntry >= allEntries.size() || !slideSource)
 		return;
 
 	const PresentationEntry &entry = allEntries.at(liveEntry);
+	if (entry.slidePaths.isEmpty())
+		return;
 	slide = qBound(0, slide, (int)entry.slidePaths.size() - 1);
 
 	if (slide != liveSlide) {
@@ -508,7 +513,8 @@ bool PresentationCatalogDock::projectHymn(int number, int mode)
 {
 	searchEdit->clear();
 	for (int row = 0; row < resultsList->count(); ++row) {
-		if (allEntries.at(resultsList->item(row)->data(Qt::UserRole).toInt()).number == number) {
+		const int index = resultsList->item(row)->data(Qt::UserRole).toInt();
+		if (index >= 0 && index < allEntries.size() && allEntries.at(index).number == number) {
 			resultsList->setCurrentRow(row);
 			audioModeCombo->setCurrentIndex(mode);
 			onProjectClicked();
@@ -516,6 +522,28 @@ bool PresentationCatalogDock::projectHymn(int number, int mode)
 		}
 	}
 	return false;
+}
+
+bool PresentationCatalogDock::selectHymn(int number)
+{
+	searchEdit->clear();
+	for (int row = 0; row < resultsList->count(); ++row) {
+		const int index = resultsList->item(row)->data(Qt::UserRole).toInt();
+		if (index >= 0 && index < allEntries.size() && allEntries.at(index).number == number) {
+			resultsList->setCurrentRow(row);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool PresentationCatalogDock::clickSlide(int slide)
+{
+	QListWidgetItem *item = slidesList->item(slide);
+	if (!item)
+		return false;
+	emit slidesList->itemClicked(item);
+	return true;
 }
 
 void PresentationCatalogDock::selectSlideRow(int slide)
@@ -529,10 +557,25 @@ void PresentationCatalogDock::onSlideClicked(QListWidgetItem *item)
 	if (!item)
 		return;
 
-	if (selectedEntry != liveEntry) {
+	/* Read the slide before projecting: starting a hymn rebuilds the
+	 * thumbnails, which deletes this item while the click is still in
+	 * flight. Using it afterwards crashed the app mid-service. */
+	const int slide = item->data(Qt::UserRole).toInt();
+
+	const bool started = selectedEntry != liveEntry;
+	if (started)
 		onProjectClicked();
+
+	showSlide(slide, true);
+
+	/* A hymn that has just started is still opening its audio, so the seek
+	 * is ignored and the sync tick drags the lyrics back to the first
+	 * slide. Keep asking until the audio accepts it. */
+	if (started && slide > 0 && liveWithAudio && liveEntry >= 0) {
+		pendingSlide = slide;
+		pendingTicks = 50;
+		syncTimer->start();
 	}
-	showSlide(item->data(Qt::UserRole).toInt(), true);
 }
 
 void PresentationCatalogDock::onSlideRowChanged(int row)
@@ -544,14 +587,18 @@ void PresentationCatalogDock::onSlideRowChanged(int row)
 
 void PresentationCatalogDock::onPreviousClicked()
 {
-	if (liveEntry >= 0)
+	if (liveEntry >= 0) {
+		pendingSlide = -1;
 		showSlide(liveSlide - 1, true);
+	}
 }
 
 void PresentationCatalogDock::onNextClicked()
 {
-	if (liveEntry >= 0)
+	if (liveEntry >= 0) {
+		pendingSlide = -1;
 		showSlide(liveSlide + 1, true);
+	}
 }
 
 void PresentationCatalogDock::onStopClicked()
@@ -563,6 +610,7 @@ void PresentationCatalogDock::onStopClicked()
 	liveEntry = -1;
 	liveSlide = -1;
 	liveWithAudio = false;
+	pendingSlide = -1;
 	WorshipLive::instance().clear(QStringLiteral("Himnario"));
 	slidesList->clearSelection();
 	updateControls();
@@ -571,7 +619,7 @@ void PresentationCatalogDock::onStopClicked()
 
 void PresentationCatalogDock::onSyncTick()
 {
-	if (liveEntry < 0 || !audioSource) {
+	if (liveEntry < 0 || liveEntry >= allEntries.size() || !audioSource) {
 		syncTimer->stop();
 		return;
 	}
@@ -579,11 +627,23 @@ void PresentationCatalogDock::onSyncTick()
 	const obs_media_state state = obs_source_media_get_state(audioSource);
 	if (state == OBS_MEDIA_STATE_ENDED) {
 		syncTimer->stop();
+		pendingSlide = -1;
 		updateLiveLabel();
 		return;
 	}
 	if (state != OBS_MEDIA_STATE_PLAYING)
 		return;
+
+	/* Finish a jump asked for before the audio was ready. */
+	if (pendingSlide > 0 && liveEntry < allEntries.size()) {
+		const int64_t target = allEntries.at(liveEntry).slideTimes.value(pendingSlide - 1, -1);
+		if (target < 0 || --pendingTicks <= 0 || obs_source_media_get_time(audioSource) + 500 >= target) {
+			pendingSlide = -1;
+		} else {
+			showSlide(pendingSlide, true);
+			return;
+		}
+	}
 
 	/* Same rule as the original hymnal: slide N+1 starts at times[N].
 	 * Hymns without timings are advanced by hand while the audio plays. */
@@ -629,7 +689,7 @@ void PresentationCatalogDock::updateControls()
 
 void PresentationCatalogDock::updateLiveLabel()
 {
-	if (liveEntry < 0) {
+	if (liveEntry < 0 || liveEntry >= allEntries.size()) {
 		liveLabel->setText(tr("Sin proyeccion activa"));
 		return;
 	}

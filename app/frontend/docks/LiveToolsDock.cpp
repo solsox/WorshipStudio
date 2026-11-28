@@ -788,6 +788,22 @@ void LiveToolsDock::startCountdown(int minutes, const QString &title)
 	countdownButton->setText(tr("Detener cuenta regresiva"));
 	markOnAir(countdownHeader, true);
 	renderCountdown();
+
+	/* Remember what was there: stopping the countdown brings it back. */
+	const auto nameOf = [](obs_source_t *source) {
+		return source ? QT_UTF8(obs_source_get_name(source)) : QString();
+	};
+	const QString countdownName = QString::fromLatin1(CountdownSceneName);
+	OBSSourceAutoRelease program = obs_frontend_get_current_scene();
+	OBSSourceAutoRelease preview = obs_frontend_preview_program_mode_active() ? obs_frontend_get_current_preview_scene()
+										  : nullptr;
+	const QString onProjector = WorshipOutput::SeparateRoomScreen() ? WorshipOutput::OnAirSceneName() : QString();
+	if (nameOf(program) != countdownName)
+		countdownReturnProgram = nameOf(program);
+	if (nameOf(preview) != countdownName)
+		countdownReturnPreview = nameOf(preview);
+	if (onProjector != countdownName)
+		countdownReturnProjector = onProjector;
 	WorshipOutput::ShowScene(countdownSceneRef);
 }
 
@@ -796,6 +812,27 @@ void LiveToolsDock::stopCountdown()
 	countdownActive = false;
 	countdownButton->setText(tr("Proyectar cuenta regresiva"));
 	markOnAir(countdownHeader, false);
+
+	/* Whatever shows the countdown goes back to what it showed before. */
+	const QString countdownName = QString::fromLatin1(CountdownSceneName);
+	const auto restore = [](const QString &name, auto apply) {
+		OBSSourceAutoRelease scene = name.isEmpty() ? nullptr : obs_get_source_by_name(QT_TO_UTF8(name));
+		if (scene)
+			apply(scene.Get());
+	};
+	OBSSourceAutoRelease program = obs_frontend_get_current_scene();
+	if (program && QT_UTF8(obs_source_get_name(program)) == countdownName)
+		restore(countdownReturnProgram, [](obs_source_t *scene) { obs_frontend_set_current_scene(scene); });
+	if (obs_frontend_preview_program_mode_active()) {
+		OBSSourceAutoRelease preview = obs_frontend_get_current_preview_scene();
+		if (preview && QT_UTF8(obs_source_get_name(preview)) == countdownName)
+			restore(countdownReturnPreview,
+				[](obs_source_t *scene) { obs_frontend_set_current_preview_scene(scene); });
+	}
+	if (WorshipOutput::SeparateRoomScreen() && WorshipOutput::OnAirSceneName() == countdownName)
+		restore(countdownReturnProjector, [](obs_source_t *scene) { WorshipOutput::ShowOnProjector(scene); });
+	/* Placed in a scene as "Cuenta regresiva en vivo": it just disappears. */
+	WorshipOutput::ClearFollower(countdownName);
 	refreshStage();
 }
 

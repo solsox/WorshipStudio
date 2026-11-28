@@ -1437,12 +1437,17 @@ private:
 	static void RenderProgram(void *data, uint32_t cx, uint32_t cy);
 
 	void UpdatePreviewProgramIndicators();
-	/* WorshipStudio: "Cantos en vivo" and the others as a source of the scene. */
+
+public:
+	/* WorshipStudio: "Cantos en vivo" and the others as a source of the scene
+	 * (also from the Add Source window and the phone). */
 	void AddPanelSource(const QString &panel, bool useSelection, const std::function<void()> &selectDragged = {});
 	/* "Gráficos en vivo" (name and urgent message) or "Cuenta regresiva en vivo". */
 	void AddGraphicsSource(bool countdown);
 	/* An image or looping video of Mis fondos at the back of the scene. */
 	void AddBackgroundSource(const QString &path, const QString &name);
+
+private:
 
 private slots:
 	void EnablePreviewProgram();

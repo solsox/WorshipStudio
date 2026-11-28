@@ -31,8 +31,12 @@ public:
 	int audioModeIndex() const;
 	void goToSlide(int slide) { showSlide(slide, true); }
 	int currentSlide() const { return liveSlide; }
-	int slideCount() const { return liveEntry >= 0 ? (int)allEntries.at(liveEntry).slidePaths.size() : 0; }
-	QVector<int> slideTimes() const { return liveEntry >= 0 ? allEntries.at(liveEntry).slideTimes : QVector<int>(); }
+	int slideCount() const { return liveIsValid() ? (int)allEntries.at(liveEntry).slidePaths.size() : 0; }
+	QVector<int> slideTimes() const { return liveIsValid() ? allEntries.at(liveEntry).slideTimes : QVector<int>(); }
+	/* Used by the self test: picks a hymn in the list without projecting it. */
+	bool selectHymn(int number);
+	/* Used by the self test: a real click on a thumbnail, signal included. */
+	bool clickSlide(int slide);
 	obs_source_t *audio() const { return audioSource; }
 	obs_scene_t *outputScene() const { return scene; }
 	void stop() { onStopClicked(); }
@@ -79,10 +83,16 @@ private:
 	QLabel *liveLabel = nullptr;
 	QTimer *syncTimer = nullptr;
 
+	bool liveIsValid() const { return liveEntry >= 0 && liveEntry < allEntries.size(); }
+
 	int selectedEntry = -1;
 	int liveEntry = -1;
 	int liveSlide = -1;
 	bool liveWithAudio = false;
+	/* Slide asked for while the audio was still opening, and how many sync
+	 * ticks it may keep trying before giving up. */
+	int pendingSlide = -1;
+	int pendingTicks = 0;
 
 	OBSScene scene;
 	QString outputSlot;

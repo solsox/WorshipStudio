@@ -46,5 +46,7 @@ private:
 	void toggleSource(const QString &name);
 	/* One step up or down in the scene, like the arrows of Sources. */
 	void moveSource(const QString &name, bool up);
+	void addSource(const QString &kind, const QString &value);
+	void addScene(const QString &name);
 	void toggleMute(const QString &name);
 };

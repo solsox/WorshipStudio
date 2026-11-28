@@ -22,6 +22,10 @@ incluir** contenido protegido. Pero cada iglesia puede usar el que tenga permiso
 3. **Detección automática** (ya funciona): si la carpeta del Himnario Adventista está en el equipo
    (`Documentos/WorshipStudio/`, `Música`, junto a la app o en `contenido-local/`), se carga sola.
 
+En un Mac, `herramientas/preparar-himnario-mac.sh` deja la carpeta enlazada en `Documentos/WorshipStudio/`
+(con `--copiar`, una copia propia). Como está fuera del programa, el himnario sigue ahí después de actualizar
+o de reinstalar de cero; `herramientas/instalar-mac-desde-cero.sh` lo vuelve a dejar listo al terminar.
+
 Lo mismo para la RV1960: con permiso de las Sociedades Bíblicas se puede incluir un archivo de importación.
 Sin permiso, cada iglesia la importa por su cuenta.
 

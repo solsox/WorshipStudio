@@ -251,6 +251,13 @@ QString FollowerFor(const QString &name)
 	return {};
 }
 
+void ClearFollower(const QString &contentSceneName)
+{
+	const QString follower = FollowerFor(contentSceneName);
+	if (!follower.isEmpty())
+		follow(QT_TO_UTF8(follower), nullptr);
+}
+
 bool SeparateRoomScreen()
 {
 	return ConfigString("SeparateRoomScreen") == QStringLiteral("1");

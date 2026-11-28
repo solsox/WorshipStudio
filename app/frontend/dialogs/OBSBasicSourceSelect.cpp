@@ -25,13 +25,20 @@
 
 #include "qt-wrappers.hpp"
 
+#include <docks/BackgroundLibrary.hpp>
+
+#include <QCursor>
+#include <QFileInfo>
 #include <QList>
+#include <QMenu>
 #include <QMessageBox>
 
 #include "moc_OBSBasicSourceSelect.cpp"
 
 constexpr int kUnversionedIdRole = Qt::UserRole + 1;
 constexpr int kDeprecatedRole = Qt::UserRole + 2;
+/* WorshipStudio's library at the top of the list: what the item adds. */
+constexpr int kWorshipRole = Qt::UserRole + 3;
 
 constexpr QStringView kRecentTypeId = u"_recent";
 constexpr int kRecentListLimit = 16;
@@ -268,7 +275,42 @@ OBSBasicSourceSelect::OBSBasicSourceSelect(OBSBasic *parent, undo_stack &undo_s)
 	signalHandlers.emplace_back(obs_get_signal_handler(), "source_destroy", &OBSBasicSourceSelect::obsSourceRemoved,
 				    this);
 
-	connect(ui->sourceTypeList, &QListWidget::itemDoubleClicked, this, &OBSBasicSourceSelect::createNew);
+	connect(ui->sourceTypeList, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *item) {
+		if (!item->data(kWorshipRole).isValid())
+			createNew();
+	});
+	/* One click on Cantos, Biblia, Gráficos, Fondos... adds it and closes. */
+	connect(ui->sourceTypeList, &QListWidget::itemClicked, this, [this](QListWidgetItem *item) {
+		const QString action = item->data(kWorshipRole).toString();
+		OBSBasic *main = OBSBasic::Get();
+		if (action.isEmpty() || !main)
+			return;
+		if (action.startsWith(QStringLiteral("panel:"))) {
+			main->AddPanelSource(action.mid(6), false);
+		} else if (action == QStringLiteral("graficos") || action == QStringLiteral("cuenta")) {
+			main->AddGraphicsSource(action == QStringLiteral("cuenta"));
+		} else if (action == QStringLiteral("fondos")) {
+			QMenu menu(this);
+			for (const BackgroundLibrary::Item &background : BackgroundLibrary::Items(true)) {
+				const QString path = background.path;
+				const QString name = background.name;
+				menu.addAction(BackgroundLibrary::Thumbnail(path),
+					       background.video ? name + QStringLiteral("  ▶") : name, this,
+					       [main, path, name]() { main->AddBackgroundSource(path, name); });
+			}
+			menu.addSeparator();
+			menu.addAction(QCoreApplication::translate("WorshipStudio", "Agregar mis imágenes o videos..."), this,
+				       [this, main]() {
+					       const QStringList added = BackgroundLibrary::AddWithDialog(this, true);
+					       if (!added.isEmpty())
+						       main->AddBackgroundSource(added.first(),
+										 QFileInfo(added.first()).completeBaseName());
+				       });
+			if (!menu.exec(QCursor::pos()))
+				return;
+		}
+		close();
+	});
 	connect(ui->sourceTypeList, &QListWidget::currentItemChanged, this, &OBSBasicSourceSelect::sourceTypeSelected);
 	connect(ui->newSourceName, &QLineEdit::returnPressed, this, &OBSBasicSourceSelect::createNew);
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -368,6 +410,9 @@ void OBSBasicSourceSelect::refreshSources()
 
 	for (size_t i = 0; i < list.sources.num; ++i) {
 		OBSSource source = list.sources.array[i];
+		if (QString::fromUtf8(obs_source_get_name(source)).startsWith(QStringLiteral("WS "))) {
+			continue;
+		}
 
 		OBSWeakSourceAutoRelease weakSource = obs_source_get_weak_source(source);
 		weakSources.emplace_back(weakSource);
@@ -483,6 +528,10 @@ bool OBSBasicSourceSelect::enumSourcesCallback(void *data, obs_source_t *source)
 	if (obs_source_is_hidden(source)) {
 		return true;
 	}
+	/* WorshipStudio's own parts ("WS Biblia"...) are driven by the panels. */
+	if (QString::fromUtf8(obs_source_get_name(source)).startsWith(QStringLiteral("WS "))) {
+		return true;
+	}
 
 	OBSBasicSourceSelect *window = static_cast<OBSBasicSourceSelect *>(data);
 
@@ -561,6 +610,37 @@ void OBSBasicSourceSelect::rebuildSourceTypeList()
 	allSources->setData(Qt::DisplayRole, Str("Basic.SourceSelect.Recent"));
 	allSources->setData(kUnversionedIdRole, QVariant(kRecentTypeId.toString()));
 	ui->sourceTypeList->insertItem(0, allSources);
+
+	/* WorshipStudio's library first: one click adds it to the scene. */
+	const auto translate = [](const char *text) { return QCoreApplication::translate("WorshipStudio", text); };
+	const struct {
+		const char *text;
+		const char *action;
+	} library[] = {{QT_TRANSLATE_NOOP("WorshipStudio", "Cantos y coros"), "panel:songsDock"},
+		       {QT_TRANSLATE_NOOP("WorshipStudio", "Biblia"), "panel:bibleDock"},
+		       {QT_TRANSLATE_NOOP("WorshipStudio", "Himnario"), "panel:hymnalDock"},
+		       {QT_TRANSLATE_NOOP("WorshipStudio", "Presentaciones (PDF, PowerPoint...)"), "panel:presentationDock"},
+		       {QT_TRANSLATE_NOOP("WorshipStudio", "Rótulo de nombre y mensaje urgente"), "graficos"},
+		       {QT_TRANSLATE_NOOP("WorshipStudio", "Cuenta regresiva"), "cuenta"},
+		       {QT_TRANSLATE_NOOP("WorshipStudio", "Fondo (imagen o en movimiento)"), "fondos"}};
+	int row = 0;
+	auto *heading = new QListWidgetItem(translate("WORSHIPSTUDIO"));
+	heading->setFlags(Qt::NoItemFlags);
+	QFont headingFont = heading->font();
+	headingFont.setBold(true);
+	headingFont.setPointSizeF(headingFont.pointSizeF() * 0.85);
+	heading->setFont(headingFont);
+	ui->sourceTypeList->insertItem(row++, heading);
+	for (const auto &entry : library) {
+		auto *item = new QListWidgetItem(translate(entry.text));
+		item->setData(kWorshipRole, QString::fromLatin1(entry.action));
+		item->setIcon(main->GetSceneIcon());
+		ui->sourceTypeList->insertItem(row++, item);
+	}
+	auto *obsHeading = new QListWidgetItem(translate("OTRAS FUENTES"));
+	obsHeading->setFlags(Qt::NoItemFlags);
+	obsHeading->setFont(headingFont);
+	ui->sourceTypeList->insertItem(row++, obsHeading);
 
 	ui->sourceTypeList->setCurrentItem(allSources);
 	ui->sourceTypeList->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Preferred);
@@ -903,6 +983,11 @@ void OBSBasicSourceSelect::handleSourceRemoved(QString uuid)
 
 void OBSBasicSourceSelect::sourceTypeSelected(QListWidgetItem *current, QListWidgetItem *)
 {
+	/* WorshipStudio items act on click; the view stays as it was. */
+	if (!current || current->data(kWorshipRole).isValid() || !(current->flags() & Qt::ItemIsSelectable)) {
+		return;
+	}
+
 	clearSelectedItems();
 
 	QVariant unversionedIdData = current->data(kUnversionedIdRole);
