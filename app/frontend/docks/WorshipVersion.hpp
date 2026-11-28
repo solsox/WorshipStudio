@@ -1,4 +1,4 @@
 #pragma once
 
 /* Shown in About and in feedback emails. */
-#define WORSHIPSTUDIO_VERSION_TEXT "0.9.4"
+#define WORSHIPSTUDIO_VERSION_TEXT "0.9.5"
