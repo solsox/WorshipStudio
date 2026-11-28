@@ -1276,9 +1276,20 @@ struct SelfTest {
 				      QByteArray("ok"),
 			      QStringLiteral("la página puede avisar en qué va el video"));
 
+		});
+		/* The page has to load YouTube and report back: that proves the
+		 * browser of the video really runs. */
+		waitFor(20000, []() { return YouTubeConnect::Status().value(QStringLiteral("duracion")).toDouble() > 0; });
+		add(500, [=]() {
+			const QJsonObject status = YouTubeConnect::Status();
+			check(status.value(QStringLiteral("duracion")).toDouble() > 0,
+			      QStringLiteral("el video carga y avisa su duración: %1 s")
+				      .arg(status.value(QStringLiteral("duracion")).toDouble()));
 			OBSSourceAutoRelease program = obs_frontend_get_current_scene();
 			capture(obs_scene_from_source(program), QStringLiteral("youtube-en-la-escena"));
-			obs_source_remove(source);
+			OBSSourceAutoRelease source = obs_get_source_by_name("YouTube - Autoprueba");
+			if (source)
+				obs_source_remove(source);
 		});
 		add(400, [=]() {
 			OBSSourceAutoRelease gone = obs_get_source_by_name("YouTube - Autoprueba");
