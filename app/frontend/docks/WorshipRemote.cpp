@@ -292,8 +292,8 @@ $('next').textContent=s.next||'—';$('hide').classList.toggle('on',!!s.hidden);
 const it=s.service||[];$('svc').style.display=it.length?'block':'none';
 $('items').innerHTML=it.map((t,i)=>'<li class="'+(i===s.serviceIndex?'cur':'')+'" onclick="act(\'item\',{n:'+i+'})"><span class="n">'+(i+1)+'</span><span class="grow">'+esc(t)+'</span></li>').join('');
 $('scenes').innerHTML=(s.scenes||[]).map(n=>'<li class="'+(n===s.program?'cur':'')+'" onclick="act(\'escena\',{nombre:'+JSON.stringify(n).replace(/"/g,'&quot;')+'})"><span class="grow">'+esc(n)+'</span>'+(n===s.program?'<span class="tag p">'+t(sep?'AL AIRE':'EN PANTALLA')+'</span>':n===s.preview?'<span class="tag w">'+t('EN ESPERA')+'</span>':'')+'</li>').join('')||'<li>'+t('No hay escenas propias todavía')+'</li>';
-$('sources').innerHTML=(s.sources||[]).map(f=>{const n=JSON.stringify(f.nombre).replace(/"/g,'&quot;');return '<li><span class="grow" title="'+esc(friendly(f.nombre))+'">'+esc(friendly(f.nombre))+'</span><span class="acts">'+(f.audio?'<button class="pill ord'+(f.silencio?' off':'')+'" onclick="act(\'silencio\',{nombre:'+n+'})">'+(f.silencio?'🔇':'🔊')+'</button>':'')+'<button class="pill'+(f.visible?'':' off')+'" onclick="act(\'fuente\',{nombre:'+n+'})">'+t(f.visible?'Visible':'Oculta')+'</button><button class="pill ord" aria-label="'+t('Subir')+'" onclick="act(\'subir\',{nombre:'+n+'})">▲</button><button class="pill ord" aria-label="'+t('Bajar')+'" onclick="act(\'bajar\',{nombre:'+n+'})">▼</button></span></li>';}).join('')||'<li>'+t('Sin fuentes')+'</li>';
-$('srcK').textContent=t(studio?'Fuentes en espera':'Fuentes en pantalla');$('srcHint').textContent=t(studio?'Los cambios quedan EN ESPERA hasta que tocas Pasar a pantalla.':'Toca para mostrar u ocultar; ▲ ▼ cambian el orden.');
+$('sources').innerHTML=(s.sources||[]).map(f=>{const n=JSON.stringify(f.nombre).replace(/"/g,'&quot;');return '<li><span class="grow" title="'+esc(friendly(f.nombre))+'">'+esc(friendly(f.nombre))+'</span><span class="acts">'+(f.audio?'<button class="pill ord'+(f.silencio?' off':'')+'" onclick="act(\'silencio\',{nombre:'+n+'})">'+(f.silencio?'🔇':'🔊')+'</button><button class="pill ord'+(f.auriculares?' on':'')+'" aria-label="'+t('Auriculares')+'" onclick="act(\'auriculares\',{nombre:'+n+'})">🎧</button>':'')+'<button class="pill'+(f.visible?'':' off')+'" onclick="act(\'fuente\',{nombre:'+n+'})">'+t(f.visible?'Visible':'Oculta')+'</button><button class="pill ord" aria-label="'+t('Subir')+'" onclick="act(\'subir\',{nombre:'+n+'})">▲</button><button class="pill ord" aria-label="'+t('Bajar')+'" onclick="act(\'bajar\',{nombre:'+n+'})">▼</button></span></li>';}).join('')||'<li>'+t('Sin fuentes')+'</li>';
+$('srcK').textContent=t(studio?'Fuentes en espera':'Fuentes en pantalla');$('srcHint').textContent=t(studio?'Los cambios quedan EN ESPERA hasta que tocas Pasar a pantalla.':'Toca para mostrar u ocultar; 🎧 es escucharla en los auriculares; ▲ ▼ cambian el orden.');
 $('stream').classList.toggle('rec',!!s.streaming);$('stream').textContent=t(s.streaming?'Detener transmisión':'Transmitir');
 $('record').classList.toggle('rec',!!s.recording);$('record').textContent=t(s.recording?'Detener grabación':'Grabar');
 const y=s.youtube;$('ytnow').style.display=y?'block':'none';
@@ -588,6 +588,8 @@ QByteArray WorshipRemote::respond(const QByteArray &method, const QString &targe
 			live.requestCountdownStop();
 		else if (action == QStringLiteral("silencio"))
 			toggleMute(name);
+		else if (action == QStringLiteral("auriculares"))
+			toggleMonitor(name);
 		else if (action == QStringLiteral("himno"))
 			live.requestHymn(query.queryItemValue(QStringLiteral("n")).toInt());
 		else if (action == QStringLiteral("biblia"))
@@ -810,11 +812,44 @@ void WorshipRemote::addScene(const QString &requested)
 		obs_frontend_set_current_preview_scene(obs_scene_get_source(scene));
 }
 
+/* The speaker and the headphones work together, like the mixer of the PC:
+ * the source is really muted only when the headphones are off. */
 void WorshipRemote::toggleMute(const QString &name)
 {
 	OBSSourceAutoRelease source = obs_get_source_by_name(QT_TO_UTF8(name));
-	if (source && (obs_source_get_output_flags(source) & OBS_SOURCE_AUDIO))
-		obs_source_set_muted(source, !obs_source_muted(source));
+	if (!source || !(obs_source_get_output_flags(source) & OBS_SOURCE_AUDIO))
+		return;
+	const obs_monitoring_type monitoring = obs_source_get_monitoring_type(source);
+	const bool mute = !(obs_source_muted(source) || monitoring == OBS_MONITORING_TYPE_MONITOR_ONLY);
+
+	if (mute && monitoring == OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT)
+		obs_source_set_monitoring_type(source, OBS_MONITORING_TYPE_MONITOR_ONLY);
+	else if (!mute && monitoring == OBS_MONITORING_TYPE_MONITOR_ONLY)
+		obs_source_set_monitoring_type(source, OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT);
+	else
+		obs_source_set_muted(source, mute);
+}
+
+/* Headphones: hear that source in the headphones of the operator, with or
+ * without sending it to the transmission. */
+void WorshipRemote::toggleMonitor(const QString &name)
+{
+	OBSSourceAutoRelease source = obs_get_source_by_name(QT_TO_UTF8(name));
+	if (!source || !(obs_source_get_output_flags(source) & OBS_SOURCE_AUDIO))
+		return;
+	const obs_monitoring_type monitoring = obs_source_get_monitoring_type(source);
+	const bool muted = obs_source_muted(source);
+
+	if (monitoring != OBS_MONITORING_TYPE_NONE) {
+		obs_source_set_monitoring_type(source, OBS_MONITORING_TYPE_NONE);
+		if (monitoring == OBS_MONITORING_TYPE_MONITOR_ONLY)
+			obs_source_set_muted(source, true);
+	} else if (muted) {
+		obs_source_set_monitoring_type(source, OBS_MONITORING_TYPE_MONITOR_ONLY);
+		obs_source_set_muted(source, false);
+	} else {
+		obs_source_set_monitoring_type(source, OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT);
+	}
 }
 
 QByteArray WorshipRemote::stateJson() const
@@ -870,11 +905,18 @@ QByteArray WorshipRemote::stateJson() const
 			[](obs_scene_t *, obs_sceneitem_t *item, void *data) {
 				obs_source_t *source = obs_sceneitem_get_source(item);
 				const bool audio = obs_source_get_output_flags(source) & OBS_SOURCE_AUDIO;
+				const obs_monitoring_type monitoring =
+					audio ? obs_source_get_monitoring_type(source) : OBS_MONITORING_TYPE_NONE;
+				/* Like the mixer: the speaker shows crossed out also when
+				 * the sound only goes to the headphones. */
+				const bool silent = audio && (obs_source_muted(source) ||
+							      monitoring == OBS_MONITORING_TYPE_MONITOR_ONLY);
 				static_cast<QJsonArray *>(data)->prepend(
 					QJsonObject{{QStringLiteral("nombre"), QT_UTF8(obs_source_get_name(source))},
 						    {QStringLiteral("visible"), obs_sceneitem_visible(item)},
 						    {QStringLiteral("audio"), audio},
-						    {QStringLiteral("silencio"), audio && obs_source_muted(source)}});
+						    {QStringLiteral("silencio"), silent},
+						    {QStringLiteral("auriculares"), monitoring != OBS_MONITORING_TYPE_NONE}});
 				return true;
 			},
 			&sources);

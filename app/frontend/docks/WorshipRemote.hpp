@@ -52,4 +52,6 @@ private:
 	void addSource(const QString &kind, const QString &value);
 	void addScene(const QString &name);
 	void toggleMute(const QString &name);
+	/* Hear that source in the headphones of the operator. */
+	void toggleMonitor(const QString &name);
 };
